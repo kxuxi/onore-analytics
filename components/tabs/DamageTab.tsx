@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { WarlordMap } from "@/lib/types";
+import type { Warlord, WarlordMap } from "@/lib/types";
 import { FilterIcon, CloseIcon } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
+import { normalizationMap, householdAliases } from "@/lib/storage";
 import {
   ACTION_LABEL,
   formatElapsed,
@@ -12,6 +13,19 @@ import {
   STATUS_ORDER,
   type ActionStatus,
 } from "@/lib/action";
+
+/**
+ * 家督名（household）が同じ武将（＝同一人物の旧名）の行動時刻をすべて合算する。
+ * "MM/DD HH:mm" はゼロ埋め固定長のため辞書順ソートで時刻順になる。
+ */
+function mergeAliasActions(aliases: (Warlord | undefined)[]): string[] {
+  const set = new Set<string>();
+  for (const w of aliases) {
+    for (const a of w?.actions ?? []) if (a) set.add(a);
+    if (w?.lastActionAt) set.add(w.lastActionAt);
+  }
+  return Array.from(set).sort();
+}
 
 interface Props {
   db: WarlordMap;
@@ -70,8 +84,32 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
   const rows = useMemo(() => {
     if (!now) return [];
     const q = nameQuery.trim().toLowerCase();
-    return Object.values(db)
-      .map((w) => ({ w, info: getActionInfo(w, now) }))
+
+    // 家督名が同じ武将（＝改名前後の同一人物）は1人として統合する。
+    // 代表名（正規化マップ上の最新名）のみを1行とし、行動時刻は
+    // 旧名側も含めて合算した最新値を使う。
+    // （旧名の行が別枠で残り続け、そちらは更新されないまま経過時間だけ
+    // 増え続けて見える＝「最新の時間が取れない」不具合の修正）
+    const canonMap = normalizationMap(db);
+    const seen = new Set<string>();
+    const merged: { w: Warlord; info: ReturnType<typeof getActionInfo> }[] = [];
+    for (const w of Object.values(db)) {
+      const canonical = canonMap[w.name] ?? w.name;
+      if (seen.has(canonical)) continue;
+      seen.add(canonical);
+      const base = db[canonical];
+      if (!base) continue;
+      const actions = mergeAliasActions(
+        householdAliases(db, canonical).map((n) => db[n])
+      );
+      const info = getActionInfo(
+        { ...base, actions, lastActionAt: actions[actions.length - 1] },
+        now
+      );
+      merged.push({ w: base, info });
+    }
+
+    return merged
       .filter((r) => r.info.status !== "none")
       .filter((r) => (statusFilter ? r.info.status === statusFilter : true))
       .filter((r) => (factionFilter ? r.w.faction === factionFilter : true))
