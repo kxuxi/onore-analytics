@@ -105,17 +105,13 @@ export function parseBattleLine(line: string): Warlord[] {
   const actionAt = extractActionTime(battleAt);
 
   const now = Date.now();
+  const shared = { battleAt, lastActionAt: actionAt, updatedAt: now } as const;
   const result: Warlord[] = [];
-  // 攻撃側（V.S. の左側）のみ「行動時刻」を紐づける。
+  // 攻撃側のみ actions を付ける。固定バッジは攻撃の連続行動パターンにのみ適用する。
+  // 守備側は lastActionAt のみ記録し、被弾表には表示されるがバッジは付かない。
   if (attacker)
-    result.push({
-      ...attacker,
-      battleAt,
-      lastActionAt: actionAt,
-      actions: actionAt ? [actionAt] : undefined,
-      updatedAt: now,
-    });
-  if (defender) result.push({ ...defender, battleAt, updatedAt: now });
+    result.push({ ...attacker, ...shared, actions: actionAt ? [actionAt] : undefined });
+  if (defender) result.push({ ...defender, ...shared });
   return result;
 }
 

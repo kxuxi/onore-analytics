@@ -15,6 +15,7 @@ import {
   branchStats,
   winHeatmap,
   factionTimeline,
+  type YearRankTag,
 } from "@/lib/stats";
 import { PieChart, chartColor } from "@/components/PieChart";
 import { BattleLogList } from "@/components/detail/BattleLogList";
@@ -41,6 +42,8 @@ interface Props {
   colors: FactionColorMap;
   /** コメント欄（一言コメント）を表示するか。未ログインでは非表示。 */
   canComment: boolean;
+  /** 年代別勝率ランキングでの入賞タグ（全期間集計）。 */
+  yearRankTags?: YearRankTag[];
   onSelectWarlord: (name: string) => void;
   onSelectUnit: (name: string) => void;
   onSelectFaction: (name: string) => void;
@@ -53,6 +56,7 @@ export function WarlordDetail({
   log,
   colors,
   canComment,
+  yearRankTags,
   onSelectWarlord,
   onSelectUnit,
   onSelectFaction,
@@ -114,6 +118,17 @@ export function WarlordDetail({
       )}
       {displayType && <span className="tag type">{displayType}</span>}
       {branch && <span className="tag branch">{branch}</span>}
+      {yearRankTags?.map((t) => (
+        <span
+          key={t.bucketKey}
+          className={`tag year-rank rank-${t.rank}`}
+          title={`${t.label}の勝率ランキング 第${t.rank}位（勝率 ${Math.round(
+            t.winRate * 100
+          )}% / ${t.wins}勝${t.losses}敗）`}
+        >
+          {t.label} #{t.rank}
+        </span>
+      ))}
     </>
   );
 

@@ -23,6 +23,7 @@ import {
   SunIcon,
   MoonIcon,
   HistoryIcon,
+  HomeIcon,
   SearchIcon,
   ShieldIcon,
   TrophyIcon,
@@ -33,12 +34,19 @@ import {
   FlagIcon,
   SlidersIcon,
   BookIcon,
+  LinkIcon,
+  GridIcon,
+  ActivityIcon,
   LogInIcon,
   LogOutIcon,
 } from "@/components/icons";
 import type { BattleRecord, TabKey, WarlordMap } from "@/lib/types";
 import { normalizationMap } from "@/lib/storage";
+import { yearBucketWinRankings, warlordYearRankTags } from "@/lib/stats";
 
+const HomeTab = dynamic(
+  () => import("@/components/tabs/HomeTab").then((m) => m.HomeTab)
+);
 const HistoryTab = dynamic(
   () => import("@/components/tabs/HistoryTab").then((m) => m.HistoryTab)
 );
@@ -64,6 +72,18 @@ const SettingsTab = dynamic(
 const SwiTab = dynamic(
   () => import("@/components/tabs/SwiTab").then((m) => m.SwiTab)
 );
+const RankingTab = dynamic(
+  () => import("@/components/tabs/RankingTab").then((m) => m.RankingTab)
+);
+const EquipSynergyTab = dynamic(
+  () => import("@/components/tabs/EquipSynergyTab").then((m) => m.EquipSynergyTab)
+);
+const TraitMatrixTab = dynamic(
+  () => import("@/components/tabs/TraitMatrixTab").then((m) => m.TraitMatrixTab)
+);
+const MetaTab = dynamic(
+  () => import("@/components/tabs/MetaTab").then((m) => m.MetaTab)
+);
 const WarlordDetail = dynamic(
   () => import("@/components/detail/WarlordDetail").then((m) => m.WarlordDetail)
 );
@@ -79,10 +99,17 @@ const FactionDetail = dynamic(
 
 /** タブ（リーフ）ごとのアイコン。サイドバーのグループ単独表示とページ内サブタブで共用。 */
 const TAB_ICONS: Record<TabKey, ReactNode> = {
+  home: <HomeIcon />,
   history: <HistoryIcon />,
   scout: <SearchIcon />,
   damage: <ShieldIcon />,
   swi: <TrophyIcon />,
+  unitrank: <UsersIcon />,
+  weaponrank: <SwordIcon />,
+  itemrank: <PackageIcon />,
+  synergy: <LinkIcon />,
+  matrix: <GridIcon />,
+  metaenv: <ActivityIcon />,
   db: <DatabaseIcon />,
   units: <UsersIcon />,
   weapons: <SwordIcon />,
@@ -93,9 +120,11 @@ const TAB_ICONS: Record<TabKey, ReactNode> = {
 
 /** サイドバーのグループごとのアイコン（JSX なので描画側に置く）。 */
 const GROUP_ICONS: Record<TabGroupKey, ReactNode> = {
+  home: <HomeIcon />,
   history: <HistoryIcon />,
   warlords: <UsersIcon />,
   ranking: <TrophyIcon />,
+  meta: <GridIcon />,
   encyclopedia: <BookIcon />,
   nations: <FlagIcon />,
   settings: <SlidersIcon />,
@@ -106,6 +135,9 @@ const FALLBACK_TERM = 145;
 
 /** サイドバーの「新期」で追加した期番号の保存キー。 */
 const TERM_OPTIONS_STORAGE_KEY = "onore-tool:term-options:v1";
+
+/** 直近に選択した「対象の期」の保存キー。 */
+const TERM_SELECTED_STORAGE_KEY = "onore-tool:selected-term:v1";
 
 /** 共有DBを最後に取得した時刻を HH:MM 表記にする。 */
 function formatClock(ts: number): string {
@@ -228,13 +260,42 @@ export default function HomePage() {
     return Array.from(set).sort((a, b) => b - a);
   }, [battleLog, manualTerms]);
 
-  // 基本は最新の期を既定選択にする（初回のみ）。
+  // 起動時は「直近に選択した期」を復元し、無ければ最新の期を既定選択にする（初回のみ）。
   const latestTerm = termOptions[0] ?? FALLBACK_TERM;
   useEffect(() => {
     if (didAutoSelectLatestTerm) return;
-    setSelectedTerm(latestTerm);
+    let restored = false;
+    try {
+      const raw = window.localStorage.getItem(TERM_SELECTED_STORAGE_KEY);
+      if (raw === "all") {
+        setSelectedTerm("all");
+        restored = true;
+      } else if (raw !== null) {
+        const n = Number(raw);
+        if (Number.isInteger(n) && n > 0) {
+          setSelectedTerm(n);
+          restored = true;
+        }
+      }
+    } catch {
+      // 壊れた保存データは無視して既定（最新の期）で続行する。
+    }
+    if (!restored) setSelectedTerm(latestTerm);
     setDidAutoSelectLatestTerm(true);
   }, [didAutoSelectLatestTerm, latestTerm]);
+
+  // 選択した期を保存し、次回起動時に復元できるようにする。
+  useEffect(() => {
+    if (!didAutoSelectLatestTerm) return;
+    try {
+      window.localStorage.setItem(
+        TERM_SELECTED_STORAGE_KEY,
+        selectedTerm === "all" ? "all" : String(selectedTerm)
+      );
+    } catch {
+      // 保存に失敗しても選択は継続する。
+    }
+  }, [selectedTerm, didAutoSelectLatestTerm]);
 
   // ドロップダウンに表示する期の一覧。
   // 選択中の期がデータに存在しない場合（新期入力直後など）でも選択肢に残す。
@@ -259,6 +320,15 @@ export default function HomePage() {
 
   // filteredDb 内の household 正規化マップ（同じ household → 最新の代表名）。
   const householdNormMap = useMemo(() => normalizationMap(filteredDb), [filteredDb]);
+
+  // 年代別（在ゲーム年）の勝率ランキング。武将ページの入賞タグは「称号」的な
+  // 性質のため、期フィルタを無視して全期間の戦闘・全DBで集計する。
+  const yearRankings = useMemo(
+    () => yearBucketWinRankings(battleLog, db),
+    [battleLog, db]
+  );
+  // 全DBでの代表名解決（入賞タグの引き当てをランキングと同じ正規化で行う）。
+  const fullNormMap = useMemo(() => normalizationMap(db), [db]);
 
   // 武将詳細ページへの遷移。household がある場合は代表名（最新名）にリダイレクト。
   const selectWarlordNormalized = useCallback(
@@ -470,10 +540,21 @@ export default function HomePage() {
 
   const content = useMemo(() => {
     switch (tab) {
+      case "home":
+        return (
+          <HomeTab
+            log={filteredBattleLog}
+            db={db}
+            colors={factionColors}
+            onSelectWarlord={selectWarlordNormalized}
+            onSelectUnit={selectUnit}
+            onSelectFaction={selectFaction}
+          />
+        );
       case "history":
         return (
           <HistoryTab
-            canRegister={!authReady || isAdmin}
+            canRegister={(!authReady || isAdmin) && (selectedTerm === "all" || selectedTerm === latestTerm)}
             canDelete={isAdmin}
             onRegister={handleRegister}
             log={filteredBattleLog}
@@ -501,10 +582,58 @@ export default function HomePage() {
         );
       case "swi":
         return <SwiTab log={filteredBattleLog} db={filteredDb} onSelectWarlord={selectWarlordNormalized} />;
+      case "unitrank":
+        return (
+          <RankingTab
+            variant="unit"
+            log={filteredBattleLog}
+            onSelectUnit={selectUnit}
+            onSelectEquip={selectEquip}
+            onSelectWarlord={selectWarlordNormalized}
+          />
+        );
+      case "weaponrank":
+        return (
+          <RankingTab
+            variant="weapon"
+            log={filteredBattleLog}
+            onSelectUnit={selectUnit}
+            onSelectEquip={selectEquip}
+            onSelectWarlord={selectWarlordNormalized}
+          />
+        );
+      case "itemrank":
+        return (
+          <RankingTab
+            variant="item"
+            log={filteredBattleLog}
+            onSelectUnit={selectUnit}
+            onSelectEquip={selectEquip}
+            onSelectWarlord={selectWarlordNormalized}
+          />
+        );
+      case "synergy":
+        return (
+          <EquipSynergyTab
+            log={filteredBattleLog}
+            onSelectWarlord={selectWarlordNormalized}
+            onSelectEquip={selectEquip}
+          />
+        );
+      case "matrix":
+        return (
+          <TraitMatrixTab
+            log={filteredBattleLog}
+            onSelectWarlord={selectWarlordNormalized}
+            onSelectUnit={selectUnit}
+          />
+        );
+      case "metaenv":
+        return <MetaTab log={filteredBattleLog} onSelectUnit={selectUnit} />;
       case "db":
         return <DbTab db={filteredDb} colors={factionColors} onSelectWarlord={selectWarlord} onSelectFaction={selectFaction} onImportStats={handleImportStats} />;
       case "units":
-        return <UnitTab onSelectUnit={selectUnit} />;
+        return <UnitTab onSelectUnit={selectUnit} isAdmin={isAdmin} />;
       case "weapons":
         return (
           <EquipTab
@@ -571,6 +700,8 @@ export default function HomePage() {
   let detailView: React.ReactNode = null;
   if (detail) {
     if (detail.kind === "warlord") {
+      // ランキングと同じ正規化で代表名を解決し、入賞タグを引き当てる。
+      const repName = fullNormMap[detail.name] ?? detail.name;
       detailView = (
         <WarlordDetail
           name={detail.name}
@@ -578,6 +709,7 @@ export default function HomePage() {
           log={filteredBattleLog}
           colors={factionColors}
           canComment={isAdmin}
+          yearRankTags={warlordYearRankTags(yearRankings, repName)}
           onSelectWarlord={selectWarlordNormalized}
           onSelectUnit={selectUnit}
           onSelectFaction={selectFaction}
@@ -643,8 +775,8 @@ export default function HomePage() {
             <button
               type="button"
               className="brand-btn"
-              onClick={() => selectTab("history")}
-              title="ホーム（戦闘履歴）へ"
+              onClick={() => selectTab("home")}
+              title="ホームへ"
             >
               ONORE ANALYTICS
             </button>

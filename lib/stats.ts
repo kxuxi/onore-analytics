@@ -321,6 +321,330 @@ export function branchStats(outcomes: BattleOutcome[]): BranchStat[] {
   return arr.sort((a, b) => b.battles - a.battles);
 }
 
+/* ---------- 兵種別の習熟度・相手特性別の勝率（ホーム用） ---------- */
+
+/** 注目側が使った兵種ごとの戦績（習熟度の指標。戦闘数の多い順）。 */
+export interface SelfUnitStat {
+  unit: string;
+  battles: number;
+  wins: number;
+  losses: number;
+  decided: number;
+  winRate: number;
+}
+
+/** 注目側が出陣した兵種ごとに勝率を集計する（戦闘数の多い順）。 */
+export function selfUnitStats(outcomes: BattleOutcome[]): SelfUnitStat[] {
+  const map = new Map<string, SelfUnitStat>();
+  for (const o of outcomes) {
+    const unit = o.self.unit ? normalizeDisplayToken(o.self.unit) : "不明";
+    let s = map.get(unit);
+    if (!s) {
+      s = { unit, battles: 0, wins: 0, losses: 0, decided: 0, winRate: 0 };
+      map.set(unit, s);
+    }
+    s.battles++;
+    if (o.result === "win") s.wins++;
+    else if (o.result === "loss") s.losses++;
+  }
+  const arr = Array.from(map.values());
+  for (const s of arr) {
+    s.decided = s.wins + s.losses;
+    s.winRate = s.decided > 0 ? s.wins / s.decided : 0;
+  }
+  return arr.sort((a, b) => b.battles - a.battles);
+}
+
+/** 相手の特性（タイプ）ごとの注目側戦績（戦闘数の多い順）。 */
+export interface OpponentTraitStat {
+  trait: string;
+  battles: number;
+  wins: number;
+  losses: number;
+  decided: number;
+  winRate: number;
+}
+
+/** 相手の特性（タイプ）ごとに注目側の勝率を集計する（戦闘数の多い順）。 */
+export function opponentTraitStats(
+  outcomes: BattleOutcome[]
+): OpponentTraitStat[] {
+  const map = new Map<string, OpponentTraitStat>();
+  for (const o of outcomes) {
+    const trait = o.opponent.type?.trim() || "不明";
+    let s = map.get(trait);
+    if (!s) {
+      s = { trait, battles: 0, wins: 0, losses: 0, decided: 0, winRate: 0 };
+      map.set(trait, s);
+    }
+    s.battles++;
+    if (o.result === "win") s.wins++;
+    else if (o.result === "loss") s.losses++;
+  }
+  const arr = Array.from(map.values());
+  for (const s of arr) {
+    s.decided = s.wins + s.losses;
+    s.winRate = s.decided > 0 ? s.wins / s.decided : 0;
+  }
+  return arr.sort((a, b) => b.battles - a.battles);
+}
+
+/* ---------- 先週比の勝率トレンド（ホーム用） ---------- */
+
+/** 「先週比」の勝率トレンド。 */
+export interface WeeklyTrend {
+  /** 今週（基準日からさかのぼって 7 日間）の勝率 0..1 */
+  thisRate: number;
+  /** 今週の勝敗確定数 */
+  thisDecided: number;
+  /** 先週（基準日の 7〜14 日前）の勝率 0..1 */
+  lastRate: number;
+  /** 先週の勝敗確定数 */
+  lastDecided: number;
+  /** 今週 − 先週 の勝率差（0..1 単位）。両週とも確定戦が無いと null。 */
+  delta: number | null;
+}
+
+/**
+ * 「先週比」の勝率トレンドを算出する。
+ * 最新の戦闘日時を基準（アンカー）に、そこからさかのぼった 7 日間（今週）と
+ * その前の 7 日間（先週）の勝率を比較する。実日時が無い戦闘は対象外。
+ * 基準を「最新の戦闘」に固定することで、戦闘を記録しない限り数値は動かない
+ * （日付が進むだけで今週／先週の区切りがずれて先週比が変わるのを防ぐ）。
+ */
+export function weeklyWinRateTrend(
+  outcomes: BattleOutcome[],
+  now: Date = new Date()
+): WeeklyTrend {
+  const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+  const dated: { o: BattleOutcome; t: number }[] = [];
+  for (const o of outcomes) {
+    const d = parseActionDate(o.record.time, now);
+    if (d) dated.push({ o, t: d.getTime() });
+  }
+  if (dated.length === 0) {
+    return { thisRate: 0, thisDecided: 0, lastRate: 0, lastDecided: 0, delta: null };
+  }
+  // 基準は「最新の戦闘日時」。日付の経過では動かず、戦闘を記録した時だけ更新される。
+  const anchor = Math.max(...dated.map((x) => x.t));
+  const thisStart = anchor - WEEK_MS;
+  const lastStart = anchor - 2 * WEEK_MS;
+  const thisWeek: BattleOutcome[] = [];
+  const lastWeek: BattleOutcome[] = [];
+  for (const { o, t } of dated) {
+    if (t > thisStart) thisWeek.push(o);
+    else if (t > lastStart) lastWeek.push(o);
+  }
+  const a = summarize(thisWeek);
+  const b = summarize(lastWeek);
+  const delta = a.decided > 0 && b.decided > 0 ? a.winRate - b.winRate : null;
+  return {
+    thisRate: a.winRate,
+    thisDecided: a.decided,
+    lastRate: b.winRate,
+    lastDecided: b.decided,
+    delta,
+  };
+}
+
+/* ---------- 年代別（在ゲーム年）の勝率ランキング ---------- */
+
+/** 年代バケット（在ゲーム年の下2桁で区切る）。 */
+export interface YearBucket {
+  /** 内部キー（例: "06-11"）。 */
+  key: string;
+  /** 表示ラベル（例: "06年-11年"）。 */
+  label: string;
+  /** 下2桁の下限（含む）。 */
+  min: number;
+  /** 下2桁の上限（含む）。 */
+  max: number;
+}
+
+/**
+ * 在ゲーム年の下2桁で区切った年代バケット。
+ * 06〜59 は固定幅、60 以上は「60年以降」で1つにまとめる。
+ */
+export const YEAR_BUCKETS: YearBucket[] = [
+  { key: "06-11", label: "06年-11年", min: 6, max: 11 },
+  { key: "12-17", label: "12年-17年", min: 12, max: 17 },
+  { key: "18-23", label: "18年-23年", min: 18, max: 23 },
+  { key: "24-35", label: "24年-35年", min: 24, max: 35 },
+  { key: "36-47", label: "36年-47年", min: 36, max: 47 },
+  { key: "48-59", label: "48年-59年", min: 48, max: 59 },
+  { key: "60+", label: "60年以降", min: 60, max: 99 },
+];
+
+/** ランキングに載せる最低決着戦数（勝敗が確定した戦闘数）。 */
+export const YEAR_RANK_MIN_DECIDED = 10;
+/** 各バケットで何位まで表彰するか。 */
+export const YEAR_RANK_TOP_N = 3;
+
+/**
+ * "1706年2月 06/18 12:36" などの戦闘時刻から在ゲーム年（西暦）を取り出す。
+ * 年が含まれない／パースできない場合は null。
+ */
+export function parseGameYear(time: string | undefined): number | null {
+  if (!time) return null;
+  const m = time.match(/(\d+)\s*年/);
+  if (!m) return null;
+  const y = Number(m[1]);
+  return Number.isFinite(y) ? y : null;
+}
+
+/** 在ゲーム年（西暦）が属する年代バケットを返す（下2桁で判定）。該当なしは null。 */
+export function yearBucketFor(year: number): YearBucket | null {
+  const yy = ((year % 100) + 100) % 100;
+  return YEAR_BUCKETS.find((b) => yy >= b.min && yy <= b.max) ?? null;
+}
+
+/** 年代別ランキングの 1 エントリ（武将 1 人ぶん）。 */
+export interface WarlordYearRankEntry {
+  /** 代表名（家督統合後）。 */
+  name: string;
+  /** バケット内の順位（1..N）。 */
+  rank: number;
+  /** バケット内の関与戦闘数。 */
+  battles: number;
+  wins: number;
+  losses: number;
+  /** 勝敗が確定した戦闘数（wins + losses）。 */
+  decided: number;
+  /** 勝率 0..1。 */
+  winRate: number;
+}
+
+/** 1 バケットぶんのランキング。 */
+export interface YearBucketRanking {
+  bucket: YearBucket;
+  /** 勝率の高い順（最大 topN 件）。 */
+  entries: WarlordYearRankEntry[];
+}
+
+/**
+ * 在ゲーム年の年代ごとに、武将を勝率（総合＝攻撃＋守備）で順位付けする。
+ * 各バケットで決着戦数が minDecided 以上の武将のみを対象に上位 topN を返す。
+ *
+ * @param log 戦闘ログ（期で絞らず全期間を渡す想定）。
+ * @param db 武将DB。渡すと同じ household の別名を代表名へ統合して集計する。
+ */
+export function yearBucketWinRankings(
+  log: BattleRecord[],
+  db?: WarlordMap,
+  opts?: { minDecided?: number; topN?: number }
+): YearBucketRanking[] {
+  const minDecided = opts?.minDecided ?? YEAR_RANK_MIN_DECIDED;
+  const topN = opts?.topN ?? YEAR_RANK_TOP_N;
+  const normMap = db ? normalizationMap(db) : null;
+  const norm = (n: string | undefined): string | null => {
+    const k = n?.trim();
+    if (!k) return null;
+    return (normMap && normMap[k]) || k;
+  };
+
+  interface Tally {
+    battles: number;
+    wins: number;
+    losses: number;
+  }
+  // バケットキー -> 代表名 -> 集計。
+  const byBucket = new Map<string, Map<string, Tally>>();
+  for (const b of YEAR_BUCKETS) byBucket.set(b.key, new Map());
+
+  for (const { record, card } of dedupedCards(log)) {
+    const year = parseGameYear(record.time ?? card.battleAt);
+    if (year === null) continue;
+    const bucket = yearBucketFor(year);
+    if (!bucket) continue;
+    const table = byBucket.get(bucket.key)!;
+
+    const leftRep = norm(card.left.name);
+    const rightRep = norm(card.right.name);
+    // 通常は別人。同一人物に正規化される稀なケースは片側のみ計上する。
+    const sides: { rep: string; side: SideKey }[] = [];
+    if (leftRep) sides.push({ rep: leftRep, side: "left" });
+    if (rightRep && rightRep !== leftRep)
+      sides.push({ rep: rightRep, side: "right" });
+
+    for (const { rep, side } of sides) {
+      const t = table.get(rep) ?? { battles: 0, wins: 0, losses: 0 };
+      t.battles += 1;
+      const r = outcomeForSide(card.winner, side);
+      if (r === "win") t.wins += 1;
+      else if (r === "loss") t.losses += 1;
+      table.set(rep, t);
+    }
+  }
+
+  return YEAR_BUCKETS.map((bucket) => {
+    const table = byBucket.get(bucket.key)!;
+    const entries: WarlordYearRankEntry[] = [];
+    for (const [name, t] of table) {
+      const decided = t.wins + t.losses;
+      if (decided < minDecided) continue;
+      entries.push({
+        name,
+        rank: 0,
+        battles: t.battles,
+        wins: t.wins,
+        losses: t.losses,
+        decided,
+        winRate: decided > 0 ? t.wins / decided : 0,
+      });
+    }
+    entries.sort(
+      (a, b) =>
+        b.winRate - a.winRate ||
+        b.decided - a.decided ||
+        a.name.localeCompare(b.name, "ja")
+    );
+    const top = entries.slice(0, topN);
+    top.forEach((e, i) => (e.rank = i + 1));
+    return { bucket, entries: top };
+  });
+}
+
+/** 武将ページに付ける年代別ランキングのタグ。 */
+export interface YearRankTag {
+  /** バケットキー（例: "06-11"）。 */
+  bucketKey: string;
+  /** 表示ラベル（例: "06年-11年"）。 */
+  label: string;
+  /** 順位（1..N）。 */
+  rank: number;
+  wins: number;
+  losses: number;
+  decided: number;
+  winRate: number;
+}
+
+/**
+ * 指定した代表名の武将が入賞している年代バケットのタグ一覧を返す。
+ * バケットは YEAR_BUCKETS の並び順（古い年代→新しい年代）。
+ */
+export function warlordYearRankTags(
+  rankings: YearBucketRanking[],
+  repName: string
+): YearRankTag[] {
+  const key = repName.trim();
+  if (!key) return [];
+  const out: YearRankTag[] = [];
+  for (const { bucket, entries } of rankings) {
+    const e = entries.find((x) => x.name === key);
+    if (!e) continue;
+    out.push({
+      bucketKey: bucket.key,
+      label: bucket.label,
+      rank: e.rank,
+      wins: e.wins,
+      losses: e.losses,
+      decided: e.decided,
+      winRate: e.winRate,
+    });
+  }
+  return out;
+}
+
 /* ---------- 時間帯・曜日別の勝率ヒートマップ ---------- */
 
 /** 曜日ラベル（getDay() の 0..6 に対応）。 */
@@ -1558,6 +1882,109 @@ export function itemStats(log: BattleRecord[]): EquipStat[] {
   return collectEquipStats(log, (s) => s.equip1);
 }
 
+/** 兵種ランキングの集計単位。 */
+export interface UnitStat {
+  /** 兵種名（normalizeDisplayToken 済み） */
+  unit: string;
+  /** 代表兵科（その兵種で最も多い兵科） */
+  branch: string;
+  /** 登場した戦闘数（攻守の延べ） */
+  battles: number;
+  wins: number;
+  losses: number;
+  others: number;
+  /** 勝敗が確定した数（wins + losses） */
+  decided: number;
+  /** 勝率 0..1（decided が 0 のときは 0） */
+  winRate: number;
+  /** 攻撃側で出撃した回数 */
+  attackUses: number;
+  /** 守備側で出撃した回数 */
+  defenseUses: number;
+  /** よく使う武将 TOP3 */
+  topUsers: { name: string; count: number }[];
+}
+
+/**
+ * 兵種ごとの出撃実績を集計し、使用回数・勝率・主な使用武将を求める。
+ * 攻撃側・守備側の両方を対象とし、重複行は除外する。兵科は最頻のものを代表とする。
+ */
+export function unitStats(log: BattleRecord[]): UnitStat[] {
+  interface Acc {
+    unit: string;
+    branches: Map<string, number>;
+    battles: number;
+    wins: number;
+    losses: number;
+    others: number;
+    attackUses: number;
+    defenseUses: number;
+    users: Map<string, number>;
+  }
+  const map = new Map<string, Acc>();
+  const sides: SideKey[] = ["left", "right"];
+  for (const { card } of dedupedCards(log)) {
+    for (const side of sides) {
+      const self = side === "left" ? card.left : card.right;
+      const raw = self.unit;
+      if (!raw) continue;
+      const unit = normalizeDisplayToken(raw);
+      if (!unit) continue;
+      const result = outcomeForSide(card.winner, side);
+      let e = map.get(unit);
+      if (!e) {
+        e = {
+          unit,
+          branches: new Map(),
+          battles: 0,
+          wins: 0,
+          losses: 0,
+          others: 0,
+          attackUses: 0,
+          defenseUses: 0,
+          users: new Map(),
+        };
+        map.set(unit, e);
+      }
+      e.battles++;
+      if (result === "win") e.wins++;
+      else if (result === "loss") e.losses++;
+      else e.others++;
+      if (side === "left") e.attackUses++;
+      else e.defenseUses++;
+      const branch = self.branch?.trim();
+      if (branch) e.branches.set(branch, (e.branches.get(branch) ?? 0) + 1);
+      const user = self.name?.trim();
+      if (user) e.users.set(user, (e.users.get(user) ?? 0) + 1);
+    }
+  }
+  return Array.from(map.values())
+    .map((e) => {
+      const decided = e.wins + e.losses;
+      const branch =
+        Array.from(e.branches.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ??
+        "";
+      const topUsers = Array.from(e.users.entries())
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 3);
+      return {
+        unit: e.unit,
+        branch,
+        battles: e.battles,
+        wins: e.wins,
+        losses: e.losses,
+        others: e.others,
+        decided,
+        winRate: decided > 0 ? e.wins / decided : 0,
+        attackUses: e.attackUses,
+        defenseUses: e.defenseUses,
+        topUsers,
+      };
+    })
+    .sort((a, b) => b.battles - a.battles);
+}
+
 /** 装備枠。weapon=武器(装備2) / item=品物(装備1)。 */
 export type EquipSlot = "weapon" | "item";
 
@@ -1595,5 +2022,473 @@ export function collectEquipBattles(
       out.push(makeOutcome(record, card, "right"));
   }
   return sortByTimeDesc(out);
+}
+
+/** 装備の組み合わせ（武器＝装備2 × 品物＝装備1）ごとの勝率。 */
+export interface EquipSynergyStat {
+  /** 武器（装備2） */
+  weapon: string;
+  /** 品物（装備1） */
+  item: string;
+  /** 登場した戦闘数（攻守の延べ） */
+  battles: number;
+  wins: number;
+  losses: number;
+  /** 勝敗が確定した数（wins + losses） */
+  decided: number;
+  /** 勝率 0..1（decided が 0 のときは 0） */
+  winRate: number;
+  /** よく使う武将 TOP3 */
+  topUsers: { name: string; count: number }[];
+}
+
+/**
+ * 武器（装備2）と品物（装備1）の組み合わせごとに勝率を集計し、どの組み合わせが
+ * 強いかを数値化する。両方の装備が揃っている側のみ対象（片方でも空・「なし」は除外）。
+ * 攻撃側・守備側の両方を対象とし、重複行は除外する。
+ */
+export function equipSynergy(log: BattleRecord[]): EquipSynergyStat[] {
+  interface Acc {
+    weapon: string;
+    item: string;
+    battles: number;
+    wins: number;
+    losses: number;
+    users: Map<string, number>;
+  }
+  const map = new Map<string, Acc>();
+  const sides: SideKey[] = ["left", "right"];
+  for (const { card } of dedupedCards(log)) {
+    for (const side of sides) {
+      const self = side === "left" ? card.left : card.right;
+      if (!self.equip1 || !self.equip2) continue;
+      const weapon = normalizeDisplayToken(self.equip2);
+      const item = normalizeDisplayToken(self.equip1);
+      if (!weapon || weapon === "なし") continue;
+      if (!item || item === "なし") continue;
+      const key = `${weapon}\u0000${item}`;
+      const result = outcomeForSide(card.winner, side);
+      let e = map.get(key);
+      if (!e) {
+        e = { weapon, item, battles: 0, wins: 0, losses: 0, users: new Map() };
+        map.set(key, e);
+      }
+      e.battles++;
+      if (result === "win") e.wins++;
+      else if (result === "loss") e.losses++;
+      const user = self.name?.trim();
+      if (user) e.users.set(user, (e.users.get(user) ?? 0) + 1);
+    }
+  }
+  return Array.from(map.values())
+    .map((e) => {
+      const decided = e.wins + e.losses;
+      const topUsers = Array.from(e.users.entries())
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 3);
+      return {
+        weapon: e.weapon,
+        item: e.item,
+        battles: e.battles,
+        wins: e.wins,
+        losses: e.losses,
+        decided,
+        winRate: decided > 0 ? e.wins / decided : 0,
+        topUsers,
+      };
+    })
+    .sort((a, b) => b.battles - a.battles);
+}
+
+/**
+ * 相性マトリックスで扱う主要な特性（タイプ）の表示順。
+ * 政治家・謎などの非戦闘タイプは対戦相性の対象外とする。
+ */
+export const MATCHUP_TRAITS = ["武特", "知特", "統特", "武統", "知武", "統知"];
+
+/** 相性マトリックスの 1 セル（攻撃側の特性 × 防衛側の特性）。 */
+export interface TraitMatchupCell {
+  /** 対戦数（攻撃側＝左側の延べ） */
+  battles: number;
+  wins: number;
+  losses: number;
+  /** 勝敗が確定した数（wins + losses） */
+  decided: number;
+  /** 勝率 0..1（decided が 0 のときは 0） */
+  winRate: number;
+}
+
+/** 特性ごとの相性マトリックス。 */
+export interface TraitMatchupMatrix {
+  /** 行（攻撃側）・列（防衛側）に並ぶ特性。 */
+  traits: string[];
+  /** matrix[i][j] = traits[i]（攻撃側）が traits[j]（防衛側）と戦った成績。 */
+  matrix: TraitMatchupCell[][];
+}
+
+/** ゲーム内の年でフィルタする範囲（西暦・両端を含む、null＝無制限）。 */
+export interface YearRange {
+  from: number | null;
+  to: number | null;
+}
+
+/** メタ分析の集計期間プリセット（ゲーム内の年で区切る）。 */
+export interface MetaPeriod extends YearRange {
+  key: string;
+  label: string;
+}
+
+/**
+ * メタ分析（相性マトリックス・環境ダッシュボード）の集計期間プリセット。
+ * ゲーム内の通算年（西暦の下2桁が「○年」）で区切る。from/to は西暦で両端を含む。
+ */
+export const META_PERIODS: MetaPeriod[] = [
+  { key: "y06", label: "06年-11年", from: 1606, to: 1611 },
+  { key: "y12", label: "12年-17年", from: 1612, to: 1617 },
+  { key: "y18", label: "18年-23年", from: 1618, to: 1623 },
+  { key: "y24", label: "24年-35年", from: 1624, to: 1635 },
+  { key: "y36", label: "36年-47年", from: 1636, to: 1647 },
+  { key: "y48", label: "48年-59年", from: 1648, to: 1659 },
+  { key: "y60", label: "60年以降", from: 1660, to: null },
+  { key: "all", label: "全期間", from: null, to: null },
+];
+
+/**
+ * card のゲーム内の年が範囲 [from, to]（両端含む）に入るか。
+ * range 未指定または両端 null なら常に true。年が判別できない戦闘は範囲指定時は除外する。
+ */
+function withinYearRange(
+  card: BattleCard,
+  range: YearRange | undefined
+): boolean {
+  if (!range || (range.from == null && range.to == null)) return true;
+  const y = gameYear(card);
+  if (y == null) return false;
+  if (range.from != null && y < range.from) return false;
+  if (range.to != null && y > range.to) return false;
+  return true;
+}
+
+/**
+ * 特性（タイプ）の組み合わせごとの勝率を、攻撃側（左）視点で集計する。
+ * 行＝攻撃側の特性 / 列＝防衛側の特性。各セルは「行の特性で攻めて列の特性に勝った率」。
+ * range を渡すと、その年範囲（ゲーム内の年が判明している分）に絞る。重複行は除外する。
+ */
+export function traitMatchupMatrix(
+  log: BattleRecord[],
+  range?: YearRange,
+  traits: string[] = MATCHUP_TRAITS
+): TraitMatchupMatrix {
+  const index = new Map<string, number>();
+  traits.forEach((t, i) => index.set(t, i));
+  const acc = traits.map(() =>
+    traits.map(() => ({ battles: 0, wins: 0, losses: 0 }))
+  );
+  for (const { card } of dedupedCards(log)) {
+    if (!withinYearRange(card, range)) continue;
+    const ri = index.get(card.left.type?.trim() ?? "");
+    const ci = index.get(card.right.type?.trim() ?? "");
+    if (ri == null || ci == null) continue;
+    const cell = acc[ri][ci];
+    cell.battles++;
+    const result = outcomeForSide(card.winner, "left");
+    if (result === "win") cell.wins++;
+    else if (result === "loss") cell.losses++;
+  }
+  const matrix = acc.map((row) =>
+    row.map((c) => {
+      const decided = c.wins + c.losses;
+      return {
+        battles: c.battles,
+        wins: c.wins,
+        losses: c.losses,
+        decided,
+        winRate: decided > 0 ? c.wins / decided : 0,
+      };
+    })
+  );
+  return { traits, matrix };
+}
+
+/**
+ * 特定の相性（攻撃側＝rowTrait × 防衛側＝colTrait）の戦闘を新しい順で集める。
+ * マトリックスのセルをクリックしたときの対戦履歴表示に使う。
+ */
+export function collectTraitMatchupBattles(
+  log: BattleRecord[],
+  rowTrait: string,
+  colTrait: string,
+  range?: YearRange
+): BattleOutcome[] {
+  const row = rowTrait.trim();
+  const col = colTrait.trim();
+  const out: BattleOutcome[] = [];
+  for (const { record, card } of dedupedCards(log)) {
+    if (!withinYearRange(card, range)) continue;
+    if ((card.left.type?.trim() ?? "") !== row) continue;
+    if ((card.right.type?.trim() ?? "") !== col) continue;
+    out.push(makeOutcome(record, card, "left"));
+  }
+  return sortByTimeDesc(out);
+}
+
+/* ---------- メタゲーム概観（環境ダッシュボード） ---------- */
+
+/** 兵種の強度ティア（上から S+ が最強）。 */
+export type MetaTier = "S+" | "S" | "A+" | "A" | "B" | "C";
+
+/** 強度ティアを判定するのに必要な、最小の勝敗確定戦数。 */
+export const META_MIN_TIER_DECIDED = 10;
+
+/** トレンド（直近半分 − 古い半分の勝率差）の算出に必要な、片側の最小サンプル。 */
+const META_TREND_MIN_HALF = 4;
+
+/** 環境ダッシュボードに表示する 1 兵種分の集計。 */
+export interface MetaUnitStat {
+  unit: string;
+  /** 最も多く登場した兵科。 */
+  branch?: string;
+  /** 延べ登場数（左右どちらでも 1 と数える）。 */
+  appearances: number;
+  /** 採用率 0..1（appearances / (2 × 総戦闘数)）。 */
+  pickRate: number;
+  wins: number;
+  losses: number;
+  /** 勝敗が確定した数（wins + losses）。 */
+  decided: number;
+  /** 勝率 0..1。 */
+  winRate: number;
+  /** 強度ティア。確定戦数が不足する場合は null。 */
+  tier: MetaTier | null;
+  /** 直近半分 − 古い半分の勝率差（-1..1）。サンプル不足は null。 */
+  trend: number | null;
+}
+
+/** 特性（タイプ）別の採用率・勝率。 */
+export interface MetaTraitStat {
+  trait: string;
+  appearances: number;
+  pickRate: number;
+  wins: number;
+  losses: number;
+  decided: number;
+  winRate: number;
+}
+
+/** 環境警告（支配的な兵種・採用率の突出など）。 */
+export interface MetaWarning {
+  unit: string;
+  /** dominant＝高採用かつ高勝率（S+）/ overpick＝採用率が突出。 */
+  level: "dominant" | "overpick";
+  message: string;
+}
+
+/** 環境ダッシュボードの集計結果。 */
+export interface MetaOverview {
+  /** 集計対象の総戦闘数（重複除外後）。 */
+  totalBattles: number;
+  /** 兵種別の集計（採用率の高い順）。 */
+  units: MetaUnitStat[];
+  /** 特性別の集計（採用率の高い順）。 */
+  traits: MetaTraitStat[];
+  /** 環境警告。 */
+  warnings: MetaWarning[];
+}
+
+/** 採用率・勝率・確定戦数から強度ティアを判定する。 */
+export function metaTier(
+  pickRate: number,
+  winRate: number,
+  decided: number
+): MetaTier | null {
+  if (decided < META_MIN_TIER_DECIDED) return null;
+  if (pickRate > 0.15 && winRate > 0.65) return "S+";
+  if (pickRate > 0.1 && winRate > 0.6) return "S";
+  if (pickRate > 0.05 && winRate > 0.55) return "A+";
+  if (winRate >= 0.52) return "A";
+  if (winRate >= 0.45) return "B";
+  return "C";
+}
+
+/** 確定戦（時刻つき）を新しい順に半分ずつ比較し、勝率差を返す。不足なら null。 */
+function computeTrend(decidedTimed: { t: number; win: boolean }[]): number | null {
+  const n = decidedTimed.length;
+  const half = Math.floor(n / 2);
+  if (half < META_TREND_MIN_HALF) return null;
+  const sorted = [...decidedTimed].sort((a, b) => b.t - a.t); // 新しい順
+  const recent = sorted.slice(0, half);
+  const older = sorted.slice(n - half);
+  const rateOf = (arr: { win: boolean }[]) =>
+    arr.filter((x) => x.win).length / arr.length;
+  return rateOf(recent) - rateOf(older);
+}
+
+interface MetaUnitAcc {
+  appearances: number;
+  wins: number;
+  losses: number;
+  branches: Map<string, number>;
+  /** トレンド算出用：勝敗が確定した戦闘を時刻つきで保持。 */
+  decidedTimed: { t: number; win: boolean }[];
+}
+
+interface MetaTraitAcc {
+  appearances: number;
+  wins: number;
+  losses: number;
+}
+
+/**
+ * 環境（メタゲーム）全体を概観する集計。
+ * 兵種ごとの採用率・勝率・強度ティア・トレンド、特性別の勝率、環境警告をまとめて返す。
+ * range を渡すと、その年範囲（ゲーム内の年が判明している分）に絞る。重複行は除外する。
+ * typeFilter を渡すと、兵種採用ランキングをその武将タイプ（特性）のものだけに絞り、
+ * 採用率は「そのタイプの中での割合」として計算する（特性別の勝率セクションは比較用なので絞らない）。
+ */
+export function metaOverview(
+  log: BattleRecord[],
+  range?: YearRange,
+  typeFilter?: string
+): MetaOverview {
+  const typeOf = typeFilter?.trim() || null;
+  const now = new Date();
+  const units = new Map<string, MetaUnitAcc>();
+  const traits = new Map<string, MetaTraitAcc>();
+  let totalBattles = 0;
+
+  const addUnit = (
+    side: BattleSide,
+    result: OutcomeResult,
+    t: number | null
+  ) => {
+    const name = side.unit ? normalizeDisplayToken(side.unit) : "";
+    if (!name) return;
+    let a = units.get(name);
+    if (!a) {
+      a = {
+        appearances: 0,
+        wins: 0,
+        losses: 0,
+        branches: new Map(),
+        decidedTimed: [],
+      };
+      units.set(name, a);
+    }
+    a.appearances++;
+    const branch = side.branch?.trim();
+    if (branch) a.branches.set(branch, (a.branches.get(branch) ?? 0) + 1);
+    if (result === "win") {
+      a.wins++;
+      if (t != null) a.decidedTimed.push({ t, win: true });
+    } else if (result === "loss") {
+      a.losses++;
+      if (t != null) a.decidedTimed.push({ t, win: false });
+    }
+  };
+
+  const addTrait = (side: BattleSide, result: OutcomeResult) => {
+    const trait = side.type?.trim();
+    if (!trait) return;
+    let s = traits.get(trait);
+    if (!s) {
+      s = { appearances: 0, wins: 0, losses: 0 };
+      traits.set(trait, s);
+    }
+    s.appearances++;
+    if (result === "win") s.wins++;
+    else if (result === "loss") s.losses++;
+  };
+
+  for (const { record, card } of dedupedCards(log)) {
+    if (!withinYearRange(card, range)) continue;
+    totalBattles++;
+    const t = parseActionDate(record.time, now)?.getTime() ?? null;
+    const leftResult = outcomeForSide(card.winner, "left");
+    const rightResult = outcomeForSide(card.winner, "right");
+    // 兵種ランキングは typeFilter 指定時にそのタイプの側だけ集計する。
+    if (typeOf == null || card.left.type?.trim() === typeOf)
+      addUnit(card.left, leftResult, t);
+    if (typeOf == null || card.right.type?.trim() === typeOf)
+      addUnit(card.right, rightResult, t);
+    // 特性別の勝率は比較ビューなので typeFilter に関わらず全タイプを集計する。
+    addTrait(card.left, leftResult);
+    addTrait(card.right, rightResult);
+  }
+
+  const denom = totalBattles * 2;
+  // typeFilter 指定時の採用率は「そのタイプの延べ登場数」を分母にし、タイプ内の割合として示す。
+  let unitAppearances = 0;
+  for (const a of units.values()) unitAppearances += a.appearances;
+  const unitDenom = typeOf ? unitAppearances : denom;
+
+  const unitStats: MetaUnitStat[] = Array.from(units.entries()).map(
+    ([unit, a]) => {
+      const decided = a.wins + a.losses;
+      const winRate = decided > 0 ? a.wins / decided : 0;
+      const pickRate = unitDenom > 0 ? a.appearances / unitDenom : 0;
+      let branch: string | undefined;
+      let bestN = 0;
+      for (const [b, n] of a.branches) {
+        if (n > bestN) {
+          branch = b;
+          bestN = n;
+        }
+      }
+      return {
+        unit,
+        branch,
+        appearances: a.appearances,
+        pickRate,
+        wins: a.wins,
+        losses: a.losses,
+        decided,
+        winRate,
+        tier: metaTier(pickRate, winRate, decided),
+        trend: computeTrend(a.decidedTimed),
+      };
+    }
+  );
+  unitStats.sort((x, y) => y.pickRate - x.pickRate || y.winRate - x.winRate);
+
+  const traitStats: MetaTraitStat[] = Array.from(traits.entries()).map(
+    ([trait, s]) => {
+      const decided = s.wins + s.losses;
+      return {
+        trait,
+        appearances: s.appearances,
+        pickRate: denom > 0 ? s.appearances / denom : 0,
+        wins: s.wins,
+        losses: s.losses,
+        decided,
+        winRate: decided > 0 ? s.wins / decided : 0,
+      };
+    }
+  );
+  traitStats.sort((x, y) => y.appearances - x.appearances);
+
+  const warnings: MetaWarning[] = [];
+  // タイプで絞り込んだときの採用率はタイプ内割合なので、全体基準の警告は出さない。
+  if (!typeOf) {
+    for (const u of unitStats) {
+      const pickPct = Math.round(u.pickRate * 100);
+      const winPct = Math.round(u.winRate * 100);
+      if (u.tier === "S+") {
+        warnings.push({
+          unit: u.unit,
+          level: "dominant",
+          message: `${u.unit} が高採用・高勝率で環境を支配しています（採用 ${pickPct}% / 勝率 ${winPct}%）。`,
+        });
+      } else if (u.pickRate > 0.22) {
+        warnings.push({
+          unit: u.unit,
+          level: "overpick",
+          message: `${u.unit} の採用率が突出しています（採用 ${pickPct}%）。`,
+        });
+      }
+    }
+  }
+
+  return { totalBattles, units: unitStats, traits: traitStats, warnings };
 }
 

@@ -1,4 +1,4 @@
-export type TabKey = "history" | "scout" | "db" | "damage" | "units" | "weapons" | "items" | "nations" | "factions" | "swi";
+export type TabKey = "home" | "history" | "scout" | "db" | "damage" | "units" | "weapons" | "items" | "nations" | "factions" | "swi" | "unitrank" | "weaponrank" | "itemrank" | "synergy" | "matrix" | "metaenv";
 
 export interface Warlord {
   /** 武将名（プライマリキー） */
@@ -15,9 +15,9 @@ export interface Warlord {
   unit?: string;
   /** 戦闘履歴上の年月 + 時刻（生文字列） */
   battleAt?: string;
-  /** 攻撃側（左側）として登場した最新の行動時刻（例: 06/15 09:30） */
+  /** 攻撃側または守備側として登場した最新の行動時刻（例: 06/15 09:30） */
   lastActionAt?: string;
-  /** 攻撃側として登場した行動時刻の履歴（昇順・重複なし） */
+  /** 攻撃側として登場した行動時刻の履歴（昇順・重複なし）。守備時刻は含まない。 */
   actions?: string[];
   /** 最後に登録された期番号（登録時にセット。パース中間オブジェクトでは省略可） */
   term?: number;

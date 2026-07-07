@@ -157,6 +157,12 @@ describe("スマホ貼り付け（リンク喪失で詰まった形式）", () =
     expect(w[0].lastActionAt).toBe("06/15 12:51");
   });
 
+  it("守備側は lastActionAt を設定するが actions は付けない（バッジ対象外）", () => {
+    const w = parseBattleLine(mobileGlued);
+    expect(w[1].lastActionAt).toBe("06/15 12:51");
+    expect(w[1].actions).toBeUndefined();
+  });
+
   it("装備2に連結した勝敗を切り離し、勝者・ターン数・装備を復元する", () => {
     const card = parseBattleCard(mobileGlued);
     expect(card).not.toBeNull();

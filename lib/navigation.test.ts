@@ -8,8 +8,9 @@ import {
 } from "./navigation";
 
 describe("buildPath", () => {
-  it("戦闘履歴（既定タブ）はルートになる", () => {
-    expect(buildPath("history", null)).toBe("/");
+  it("ホーム（既定タブ）はルート、戦闘履歴は /history になる", () => {
+    expect(buildPath("home", null)).toBe("/");
+    expect(buildPath("history", null)).toBe("/history");
   });
 
   it("入れ子グループのタブはグループ階層を含む", () => {
@@ -20,7 +21,7 @@ describe("buildPath", () => {
 
   it("詳細ページは単数形スラッグ＋エンコード名を付ける", () => {
     const detail: DetailView = { kind: "warlord", name: "最終兵器ルイズちゃん" };
-    expect(buildPath("history", detail)).toBe(
+    expect(buildPath("home", detail)).toBe(
       "/warlord/" + encodeURIComponent("最終兵器ルイズちゃん")
     );
   });
@@ -34,11 +35,15 @@ describe("buildPath", () => {
 });
 
 describe("navStateFromPath", () => {
-  it("ルートは戦闘履歴・詳細なし", () => {
-    expect(navStateFromPath("/")).toEqual({ tab: "history", detailStack: [] });
+  it("ルートはホーム・詳細なし", () => {
+    expect(navStateFromPath("/")).toEqual({ tab: "home", detailStack: [] });
   });
 
   it("入れ子タブパスを TabKey に戻す", () => {
+    expect(navStateFromPath("/history")).toEqual({
+      tab: "history",
+      detailStack: [],
+    });
     expect(navStateFromPath("/warlords/damage")).toEqual({
       tab: "damage",
       detailStack: [],
@@ -54,7 +59,7 @@ describe("navStateFromPath", () => {
     expect(
       navStateFromPath("/warlord/" + encodeURIComponent(name))
     ).toEqual({
-      tab: "history",
+      tab: "home",
       detailStack: [{ kind: "warlord", name }],
     });
   });
@@ -69,9 +74,9 @@ describe("navStateFromPath", () => {
     });
   });
 
-  it("不明なパスは戦闘履歴にフォールバックする", () => {
+  it("不明なパスはホームにフォールバックする", () => {
     expect(navStateFromPath("/totally/unknown")).toEqual({
-      tab: "history",
+      tab: "home",
       detailStack: [],
     });
   });
@@ -99,9 +104,9 @@ describe("navStateFromSearch（旧クエリ後方互換）", () => {
     });
   });
 
-  it("未知の tab は戦闘履歴にフォールバックする", () => {
+  it("未知の tab はホームにフォールバックする", () => {
     expect(navStateFromSearch("?tab=nope")).toEqual({
-      tab: "history",
+      tab: "home",
       detailStack: [],
     });
   });
@@ -120,9 +125,9 @@ describe("navStateFromLocation（パス優先・旧クエリ救済）", () => {
     ).toEqual({ tab: "db", detailStack: [] });
   });
 
-  it("ルート＋クエリ無しは戦闘履歴", () => {
+  it("ルート＋クエリ無しはホーム", () => {
     expect(navStateFromLocation({ pathname: "/", search: "" })).toEqual({
-      tab: "history",
+      tab: "home",
       detailStack: [],
     });
   });

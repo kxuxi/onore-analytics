@@ -144,6 +144,24 @@ export async function deleteUnitType(name: string): Promise<void> {
   invalidateUnitTypesCache();
 }
 
+/** 兵種を一括で追加 / 更新（貼り付け取り込み用）。
+ *  名前が一致する兵種は上書き、無ければ追加する（一覧に無い既存は削除しない）。 */
+export async function bulkUpsertUnitTypes(
+  units: UnitType[]
+): Promise<{ ok: boolean; count: number }> {
+  const res = await fetch("/api/unit-types", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ units }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error(data?.error ?? "兵種の一括取り込みに失敗しました");
+  }
+  invalidateUnitTypesCache();
+  return res.json();
+}
+
 /** 国の色設定をDBから取得する（認証不要）。取得失敗時は空マップを返す。 */
 export async function fetchFactionColors(): Promise<FactionColorMap> {
   try {

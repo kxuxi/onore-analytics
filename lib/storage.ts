@@ -19,23 +19,30 @@ export function mergeWarlords(
     if (prev) updated++;
     else added++;
 
-    // 行動時刻の履歴をマージ（昇順・重複なし・直近20件まで保持）。
+    // actions は攻撃時刻のみを保持（守備は lastActionAt に反映、固定バッジ対象外）。
     const actions = mergeActions(prev?.actions, w.actions);
-    const lastActionAt =
-      actions.length > 0
-        ? actions[actions.length - 1]
-        : pickLatestAction(prev?.lastActionAt, w.lastActionAt);
+    // lastActionAt は攻撃・守備どちらの時刻も取り込む。
+    // actions の末尾と w.lastActionAt を独立して比較し、新しい方を採用する。
+    const lastActionAt = pickLatestAction(
+      actions.length > 0 ? actions[actions.length - 1] : prev?.lastActionAt,
+      w.lastActionAt
+    );
 
-    // 属性（国・タイプ・兵科・兵種）は戦闘時刻が新しい方を採用する。
-    // prev が無い、または w の戦闘時刻が prev 以上に新しければ w を採用。
+    // 属性（国・タイプ・兵科・兵種・装備）は「より新しい戦闘」の方を採用する。
+    // 新旧は 期 → 在ゲーム年月 → 実時刻 の順で判定し（isNewerBattle 参照）、
+    // 攻撃・守備のどちらで観測したかは問わず、最新の戦闘で見えたプロフィールを反映する。
     const base = isNewerBattle(w, prev, now) ? w : prev ?? w;
 
     map[w.name] = {
       ...base,
-      // 行動履歴・登録時刻・期番号は常に最新へ更新
+      // 行動履歴・登録時刻は常に最新へ更新
       lastActionAt,
       actions: actions.length > 0 ? actions : undefined,
-      term: w.term ?? prev?.term,
+      // 期番号は採用した戦闘（base）に追従させる。
+      // ここを常に w.term にすると、より古い期の戦闘を後から処理したとき
+      // term が古い期へ書き換わり、battleAt（新しい期）と不整合になって
+      // 次回以降の期比較が壊れる（在ゲーム年が期ごとにリセットするため誤判定する）。
+      term: base.term ?? w.term ?? prev?.term,
       updatedAt: Math.max(prev?.updatedAt ?? 0, w.updatedAt),
       // 家督名は新しい方を採用（未設定なら既存値を保持）
       household: w.household ?? prev?.household,
@@ -53,9 +60,20 @@ export function mergeWarlords(
 }
 
 /**
- * 武将 w の戦闘時刻が prev より新しい（または同じ）かを判定する。
- * 戦闘時刻は battleAt の実時刻部分（MM/DD HH:mm）で比較する。
- * prev が無い、または prev に比較可能な時刻が無い場合は true。
+ * 武将 w の戦闘が prev より新しい（または同じ）かを判定する。
+ *
+ * 新旧判定の優先順位:
+ *   1) 期（term）。在ゲーム年月は期（シーズン）ごとに 1606 年へリセットされる
+ *      ため、期をまたぐと「古い期の大きい在ゲーム年」が「新しい期の小さい在ゲーム
+ *      年」より新しく見えてしまう。期番号は登録時に必ず付くシーズン識別子なので、
+ *      これを最優先にすれば期リセットに左右されず正しく新旧を決められる。
+ *   2) 在ゲーム年月（battleAt 先頭の "1706年1月" 等）。同じ期の中では在ゲーム年月が
+ *      戦闘順そのもの。登録時刻に依存しないため、過去ログの一括登録・再登録でも
+ *      安定する。攻守どちらで観測したかを問わず最新戦闘のプロフィールを採用できる。
+ *   3) 実時刻（MM/DD HH:mm）。期・在ゲーム年月のいずれも比較できない場合のみ使う。
+ *      登録時の now に依存して年跨ぎ補正が変わるため最後の手段とする。
+ *
+ * prev が無い、または比較可能な情報が無い場合は true。
  */
 function isNewerBattle(
   w: Warlord,
@@ -63,11 +81,35 @@ function isNewerBattle(
   now: Date
 ): boolean {
   if (!prev) return true;
+  // 1) 期（term）で比較。新しい期＝新しい戦闘。
+  const wt = w.term;
+  const pt = prev.term;
+  if (typeof wt === "number" && typeof pt === "number" && wt !== pt)
+    return wt > pt;
+  // 2) 同じ期（または期不明）の中では在ゲーム年月で比較する。
+  const wg = gameOrderOf(w.battleAt);
+  const pg = gameOrderOf(prev.battleAt);
+  if (wg != null && pg != null && wg !== pg) return wg > pg;
+  // 3) 在ゲーム年月も同じ／取れない場合のみ実時刻で決める。
   const wd = parseActionDate(extractTime(w.battleAt), now);
   const pd = parseActionDate(extractTime(prev.battleAt), now);
   if (!pd) return true;
   if (!wd) return false;
   return wd.getTime() >= pd.getTime();
+}
+
+/**
+ * battleAt 先頭の在ゲーム年月（"1706年1月" など）を順序値 year*12+month に変換する。
+ * 年月を取り出せない場合は null。
+ */
+function gameOrderOf(s: string | undefined): number | null {
+  if (!s) return null;
+  const m = s.match(/(\d+)\s*年\s*(\d+)\s*月/);
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  if (!Number.isFinite(year) || !Number.isFinite(month)) return null;
+  return year * 12 + month;
 }
 
 /** "1687年5月 06/15 09:30" などから "06/15 09:30" を取り出す。 */

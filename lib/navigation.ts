@@ -46,14 +46,21 @@ export const SEG_TO_DETAIL: Record<string, DetailKind> = Object.entries(
 
 /**
  * 各リーフタブの URL パス区切り（グループ階層を反映した入れ子）。
- * 戦闘履歴は既定なのでルート（空）に割り当てる。
+ * ホームは既定なのでルート（空）に割り当てる。
  */
 export const TAB_PATH: Record<TabKey, string[]> = {
-  history: [],
+  home: [],
+  history: ["history"],
   scout: ["warlords", "scout"],
   damage: ["warlords", "damage"],
   db: ["warlords", "db"],
   swi: ["ranking"],
+  unitrank: ["ranking", "units"],
+  weaponrank: ["ranking", "weapons"],
+  itemrank: ["ranking", "items"],
+  synergy: ["meta", "synergy"],
+  matrix: ["meta"],
+  metaenv: ["meta", "env"],
   units: ["encyclopedia", "units"],
   weapons: ["encyclopedia", "weapons"],
   items: ["encyclopedia", "items"],
@@ -99,7 +106,7 @@ export function navStateFromSearch(search: string): NavState {
   const tab: TabKey =
     tabKey && ALL_TAB_KEYS.includes(tabKey as TabKey)
       ? (tabKey as TabKey)
-      : "history";
+      : "home";
   let detailStack: DetailView[] = [];
   for (const kind of Object.keys(LEGACY_TAB_PARAM) as DetailKind[]) {
     const v = params.get(LEGACY_TAB_PARAM[kind]);
@@ -134,7 +141,7 @@ export function navStateFromPath(pathname: string): NavState {
       tabParts = parts.slice(0, parts.length - 2);
     }
   }
-  const tab = PATH_TO_TAB[tabParts.join("/")] ?? "history";
+  const tab = PATH_TO_TAB[tabParts.join("/")] ?? "home";
   return { tab, detailStack };
 }
 
@@ -144,9 +151,9 @@ export function navStateFromLocation(loc: {
   search: string;
 }): NavState {
   const fromPath = navStateFromPath(loc.pathname);
-  // パスが既定（ルート）で詳細も無いが、旧クエリ付きの共有リンクなら互換解釈する。
+  // パスが既定（ルート＝ホーム）で詳細も無いが、旧クエリ付きの共有リンクなら互換解釈する。
   if (
-    fromPath.tab === "history" &&
+    fromPath.tab === "home" &&
     fromPath.detailStack.length === 0 &&
     loc.search
   ) {

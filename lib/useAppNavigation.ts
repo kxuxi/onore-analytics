@@ -62,7 +62,7 @@ export function useAppNavigation({
   onCloseSidebar,
   allowedTabs,
 }: UseAppNavigationOptions = {}): AppNavigationState {
-  const [tab, setTab] = useState<TabKey>("history");
+  const [tab, setTab] = useState<TabKey>("home");
   const [detailStack, setDetailStack] = useState<DetailView[]>([]);
 
   // グループごとに最後に開いていたリーフタブ。グループ再選択時に復元する。
@@ -121,7 +121,7 @@ export function useAppNavigation({
     const { tab: t, detailStack: stack } = navStateFromLocation(
       window.location
     );
-    if (t !== "history" || stack.length > 0) {
+    if (t !== "home" || stack.length > 0) {
       justRestored.current = true;
       setTab(t);
       setDetailStack(stack);

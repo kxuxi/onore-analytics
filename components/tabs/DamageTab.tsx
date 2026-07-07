@@ -48,6 +48,7 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
   const [now, setNow] = useState<Date | null>(null);
   const [statusFilter, setStatusFilter] = useState<"" | ActionStatus>("");
   const [factionFilter, setFactionFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"" | "attack" | "defense-only">("");
   const [nameQuery, setNameQuery] = useState("");
   const [showFilter, setShowFilter] = useState(false);
 
@@ -114,6 +115,11 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
       .filter((r) => r.info.status !== "none")
       .filter((r) => (statusFilter ? r.info.status === statusFilter : true))
       .filter((r) => (factionFilter ? r.w.faction === factionFilter : true))
+      .filter((r) => {
+        if (roleFilter === "attack") return (r.w.actions?.length ?? 0) > 0;
+        if (roleFilter === "defense-only") return (r.w.actions?.length ?? 0) === 0;
+        return true;
+      })
       .filter((r) => (q ? r.w.name.toLowerCase().includes(q) : true))
       .sort((a, b) => {
         // 行動可 → 不明 → 行動済みの順。
@@ -122,7 +128,7 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
         if (so !== 0) return so;
         return (a.info.minutes ?? 0) - (b.info.minutes ?? 0);
       });
-  }, [db, now, statusFilter, factionFilter, nameQuery]);
+  }, [db, now, statusFilter, factionFilter, roleFilter, nameQuery]);
 
   // 国の選択肢（行動時刻を持つ武将の勢力名）
   const factionOptions = useMemo(() => {
@@ -137,29 +143,31 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
   }, [db]);
 
   const counts = useMemo(() => {
-    const c = { done: 0, ready: 0, unknown: 0 };
-    for (const { info } of rows) {
+    const c = { done: 0, ready: 0, unknown: 0, defenseOnly: 0 };
+    for (const { info, w } of rows) {
       if (info.status === "done") c.done++;
       else if (info.status === "ready") c.ready++;
       else if (info.status === "unknown") c.unknown++;
+      if ((w.actions?.length ?? 0) === 0) c.defenseOnly++;
     }
     return c;
   }, [rows]);
 
   // 検索ボックスとは別にトグルするドロップダウン系の絞り込み。
-  const hasDropdownFilter = !!(statusFilter || factionFilter);
-  const hasFilter = !!(nameQuery || statusFilter || factionFilter);
+  const hasDropdownFilter = !!(statusFilter || factionFilter || roleFilter);
+  const hasFilter = !!(nameQuery || statusFilter || factionFilter || roleFilter);
   const clearFilters = () => {
     setNameQuery("");
     setStatusFilter("");
     setFactionFilter("");
+    setRoleFilter("");
   };
 
   return (
     <section className="panel">
       <h2>被弾表（行動状況）</h2>
       <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-        各武将の行動時刻からの経過時間で行動状況を判定します。
+        攻撃・守備のどちらで登場した武将も行動時刻から行動状況を判定します。
         40分以内={ACTION_LABEL.done} / 40分〜1時間20分={ACTION_LABEL.ready} /
         1時間20分以上={ACTION_LABEL.unknown}。
       </p>
@@ -176,11 +184,21 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
             <div className="value">{counts[s].toLocaleString("ja-JP")}</div>
           </div>
         ))}
+        <div className="stat">
+          <div className="label">守備のみ</div>
+          <div className="value">{counts.defenseOnly.toLocaleString("ja-JP")}</div>
+        </div>
       </div>
 
       <details className="badge-legend">
-        <summary>固定バッジの見方</summary>
+        <summary>バッジの見方</summary>
         <ul className="badge-legend-list">
+          <li>
+            <span className="status defense-only">守備のみ</span>
+            <span className="muted">
+              守備でのみ観測されている武将です（攻撃履歴がないため固定バッジは付きません）。
+            </span>
+          </li>
           <li>
             <span className="status no-rest no-rest--loose">末尾固定</span>
             <span className="muted">
@@ -267,6 +285,20 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
               ))}
             </select>
           </label>
+          <label className="filter">
+            <span>役割</span>
+            <select
+              className="select"
+              value={roleFilter}
+              onChange={(e) =>
+                setRoleFilter(e.target.value as "" | "attack" | "defense-only")
+              }
+            >
+              <option value="">すべて</option>
+              <option value="attack">攻撃あり</option>
+              <option value="defense-only">守備のみ</option>
+            </select>
+          </label>
         </div>
       )}
 
@@ -277,7 +309,7 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
             <p className="empty-hint">
               「戦闘履歴」タブで戦績を貼り付けて登録すると、各武将の行動時刻から
               行動状況を判定してここに表示します。
-              絞り込みを設定している場合はステータス・国の条件を見直してください。
+              絞り込みを設定している場合はステータス・国・役割の条件を見直してください。
             </p>
           </div>
         ) : (
@@ -302,6 +334,14 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
                       <span className={STATUS_CLASS[info.status]}>
                         {ACTION_LABEL[info.status]}
                       </span>
+                      {(w.actions?.length ?? 0) === 0 && (
+                        <span
+                          className="status defense-only"
+                          title="守備でのみ観測されています"
+                        >
+                          守備のみ
+                        </span>
+                      )}
                       {info.noRestLabel && (
                         <span
                           className={

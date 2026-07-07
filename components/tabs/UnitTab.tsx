@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { UnitType } from "@/lib/types";
-import { fetchUnitTypes } from "@/lib/api";
+import { fetchUnitTypes, bulkUpsertUnitTypes } from "@/lib/api";
 import { UnitEditModal } from "@/components/tabs/UnitEditModal";
 import {
   EMPTY_UNIT,
   parseReqStats,
   splitGoodAgainst,
+  parseUnitTypesTsv,
   BASE_STAT_OPTIONS,
 } from "@/lib/unitTypeForm";
 import { FilterIcon, CloseIcon } from "@/components/icons";
@@ -43,8 +44,10 @@ const COLUMNS: {
 
 export function UnitTab({
   onSelectUnit,
+  isAdmin,
 }: {
   onSelectUnit: (name: string) => void;
+  isAdmin: boolean;
 }) {
   const [units, setUnits] = useState<UnitType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +57,12 @@ export function UnitTab({
   const [showFilter, setShowFilter] = useState(false);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showImport, setShowImport] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importMsg, setImportMsg] = useState<
+    { kind: "ok" | "error"; text: string } | null
+  >(null);
 
   const reload = async () => {
     setLoading(true);
@@ -150,6 +159,45 @@ export function UnitTab({
     setAdding(true);
   };
 
+  // 貼り付けたテキストを即時パースしてプレビュー件数を出す（取り込みボタンの表示用）。
+  const importPreview = useMemo(
+    () => parseUnitTypesTsv(importText),
+    [importText]
+  );
+
+  // 兵種一覧の表を貼り付けて一括 upsert（名前一致は上書き・新規は追加）。
+  const handleImport = async () => {
+    if (importing) return;
+    const { units, parsed, skipped } = parseUnitTypesTsv(importText);
+    if (parsed === 0) {
+      setImportMsg({
+        kind: "error",
+        text: "取り込める兵種がありませんでした。兵種一覧の表をタブ区切りのまま貼り付けてください。",
+      });
+      return;
+    }
+    setImporting(true);
+    setImportMsg(null);
+    try {
+      const { count } = await bulkUpsertUnitTypes(units);
+      const parts = [`${count.toLocaleString("ja-JP")}件を反映`];
+      if (skipped > 0) parts.push(`${skipped}行スキップ`);
+      setImportMsg({
+        kind: "ok",
+        text: `取り込み完了：${parts.join(" / ")}`,
+      });
+      setImportText("");
+      await reload();
+    } catch (e) {
+      setImportMsg({
+        kind: "error",
+        text: e instanceof Error ? e.message : "取り込みに失敗しました",
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <section className="panel">
       <div className="history-head">
@@ -163,11 +211,71 @@ export function UnitTab({
         )}
       </div>
 
-      <div className="row">
-        <button type="button" className="btn btn-primary" onClick={openNew}>
-          兵種を追加
-        </button>
-      </div>
+      {isAdmin && (
+        <>
+          <div className="row">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={openNew}
+            >
+              兵種を追加
+            </button>
+            <button
+              type="button"
+              className={"btn import-toggle" + (showImport ? " active" : "")}
+              onClick={() => setShowImport((v) => !v)}
+              aria-expanded={showImport}
+            >
+              <span>一括インポート</span>
+            </button>
+          </div>
+
+          {showImport && (
+            <div className="import-block">
+              <div className="import-body">
+                <p className="import-hint">
+                  兵種一覧の表をコピーして、そのまま貼り付けてください。名前が一致する兵種は上書き、無い兵種は新規追加します（一覧に無い既存の兵種は削除されません）。
+                </p>
+                <textarea
+                  className="import-box"
+                  value={importText}
+                  aria-label="兵種一覧の表の貼り付け"
+                  placeholder={
+                    "兵種\t種類\t得意兵種\t攻撃\t防御\t雇用金\t技術\t年数\t必要能力値\t施設/国宝\t特殊攻撃\tボーナス\n（兵種一覧の表をタブ区切りのまま貼り付け）"
+                  }
+                  onChange={(e) => setImportText(e.target.value)}
+                  spellCheck={false}
+                />
+                <div className="import-actions">
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={handleImport}
+                    disabled={importing || importPreview.parsed === 0}
+                  >
+                    {importing
+                      ? "取り込み中…"
+                      : importPreview.parsed > 0
+                        ? `${importPreview.parsed.toLocaleString("ja-JP")}件を取り込む`
+                        : "取り込む"}
+                  </button>
+                  {importMsg && (
+                    <span
+                      className={
+                        "import-msg" +
+                        (importMsg.kind === "error" ? " error" : " ok")
+                      }
+                    >
+                      {importMsg.text}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {error && (
         <p className="muted" role="alert">
