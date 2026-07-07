@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { WarlordMap } from "@/lib/types";
 import { copyText } from "@/lib/clipboard";
 import { parseWarlordStats } from "@/lib/warlordStats";
+import { displayWarlordType } from "@/lib/warlordType";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
 import { FilterIcon, CloseIcon } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
@@ -468,7 +469,7 @@ export function DbTab({ db, colors, onSelectWarlord, onSelectFaction, onImportSt
                     </button>
                   </td>
                   <td data-label="タイプ">
-                    <span className="tag type">{w.type}</span>
+                    <span className="tag type">{displayWarlordType(w)}</span>
                   </td>
                   <td data-label="兵科">
                     <span className="tag branch">{w.branch}</span>

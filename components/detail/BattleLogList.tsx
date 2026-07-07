@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { normalizeDisplayToken } from "@/lib/parser";
-import { outcomeYear, BATTLE_LOG_PAGE_SIZE as PAGE_SIZE } from "@/lib/stats";
+import { BATTLE_LOG_PAGE_SIZE as PAGE_SIZE } from "@/lib/stats";
 import type { BattleOutcome, OutcomeResult } from "@/lib/stats";
 import type { BattleSide } from "@/lib/parser";
 import { copyText } from "@/lib/clipboard";
+import {
+  useYearRangeFilter,
+  YearRangeFilterBar,
+  type YearRangeFilter,
+} from "@/components/detail/YearRangeFilter";
 import {
   ExternalLinkIcon,
   CopyIcon,
@@ -22,6 +27,11 @@ interface Props {
   currentUnit?: string;
   onSelectWarlord: (name: string) => void;
   onSelectUnit: (name: string) => void;
+  /**
+   * 年フィルターを外部（呼び出し側）と共有する場合に渡す。
+   * 渡された場合、自前の年フィルターUIは表示せず、渡された絞り込み済み結果をそのまま使う。
+   */
+  yearFilter?: YearRangeFilter;
 }
 
 function resultLabel(o: BattleOutcome): string {
@@ -117,51 +127,23 @@ export function BattleLogList({
   currentUnit,
   onSelectWarlord,
   onSelectUnit,
+  yearFilter,
 }: Props) {
-  // 戦闘に含まれるゲーム内の年（新しい順）。年フィルタの選択肢に使う。
-  const years = useMemo(() => {
-    const set = new Set<number>();
-    for (const o of outcomes) {
-      const y = outcomeYear(o);
-      if (y != null) set.add(y);
-    }
-    return Array.from(set).sort((a, b) => b - a);
-  }, [outcomes]);
-  const minYear = years.length ? years[years.length - 1] : 0;
-  const maxYear = years.length ? years[0] : 0;
+  // 呼び出し側から年フィルターが渡されなければ、自前で管理する（フックは常に呼ぶ）。
+  const ownYearFilter = useYearRangeFilter(outcomes);
+  const yf = yearFilter ?? ownYearFilter;
+  const showOwnFilterBar = !yearFilter;
+  const filtered = yf.filtered;
 
-  // 取得する年の範囲（既定は全期間 = 最小〜最大）。
-  const [fromYear, setFromYear] = useState(minYear);
-  const [toYear, setToYear] = useState(maxYear);
   const [page, setPage] = useState(1);
   const wrapRef = useRef<HTMLDivElement | null>(null);
-
-  // データが変わって年の範囲が変わったら、選択を全期間へ戻す。
-  useEffect(() => {
-    setFromYear(minYear);
-    setToYear(maxYear);
-  }, [minYear, maxYear]);
-
-  const lo = Math.min(fromYear, toYear);
-  const hi = Math.max(fromYear, toYear);
-  const isFiltered = lo !== minYear || hi !== maxYear;
-
-  // 年の範囲で絞り込む。範囲を狭めた場合のみ「年が不明な戦闘」を除外する。
-  const filtered = useMemo(() => {
-    if (!isFiltered) return outcomes;
-    return outcomes.filter((o) => {
-      const y = outcomeYear(o);
-      if (y == null) return false;
-      return y >= lo && y <= hi;
-    });
-  }, [outcomes, isFiltered, lo, hi]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
 
   // 絞り込みの変化でページをリセットし、総ページ数の変化で範囲外を補正する。
   useEffect(() => {
     setPage(1);
-  }, [lo, hi]);
+  }, [yf.fromYear, yf.toYear]);
   useEffect(() => {
     setPage((p) => Math.min(Math.max(1, p), totalPages));
   }, [totalPages]);
@@ -175,10 +157,6 @@ export function BattleLogList({
     setPage(next);
     wrapRef.current?.scrollIntoView({ block: "nearest" });
   };
-  const resetYears = () => {
-    setFromYear(minYear);
-    setToYear(maxYear);
-  };
 
   if (outcomes.length === 0) {
     return <div className="empty">該当する戦闘履歴がありません。</div>;
@@ -186,55 +164,12 @@ export function BattleLogList({
 
   return (
     <div className="detail-log-wrap" ref={wrapRef}>
-      {years.length >= 2 && (
-        <div className="log-filter">
-          <span className="log-filter-label">表示する年</span>
-          <label className="log-filter-field">
-            <span className="sr-only">開始年</span>
-            <select
-              className="select"
-              value={fromYear}
-              onChange={(e) => setFromYear(Number(e.target.value))}
-            >
-              {years.map((y) => (
-                <option key={y} value={y}>
-                  {y}年
-                </option>
-              ))}
-            </select>
-          </label>
-          <span className="log-filter-sep" aria-hidden="true">
-            〜
-          </span>
-          <label className="log-filter-field">
-            <span className="sr-only">終了年</span>
-            <select
-              className="select"
-              value={toYear}
-              onChange={(e) => setToYear(Number(e.target.value))}
-            >
-              {years.map((y) => (
-                <option key={y} value={y}>
-                  {y}年
-                </option>
-              ))}
-            </select>
-          </label>
-          {isFiltered && (
-            <button
-              type="button"
-              className="btn log-filter-clear"
-              onClick={resetYears}
-            >
-              全期間
-            </button>
-          )}
-        </div>
-      )}
+      {showOwnFilterBar && yf.years.length >= 2 && <YearRangeFilterBar {...yf} />}
 
       {filtered.length === 0 ? (
         <div className="empty">
-          選択した期間（{lo}年〜{hi}年）の戦闘履歴がありません。
+          選択した期間（{Math.min(yf.fromYear, yf.toYear)}年〜
+          {Math.max(yf.fromYear, yf.toYear)}年）の戦闘履歴がありません。
         </div>
       ) : (
         <>
