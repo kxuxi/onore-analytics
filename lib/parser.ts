@@ -14,6 +14,21 @@ export function splitBattleSegments(text: string): string[] {
 }
 
 /**
+ * 全角の数字・日時区切りを半角へ正規化する。
+ * gameYear や時刻の読み取りなど、数値を扱う側で全角（例: `１７００年４月`、
+ * `０４／１２ １２：００`）で貼られた履歴からも値を取り出せるようにするヘルパー。
+ * 全角数字（０-９）・スラッシュ（／）・コロン（：）のみを対象とし、それ以外の文字は変えない。
+ */
+export function normalizeWidth(s: string): string {
+  return s.replace(/[０-９／：]/g, (ch) => {
+    const code = ch.charCodeAt(0);
+    if (code === 0xff0f) return "/"; // 全角スラッシュ ／
+    if (code === 0xff1a) return ":"; // 全角コロン ：
+    return String.fromCharCode(code - 0xfee0); // ０-９ → 0-9
+  });
+}
+
+/**
  * 戦闘履歴 1 行を解析しやすい形へ正規化し、含まれていれば URL を取り出す。
  *
  * ゲーム履歴をリンク付き（PC でコピー）で貼ると

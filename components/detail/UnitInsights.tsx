@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useState } from "react";
 import { formatWinRate } from "@/lib/stats";
 import { Section } from "@/components/detail/Section";
 import type {
@@ -142,55 +142,135 @@ export function UserWinRateList({
   );
 }
 
-/* ---------- 時期別の使用率推移 ---------- */
+/* ---------- 時期別の使用率・勝敗数の推移 ---------- */
+
+type TrendMetric = "rate" | "wins" | "losses";
+
+const TREND_METRICS: { key: TrendMetric; label: string; color: string }[] = [
+  { key: "rate", label: "使用率", color: "#3b82f6" },
+  { key: "wins", label: "勝利数", color: "#22c55e" },
+  { key: "losses", label: "敗北数", color: "#ef4444" },
+];
+
+/** 年別の推移を 1 本の折れ線で描く（Y 軸は指標に応じて % か戦闘数）。 */
+function TrendLineChart({
+  points,
+  metric,
+  color,
+}: {
+  points: UsageTrendPoint[];
+  metric: TrendMetric;
+  color: string;
+}) {
+  const W = 640;
+  const H = 220;
+  const padL = 34;
+  const padR = 10;
+  const padT = 10;
+  const padB = 22;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  const years = points.map((p) => p.year);
+  const n = years.length;
+  const xAt = (i: number) =>
+    padL + (n <= 1 ? plotW / 2 : (i / (n - 1)) * plotW);
+  const isRate = metric === "rate";
+  const valueOf = (p: UsageTrendPoint) =>
+    isRate ? p.rate * 100 : metric === "wins" ? p.wins : p.losses;
+  const rawMax = Math.max(0, ...points.map(valueOf));
+  const niceMax = Math.max(4, Math.ceil(rawMax / 4) * 4);
+  const yAt = (v: number) => padT + (1 - v / niceMax) * plotH;
+  const linePts = points
+    .map((p, i) => `${xAt(i)},${yAt(valueOf(p))}`)
+    .join(" ");
+  return (
+    <div className="home-line-wrap">
+      <svg
+        className="home-linechart"
+        viewBox={`0 0 ${W} ${H}`}
+        role="img"
+        aria-label="年別の推移グラフ"
+      >
+        {[0, 0.25, 0.5, 0.75, 1].map((g) => {
+          const v = niceMax * g;
+          return (
+            <g key={g}>
+              <line
+                className="home-line-grid"
+                x1={padL}
+                y1={yAt(v)}
+                x2={W - padR}
+                y2={yAt(v)}
+              />
+              <text className="home-line-ytick" x={padL - 4} y={yAt(v) + 3}>
+                {isRate ? `${Math.round(v)}%` : Math.round(v)}
+              </text>
+            </g>
+          );
+        })}
+        {years.map((yr, i) =>
+          yr % 10 === 0 ? (
+            <text
+              key={yr}
+              className="home-line-xtick"
+              x={xAt(i)}
+              y={H - 6}
+              textAnchor="middle"
+            >
+              {yr}
+            </text>
+          ) : null
+        )}
+        <polyline
+          className="home-line-path"
+          points={linePts}
+          style={{ stroke: color }}
+        />
+      </svg>
+    </div>
+  );
+}
 
 export function UsageTrend({ points }: { points: UsageTrendPoint[] }) {
   // 使用実績が 1 件も無い、または期間が 1 点しか無い場合は推移にならないため非表示。
   const meaningful = points.filter((p) => p.unitBattles > 0);
-  const chartRef = useRef<HTMLDivElement>(null);
-  // 年は左（古い）→右（新しい）の並び。最新の状況を初期表示にするため、
-  // マウント時・セクション展開（display:none→block）・リサイズ時に右端へスクロールする。
-  useEffect(() => {
-    const el = chartRef.current;
-    if (!el) return;
-    const scrollToEnd = () => {
-      el.scrollLeft = el.scrollWidth;
-    };
-    scrollToEnd();
-    const ro = new ResizeObserver(scrollToEnd);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [points]);
+  const [metric, setMetric] = useState<TrendMetric>("rate");
   if (meaningful.length === 0 || points.length < 2) return null;
-  const maxRate = Math.max(...points.map((p) => p.rate), 0.0001);
+  const active =
+    TREND_METRICS.find((m) => m.key === metric) ?? TREND_METRICS[0];
+  const note =
+    metric === "rate"
+      ? "各年の全戦闘のうち、この兵種が登場した割合。"
+      : metric === "wins"
+      ? "各年にこの兵種が挙げた勝利数（左右両陣営が使った戦闘は各視点で加算）。"
+      : "各年にこの兵種が喫した敗北数（左右両陣営が使った戦闘は各視点で加算）。";
   return (
-    <Section title="使用率の推移（年別）" mobileCollapsed>
-      <p className="trend-note muted">
-        各年の全戦闘のうち、この兵種が登場した割合。
-      </p>
-      <div className="trend-chart" ref={chartRef}>
-        {points.map((p) => {
-          const h = Math.round((p.rate / maxRate) * 100);
-          return (
-            <div
-              key={p.year}
-              className="trend-col"
-              title={`${p.year}年：使用率 ${Math.round(p.rate * 100)}%（${
-                p.unitBattles
-              }/${p.totalBattles}戦）`}
-            >
-              <div className="trend-bar-track">
-                <div
-                  className="trend-bar-fill"
-                  style={{ height: `${Math.max(h, p.unitBattles > 0 ? 3 : 0)}%` }}
-                />
-              </div>
-              <div className="trend-pct">{Math.round(p.rate * 100)}%</div>
-              <div className="trend-year">{p.year}</div>
-            </div>
-          );
-        })}
+    <Section title="使用率・勝敗数の推移（年別）" mobileCollapsed>
+      <div className="trend-controls">
+        <label className="trend-metric-label">
+          表示
+          <select
+            className="select trend-metric-select"
+            value={metric}
+            onChange={(e) => setMetric(e.target.value as TrendMetric)}
+          >
+            {TREND_METRICS.map((m) => (
+              <option key={m.key} value={m.key}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <span className="trend-legend">
+          <span
+            className="trend-legend-dot"
+            style={{ background: active.color }}
+          />
+          {active.label}
+        </span>
       </div>
+      <p className="trend-note muted">{note}</p>
+      <TrendLineChart points={points} metric={metric} color={active.color} />
     </Section>
   );
 }

@@ -741,6 +741,60 @@ export function outcomeYear(o: BattleOutcome): number | null {
   return gameYear(o.card);
 }
 
+/** 年別の勝率（棒グラフ用）。ゲーム内の 1 年分の集計。 */
+export interface YearlyWinRate {
+  year: number;
+  battles: number;
+  wins: number;
+  losses: number;
+  /** 勝敗が確定した数（wins + losses） */
+  decided: number;
+  /** 勝率 0..1（decided が 0 のときは 0） */
+  winRate: number;
+}
+
+/**
+ * 戦績をゲーム内の年ごとに集計する。fromYear（既定 1600）からデータ内の
+ * 最終年まで、年が飛んでいても連続した年の配列を返す（棒グラフ用に欠けた年も
+ * 0 件で埋める）。年が判別できない戦闘は除外する。データが無ければ空配列。
+ */
+export function yearlyWinRates(
+  outcomes: BattleOutcome[],
+  fromYear = 1600
+): YearlyWinRate[] {
+  const map = new Map<number, { battles: number; wins: number; losses: number }>();
+  let maxYear: number | null = null;
+  for (const o of outcomes) {
+    const y = outcomeYear(o);
+    if (y == null) continue;
+    let e = map.get(y);
+    if (!e) {
+      e = { battles: 0, wins: 0, losses: 0 };
+      map.set(y, e);
+    }
+    e.battles++;
+    if (o.result === "win") e.wins++;
+    else if (o.result === "loss") e.losses++;
+    if (maxYear == null || y > maxYear) maxYear = y;
+  }
+  if (maxYear == null) return [];
+  const start = Math.min(fromYear, maxYear);
+  const out: YearlyWinRate[] = [];
+  for (let y = start; y <= maxYear; y++) {
+    const e = map.get(y) ?? { battles: 0, wins: 0, losses: 0 };
+    const decided = e.wins + e.losses;
+    out.push({
+      year: y,
+      battles: e.battles,
+      wins: e.wins,
+      losses: e.losses,
+      decided,
+      winRate: decided > 0 ? e.wins / decided : 0,
+    });
+  }
+  return out;
+}
+
 /**
  * battleAt からゲーム内の「年・月」を時系列順の比較値（year*12 + month）に変換する。
  * 月が取れない場合は year*12 を使う。年も取れなければ null。
@@ -1226,6 +1280,12 @@ export interface UsageTrendPoint {
   unitBattles: number;
   /** 使用率 0..1（totalBattles が 0 のときは 0） */
   rate: number;
+  /** その年のこの兵種の勝利数（左右両陣営が使った場合は各視点で加算） */
+  wins: number;
+  /** その年のこの兵種の敗北数 */
+  losses: number;
+  /** 勝敗が確定した数（wins + losses） */
+  decided: number;
 }
 
 /**
@@ -1240,22 +1300,39 @@ export function unitUsageTrend(
   const target = unitName.trim();
   const total = new Map<number, number>();
   const used = new Map<number, number>();
+  const wins = new Map<number, number>();
+  const losses = new Map<number, number>();
   for (const { card } of dedupedCards(log)) {
     const year = gameYear(card);
     if (year == null) continue;
     total.set(year, (total.get(year) ?? 0) + 1);
-    const inBattle =
-      unitMatches(card.left, target) || unitMatches(card.right, target);
-    if (inBattle) used.set(year, (used.get(year) ?? 0) + 1);
+    const inLeft = unitMatches(card.left, target);
+    const inRight = unitMatches(card.right, target);
+    if (inLeft || inRight) used.set(year, (used.get(year) ?? 0) + 1);
+    if (inLeft) {
+      const r = outcomeForSide(card.winner, "left");
+      if (r === "win") wins.set(year, (wins.get(year) ?? 0) + 1);
+      else if (r === "loss") losses.set(year, (losses.get(year) ?? 0) + 1);
+    }
+    if (inRight) {
+      const r = outcomeForSide(card.winner, "right");
+      if (r === "win") wins.set(year, (wins.get(year) ?? 0) + 1);
+      else if (r === "loss") losses.set(year, (losses.get(year) ?? 0) + 1);
+    }
   }
   return Array.from(total.entries())
     .map(([year, totalBattles]) => {
       const unitBattles = used.get(year) ?? 0;
+      const w = wins.get(year) ?? 0;
+      const l = losses.get(year) ?? 0;
       return {
         year,
         totalBattles,
         unitBattles,
         rate: totalBattles > 0 ? unitBattles / totalBattles : 0,
+        wins: w,
+        losses: l,
+        decided: w + l,
       };
     })
     .sort((a, b) => a.year - b.year);
@@ -1391,7 +1468,8 @@ export interface SideSwiStat {
 function computeSideSwi(
   log: BattleRecord[],
   side: SideKey,
-  db?: WarlordMap
+  db?: WarlordMap,
+  range?: YearRange
 ): Map<string, SideSwiStat> {
   // 同じ household の複数の名前を最新の代表名に正規化するマップ
   const normMap = db ? normalizationMap(db) : null;
@@ -1403,6 +1481,7 @@ function computeSideSwi(
   const branchOf = new Map<string, string | undefined>();
 
   for (const { card } of dedupedCards(log)) {
+    if (!withinYearRange(card, range)) continue;
     const self = side === "left" ? card.left : card.right;
     let name = self.name?.trim();
     if (!name) continue;
@@ -1474,8 +1553,12 @@ function computeSideSwi(
   return out;
 }
 
-export function swiRanking(log: BattleRecord[], minSorties = 5): SwiStat[] {
-  return Array.from(computeSideSwi(log, "left").values())
+export function swiRanking(
+  log: BattleRecord[],
+  minSorties = 5,
+  range?: YearRange
+): SwiStat[] {
+  return Array.from(computeSideSwi(log, "left", undefined, range).values())
     .filter((a) => a.sorties >= minSorties)
     .map((a) => ({
       name: a.name,
@@ -1575,10 +1658,14 @@ const ASSIST_WINDOW_MS = 40 * 60 * 1000;
  * - 同一 battleAt（同一タイムスタンプ）内の別ラウンドは 0 分差のため
  *   「別イベント」に含めない（T < T2 の厳格チェック）。
  */
-function computeAssists(log: BattleRecord[], db?: WarlordMap): Map<string, number> {
+function computeAssists(
+  log: BattleRecord[],
+  db?: WarlordMap,
+  range?: YearRange
+): Map<string, number> {
   const normMap = db ? normalizationMap(db) : null;
   const now = new Date();
-  const cards = dedupedCards(log);
+  const cards = dedupedCards(log).filter(({ card }) => withinYearRange(card, range));
 
   // battleAt の parse 結果をキャッシュする。
   const timeCache = new Map<string, number | null>();
@@ -1651,14 +1738,16 @@ function computeAssists(log: BattleRecord[], db?: WarlordMap): Map<string, numbe
   return assists;
 }
 
-/** 決着戦目ごとの攻撃/守備勝率集計（撤退・引き分けを除く）。 */
+/** 決着戦目ごとの攻撃/守備勝率集計（撤退を除く）。 */
 function computeRoundWinRates(
   log: BattleRecord[],
-  db?: WarlordMap
+  db?: WarlordMap,
+  range?: YearRange
 ): Map<string, { attackWins: number; attackRounds: number; defenseWins: number; defenseRounds: number }> {
   const normMap = db ? normalizationMap(db) : null;
   const out = new Map<string, { attackWins: number; attackRounds: number; defenseWins: number; defenseRounds: number }>();
   for (const { card } of dedupedCards(log)) {
+    if (!withinYearRange(card, range)) continue;
     if (card.winner !== "left" && card.winner !== "right") continue;
     let leftName = card.left.name?.trim();
     let rightName = card.right.name?.trim();
@@ -1688,7 +1777,8 @@ function computeRoundWinRates(
 function computeEfficiency(
   log: BattleRecord[],
   side: SideKey,
-  db?: WarlordMap
+  db?: WarlordMap,
+  range?: YearRange
 ): Map<string, { wins: number; sorties: number }> {
   const normMap = db ? normalizationMap(db) : null;
   interface Sortie {
@@ -1698,6 +1788,7 @@ function computeEfficiency(
   const sorties = new Map<string, Sortie>();
 
   for (const { card } of dedupedCards(log)) {
+    if (!withinYearRange(card, range)) continue;
     const self = side === "left" ? card.left : card.right;
     let name = self.name?.trim();
     if (name && normMap && normMap[name]) {
@@ -1735,13 +1826,17 @@ function computeEfficiency(
  * @param log 戦闘ログ
  * @param db 武将DB。渡された場合、同じ household の複数の名前を1つに正規化。
  */
-export function warlordRanking(log: BattleRecord[], db?: WarlordMap): WarlordRankStat[] {
-  const atk = computeSideSwi(log, "left", db);
-  const def = computeSideSwi(log, "right", db);
-  const atkEff = computeEfficiency(log, "left", db);
-  const defEff = computeEfficiency(log, "right", db);
-  const roundRates = computeRoundWinRates(log, db);
-  const assistsMap = computeAssists(log, db);
+export function warlordRanking(
+  log: BattleRecord[],
+  db?: WarlordMap,
+  range?: YearRange
+): WarlordRankStat[] {
+  const atk = computeSideSwi(log, "left", db, range);
+  const def = computeSideSwi(log, "right", db, range);
+  const atkEff = computeEfficiency(log, "left", db, range);
+  const defEff = computeEfficiency(log, "right", db, range);
+  const roundRates = computeRoundWinRates(log, db, range);
+  const assistsMap = computeAssists(log, db, range);
   const names = new Set<string>([...atk.keys(), ...def.keys()]);
   const out: WarlordRankStat[] = [];
   for (const name of names) {
@@ -1803,7 +1898,8 @@ export interface EquipStat {
  */
 function collectEquipStats(
   log: BattleRecord[],
-  pick: (side: BattleSide) => string | undefined
+  pick: (side: BattleSide) => string | undefined,
+  range?: YearRange
 ): EquipStat[] {
   interface Acc {
     name: string;
@@ -1818,6 +1914,7 @@ function collectEquipStats(
   const map = new Map<string, Acc>();
   const sides: SideKey[] = ["left", "right"];
   for (const { card } of dedupedCards(log)) {
+    if (!withinYearRange(card, range)) continue;
     for (const side of sides) {
       const self = side === "left" ? card.left : card.right;
       const result = outcomeForSide(card.winner, side);
@@ -1873,13 +1970,13 @@ function collectEquipStats(
 }
 
 /** 武器（ゲームの装備2列）ごとの使用実績を集計する。 */
-export function weaponStats(log: BattleRecord[]): EquipStat[] {
-  return collectEquipStats(log, (s) => s.equip2);
+export function weaponStats(log: BattleRecord[], range?: YearRange): EquipStat[] {
+  return collectEquipStats(log, (s) => s.equip2, range);
 }
 
 /** 品物（ゲームの装備1列）ごとの使用実績を集計する。 */
-export function itemStats(log: BattleRecord[]): EquipStat[] {
-  return collectEquipStats(log, (s) => s.equip1);
+export function itemStats(log: BattleRecord[], range?: YearRange): EquipStat[] {
+  return collectEquipStats(log, (s) => s.equip1, range);
 }
 
 /** 兵種ランキングの集計単位。 */
@@ -1909,7 +2006,7 @@ export interface UnitStat {
  * 兵種ごとの出撃実績を集計し、使用回数・勝率・主な使用武将を求める。
  * 攻撃側・守備側の両方を対象とし、重複行は除外する。兵科は最頻のものを代表とする。
  */
-export function unitStats(log: BattleRecord[]): UnitStat[] {
+export function unitStats(log: BattleRecord[], range?: YearRange): UnitStat[] {
   interface Acc {
     unit: string;
     branches: Map<string, number>;
@@ -1924,6 +2021,7 @@ export function unitStats(log: BattleRecord[]): UnitStat[] {
   const map = new Map<string, Acc>();
   const sides: SideKey[] = ["left", "right"];
   for (const { card } of dedupedCards(log)) {
+    if (!withinYearRange(card, range)) continue;
     for (const side of sides) {
       const self = side === "left" ? card.left : card.right;
       const raw = self.unit;
@@ -2153,6 +2251,34 @@ export const META_PERIODS: MetaPeriod[] = [
   { key: "y60", label: "60年以降", from: 1660, to: null },
   { key: "all", label: "全期間", from: null, to: null },
 ];
+
+/** ランキングの「過去10年間」プリセットのキー。 */
+export const RANKING_LAST10_KEY = "last10";
+
+/** ログ中で最も新しいゲーム内の年を返す（判別できる戦闘が無ければ null）。 */
+export function latestGameYear(log: BattleRecord[]): number | null {
+  let max: number | null = null;
+  for (const { card } of dedupedCards(log)) {
+    const y = gameYear(card);
+    if (y != null && (max == null || y > max)) max = y;
+  }
+  return max;
+}
+
+/**
+ * ランキング（武将 / 兵種 / 武器 / 品物）用の集計期間プリセット。
+ * 先頭はデフォルトの「過去10年間」（ログ中の最新のゲーム内年から遡って 10 年）。
+ * 続けてメタ分析と同じ絶対年バケット（06年-11年 …）と全期間を並べ、
+ * 特定の年ごとに区切って比較できるようにする。
+ */
+export function rankingPeriods(log: BattleRecord[]): MetaPeriod[] {
+  const latest = latestGameYear(log);
+  const last10: MetaPeriod =
+    latest != null
+      ? { key: RANKING_LAST10_KEY, label: "過去10年間", from: latest - 9, to: latest }
+      : { key: RANKING_LAST10_KEY, label: "過去10年間", from: null, to: null };
+  return [last10, ...META_PERIODS];
+}
 
 /**
  * card のゲーム内の年が範囲 [from, to]（両端含む）に入るか。

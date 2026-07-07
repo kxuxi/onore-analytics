@@ -5,7 +5,7 @@ import type { BattleRecord } from "@/lib/types";
 import {
   metaOverview,
   formatWinRate,
-  META_PERIODS,
+  rankingPeriods,
 } from "@/lib/stats";
 import { AlertTriangleIcon } from "@/components/icons";
 
@@ -13,9 +13,6 @@ interface Props {
   log: BattleRecord[];
   onSelectUnit: (name: string) => void;
 }
-
-/** 集計期間のプリセット（ゲーム内の年で区切る）。相性マトリックスと共通。 */
-type PeriodKey = (typeof META_PERIODS)[number]["key"];
 
 /** 採用率ランキングに表示する上位件数。 */
 const TOP_N = 10;
@@ -30,12 +27,14 @@ function pct(rate: number): string {
  * まとめて表示する。兵種名クリックで兵種詳細へ遷移する。
  */
 export function MetaTab({ log, onSelectUnit }: Props) {
-  const [period, setPeriod] = useState<PeriodKey>("all");
+  const [period, setPeriod] = useState<string>("all");
   const [type, setType] = useState<string>("");
 
+  // 集計期間（先頭＝過去10年間、以降はメタ分析の絶対年バケット＋全期間）。
+  const periods = useMemo(() => rankingPeriods(log), [log]);
   const range = useMemo(
-    () => META_PERIODS.find((p) => p.key === period) ?? null,
-    [period]
+    () => periods.find((p) => p.key === period) ?? null,
+    [periods, period]
   );
 
   // 武将タイプの選択肢は期間に依存せず安定させたいので、全期間から抽出する。
@@ -75,7 +74,7 @@ export function MetaTab({ log, onSelectUnit }: Props) {
       </p>
 
       <div className="tmx-periods" role="tablist" aria-label="集計期間">
-        {META_PERIODS.map((p) => (
+        {periods.map((p) => (
           <button
             key={p.key}
             type="button"

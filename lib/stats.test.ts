@@ -23,6 +23,9 @@ import {
   weaponStats,
   itemStats,
   unitStats,
+  rankingPeriods,
+  latestGameYear,
+  RANKING_LAST10_KEY,
   equipSynergy,
   traitMatchupMatrix,
   collectTraitMatchupBattles,
@@ -634,6 +637,12 @@ describe("unitUsageTrend", () => {
     expect(trend.map((p) => p.year)).toEqual([1600, 1601]);
     expect(trend[0].rate).toBeCloseTo(0.5);
     expect(trend[1].rate).toBeCloseTo(1);
+    // 勝敗数：1600・1601 とも信長（ランセロ側）が勝利している。
+    expect(trend[0].wins).toBe(1);
+    expect(trend[0].losses).toBe(0);
+    expect(trend[0].decided).toBe(1);
+    expect(trend[1].wins).toBe(1);
+    expect(trend[1].losses).toBe(0);
   });
 });
 
@@ -1635,6 +1644,77 @@ describe("年代別の勝率ランキング（yearBucketWinRankings）", () => {
       "48年-59年",
       "60年以降",
     ]);
+  });
+});
+
+describe("ランキングの年フィルタ（range）と rankingPeriods", () => {
+  // 年を差し替えられる戦闘行。左＝信長(騎馬隊/鬼丸/金の腕輪)、右＝勝頼(足軽隊/カルバリン砲/金の兜)。
+  function yearLine(o: { year: number; result: string; time: string }): string {
+    return `【１戦目】 ${o.year}年4月 ${o.time} 京都 織田 信長 織田家 武特 騎馬隊 騎兵 金の腕輪 鬼丸 V.S. 武田 勝頼 武田家 統特 足軽隊 歩兵 金の兜 カルバリン砲 ${o.result} 12`;
+  }
+
+  // 1690 年に 2 戦（信長勝利）、1700 年に 2 戦（信長勝利）。時刻は全て変えて重複排除を回避。
+  const log: BattleRecord[] = [
+    rec(yearLine({ year: 1690, result: "信長の勝利", time: "04/10 10:00" }), 1),
+    rec(yearLine({ year: 1690, result: "信長の勝利", time: "04/11 11:00" }), 2),
+    rec(yearLine({ year: 1700, result: "信長の勝利", time: "04/12 12:00" }), 3),
+    rec(yearLine({ year: 1700, result: "信長の勝利", time: "04/13 13:00" }), 4),
+  ];
+
+  it("unitStats は年範囲で絞り込める", () => {
+    expect(unitStats(log).find((s) => s.unit === "騎馬隊")!.battles).toBe(4);
+    const recent = unitStats(log, { from: 1700, to: 1710 });
+    expect(recent.find((s) => s.unit === "騎馬隊")!.battles).toBe(2);
+    // 範囲外の年は 0 件。
+    expect(unitStats(log, { from: 1710, to: 1720 })).toHaveLength(0);
+  });
+
+  it("weaponStats / itemStats は年範囲で絞り込める", () => {
+    expect(weaponStats(log).find((w) => w.name === "鬼丸")!.battles).toBe(4);
+    expect(
+      weaponStats(log, { from: 1700, to: 1710 }).find((w) => w.name === "鬼丸")!
+        .battles
+    ).toBe(2);
+    expect(
+      itemStats(log, { from: 1700, to: 1710 }).find(
+        (i) => i.name === "金の腕輪"
+      )!.battles
+    ).toBe(2);
+  });
+
+  it("warlordRanking は年範囲で攻撃戦目を絞り込める", () => {
+    const all = warlordRanking(log).find((r) => r.name === "信長")!;
+    expect(all.attackRounds).toBe(4);
+    const recent = warlordRanking(log, undefined, {
+      from: 1700,
+      to: 1710,
+    }).find((r) => r.name === "信長")!;
+    expect(recent.attackRounds).toBe(2);
+  });
+
+  it("latestGameYear はログ中の最新のゲーム内年を返す", () => {
+    expect(latestGameYear(log)).toBe(1700);
+    expect(latestGameYear([])).toBeNull();
+  });
+
+  it("rankingPeriods は先頭が過去10年間（最新年から遡って十年）で、以降はメタ分析の年バケット", () => {
+    const periods = rankingPeriods(log);
+    expect(periods[0]).toMatchObject({
+      key: RANKING_LAST10_KEY,
+      label: "過去10年間",
+      from: 1691, // 1700 - 9
+      to: 1700,
+    });
+    // 2 番目以降は META_PERIODS をそのまま並べる。
+    expect(periods.slice(1)).toEqual(META_PERIODS);
+  });
+
+  it("rankingPeriods はデータが無ければ過去10年間を全期間扱いにする", () => {
+    expect(rankingPeriods([])[0]).toMatchObject({
+      key: RANKING_LAST10_KEY,
+      from: null,
+      to: null,
+    });
   });
 });
 

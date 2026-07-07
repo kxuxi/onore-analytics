@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getActionInfo, NO_REST_EVOLVE_STREAK } from "./action";
+import { getActionInfo, parseActionDate, NO_REST_EVOLVE_STREAK } from "./action";
 import type { Warlord } from "./types";
 
 /** "MM/DD HH:mm" を組み立てる。基準日 06/15 を使う。 */
@@ -22,6 +22,19 @@ function warlord(actions: string[]): Warlord {
 
 // 行動を評価する基準時刻（最終行動の少し後）。
 const NOW = new Date(2026, 5, 15, 23, 59, 0);
+
+describe("parseActionDate の全角対応", () => {
+  it("全角の日付・時刻でも半角と同じ Date を返す", () => {
+    const zen = parseActionDate("０６／１０ ０９：３０", NOW);
+    const han = parseActionDate("06/10 09:30", NOW);
+    expect(zen).not.toBeNull();
+    expect(zen!.getTime()).toBe(han!.getTime());
+    expect(zen!.getMonth()).toBe(5); // 6月 → index 5
+    expect(zen!.getDate()).toBe(10);
+    expect(zen!.getHours()).toBe(9);
+    expect(zen!.getMinutes()).toBe(30);
+  });
+});
 
 describe("getActionInfo の末尾固定判定", () => {
   it("行動が1回だけなら表示なし", () => {

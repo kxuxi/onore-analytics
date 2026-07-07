@@ -7,6 +7,8 @@ import { SearchBox } from "@/components/SearchBox";
 import {
   warlordRanking,
   rankMetricValue,
+  rankingPeriods,
+  RANKING_LAST10_KEY,
   type RankMetric,
 } from "@/lib/stats";
 
@@ -37,8 +39,19 @@ export function SwiTab({ log, db, onSelectWarlord }: Props) {
   const [query, setQuery] = useState("");
   const [branch, setBranch] = useState("");
   const [showFilter, setShowFilter] = useState(false);
+  const [periodKey, setPeriodKey] = useState<string>(RANKING_LAST10_KEY);
 
-  const ranking = useMemo(() => warlordRanking(log, db), [log, db]);
+  // 集計期間のプリセット（先頭＝過去10年間、以降はメタ分析と同じ絶対年バケット）。
+  const periods = useMemo(() => rankingPeriods(log), [log]);
+  const range = useMemo(
+    () => periods.find((p) => p.key === periodKey) ?? null,
+    [periods, periodKey]
+  );
+
+  const ranking = useMemo(
+    () => warlordRanking(log, db, range ?? undefined),
+    [log, db, range]
+  );
 
   const metricKind =
     METRIC_OPTIONS.find((m) => m.key === metric)?.kind ?? "count";
@@ -122,9 +135,9 @@ export function SwiTab({ log, db, onSelectWarlord }: Props) {
         <summary>{metricLabel}の詳細</summary>
         <p className="muted">
           {metric === "attackWinRate"
-            ? "攻撃勝率 = 攻撃側として勝った戦目数 ÷ 攻撃側として参加した決着戦目数。撤退・引き分けを除いた全攻撃戦目が母数です。"
+            ? "攻撃勝率 = 攻撃側として勝った戦目数 ÷ 攻撃側として参加した決着戦目数。撤退を除いた全攻撃戦目が母数です。"
             : metric === "defenseWinRate"
-              ? "守備勝率 = 守備側として勝った戦目数 ÷ 守備側として参加した決着戦目数。撤退・引き分けを除いた全守備戦目が母数です。"
+              ? "守備勝率 = 守備側として勝った戦目数 ÷ 守備側として参加した決着戦目数。撤退を除いた全守備戦目が母数です。"
               : metric === "avgBreakthrough"
                 ? "撃破効率 = 攻撃勝利数 ÷ 攻撃出撃数。値が 1.00 なら、1出兵で平均1枚撃破している状態です。"
                 : metric === "defenseEfficiency"
@@ -132,6 +145,21 @@ export function SwiTab({ log, db, onSelectWarlord }: Props) {
                   : "A が B を削った時刻 T の後 40 分以内に、別イベントで B が倒されると A に 1 アシストが付きます。"}
         </p>
       </details>
+
+      <div className="tmx-periods" role="tablist" aria-label="集計期間">
+        {periods.map((p) => (
+          <button
+            key={p.key}
+            type="button"
+            role="tab"
+            aria-selected={periodKey === p.key}
+            className={"tmx-period" + (periodKey === p.key ? " active" : "")}
+            onClick={() => setPeriodKey(p.key)}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
 
       <div className="search-row">
         <SearchBox
