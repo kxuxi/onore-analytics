@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import type { WarlordMap } from "@/lib/types";
 import type { BattleRecord } from "@/lib/types";
 import { lookup, householdAliases } from "@/lib/storage";
+import { displayWarlordType } from "@/lib/warlordType";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
 import {
   collectWarlordBattles,
@@ -18,6 +19,7 @@ import {
 } from "@/lib/stats";
 import { PieChart, chartColor } from "@/components/PieChart";
 import { BattleLogList } from "@/components/detail/BattleLogList";
+import { useYearRangeFilter, YearRangeFilterBar } from "@/components/detail/YearRangeFilter";
 import { Section } from "@/components/detail/Section";
 import {
   DetailHeader,
@@ -66,7 +68,9 @@ export function WarlordDetail({
     [log, name, aliases]
   );
   const summary = useMemo(() => summarize(outcomes), [outcomes]);
-  const usage = useMemo(() => unitUsage(outcomes), [outcomes]);
+  // 使用兵種の割合は戦闘ログと同じ年フィルターを共有する。
+  const yearFilter = useYearRangeFilter(outcomes);
+  const usage = useMemo(() => unitUsage(yearFilter.filtered), [yearFilter.filtered]);
   const ranking = useMemo(() => matchupRanking(outcomes), [outcomes]);
   const branches = useMemo(() => branchStats(outcomes), [outcomes]);
   const heatmap = useMemo(() => winHeatmap(outcomes), [outcomes]);
@@ -78,6 +82,15 @@ export function WarlordDetail({
   const faction = dbInfo?.faction ?? recent?.faction;
   const type = dbInfo?.type ?? recent?.type;
   const branch = dbInfo?.branch ?? recent?.branch;
+  const displayType = type
+    ? displayWarlordType({
+        type,
+        power: dbInfo?.power,
+        intelligence: dbInfo?.intelligence,
+        leadership: dbInfo?.leadership,
+        politics: dbInfo?.politics,
+      })
+    : type;
 
   const pieData = useMemo(
     () =>
@@ -103,7 +116,7 @@ export function WarlordDetail({
           {faction}
         </button>
       )}
-      {type && <span className="tag type">{type}</span>}
+      {displayType && <span className="tag type">{displayType}</span>}
       {branch && <span className="tag branch">{branch}</span>}
       {yearRankTags?.map((t) => (
         <span
@@ -162,6 +175,9 @@ export function WarlordDetail({
           {canComment && <WarlordComment name={name} />}
 
           <Section title="使用兵種の割合" mobileCollapsed>
+            {yearFilter.years.length >= 2 && (
+              <YearRangeFilterBar {...yearFilter} />
+            )}
             <div className="pie-block">
               <PieChart data={pieData} />
               <ul className="pie-legend">
@@ -198,12 +214,17 @@ export function WarlordDetail({
             </div>
           </Section>
 
-          <Section title="戦闘ログ" count={`${outcomes.length}件`} mobileCollapsed>
+          <Section
+            title="戦闘ログ"
+            count={`${yearFilter.filtered.length}件`}
+            mobileCollapsed
+          >
             <BattleLogList
               outcomes={outcomes}
               currentName={name}
               onSelectWarlord={onSelectWarlord}
               onSelectUnit={onSelectUnit}
+              yearFilter={yearFilter}
             />
           </Section>
         </>

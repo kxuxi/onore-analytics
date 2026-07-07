@@ -7,6 +7,7 @@ import { normalizeDisplayToken } from "@/lib/parser";
 import { shortUnit } from "@/lib/unitShortNames";
 import { copyText } from "@/lib/clipboard";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
+import { displayWarlordType } from "@/lib/warlordType";
 
 interface Props {
   db: WarlordMap;
@@ -18,9 +19,25 @@ interface Row {
   name: string;
   faction?: string;
   type?: string;
+  power?: number;
+  intelligence?: number;
+  leadership?: number;
+  politics?: number;
   branch?: string;
   unit?: string;
   found: boolean;
+}
+
+/** 謎タイプなら現在のステータスから "謎(武>統)" のように付記した表示用タイプを返す。 */
+function rowType(r: Row): string {
+  if (!r.type) return "？";
+  return displayWarlordType({
+    type: r.type,
+    power: r.power,
+    intelligence: r.intelligence,
+    leadership: r.leadership,
+    politics: r.politics,
+  });
 }
 
 function splitNames(text: string): string[] {
@@ -71,6 +88,10 @@ export function ScoutTab({ db, colors, onSelectWarlord }: Props) {
         name,
         faction: w.faction,
         type: w.type,
+        power: w.power,
+        intelligence: w.intelligence,
+        leadership: w.leadership,
+        politics: w.politics,
         branch: w.branch,
         unit: w.unit,
         found: true,
@@ -124,9 +145,9 @@ export function ScoutTab({ db, colors, onSelectWarlord }: Props) {
       const displayName = r.name.length > 6 ? r.name.slice(0, 6) : r.name;
       const el = (() => {
         if (!r.found) return `${displayName}［？］`;
-        if (!includeUnit) return `${displayName}［${shortType(r.type)}］`;
+        if (!includeUnit) return `${displayName}［${shortType(rowType(r))}］`;
         const unit = r.unit ? shortUnit(normalizeDisplayToken(r.unit)) : "？";
-        return `${displayName}［${shortType(r.type)}｜${unit}］`;
+        return `${displayName}［${shortType(rowType(r))}｜${unit}］`;
       })();
       const needed = parts.length === 0 ? el.length : SEP.length + el.length;
       if (len + needed > LIMIT) break;
@@ -295,7 +316,7 @@ export function ScoutTab({ db, colors, onSelectWarlord }: Props) {
                       </td>
                       <td data-label="タイプ">
                         {r.found ? (
-                          <span className="tag type">{r.type}</span>
+                          <span className="tag type">{rowType(r)}</span>
                         ) : (
                           <span className="tag warn">データなし</span>
                         )}

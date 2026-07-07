@@ -6,6 +6,7 @@ import { FilterIcon, CloseIcon } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
 import { normalizationMap, householdAliases } from "@/lib/storage";
+import { displayWarlordType } from "@/lib/warlordType";
 import {
   ACTION_LABEL,
   formatElapsed,
@@ -380,7 +381,7 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
                     </button>
                   </td>
                   <td data-label="タイプ">
-                    <span className="tag type">{w.type}</span>
+                    <span className="tag type">{displayWarlordType(w)}</span>
                   </td>
                   <td data-label="兵科">
                     <span className="tag branch">{w.branch}</span>
