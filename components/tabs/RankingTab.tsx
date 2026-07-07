@@ -2,7 +2,14 @@
 
 import { useMemo, useState } from "react";
 import type { BattleRecord } from "@/lib/types";
-import { unitStats, weaponStats, itemStats, formatWinRate } from "@/lib/stats";
+import {
+  unitStats,
+  weaponStats,
+  itemStats,
+  formatWinRate,
+  rankingPeriods,
+  RANKING_LAST10_KEY,
+} from "@/lib/stats";
 import { FilterIcon, CloseIcon } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
 
@@ -94,11 +101,19 @@ export function RankingTab({
   const [sortKey, setSortKey] = useState<SortKey>("battles");
   const [minUses, setMinUses] = useState(10);
   const [showFilter, setShowFilter] = useState(false);
+  const [periodKey, setPeriodKey] = useState<string>(RANKING_LAST10_KEY);
+
+  // 集計期間のプリセット（先頭＝過去10年間、以降はメタ分析と同じ絶対年バケット）。
+  const periods = useMemo(() => rankingPeriods(log), [log]);
+  const range = useMemo(
+    () => periods.find((p) => p.key === periodKey) ?? null,
+    [periods, periodKey]
+  );
 
   // variant に応じた集計を共通の RankRow 形に正規化する。
   const rows = useMemo<RankRow[]>(() => {
     if (variant === "unit") {
-      return unitStats(log).map((u) => ({
+      return unitStats(log, range ?? undefined).map((u) => ({
         name: u.unit,
         branch: u.branch || undefined,
         battles: u.battles,
@@ -110,7 +125,7 @@ export function RankingTab({
       }));
     }
     const fn = variant === "weapon" ? weaponStats : itemStats;
-    return fn(log).map((e) => ({
+    return fn(log, range ?? undefined).map((e) => ({
       name: e.name,
       battles: e.battles,
       wins: e.wins,
@@ -119,7 +134,7 @@ export function RankingTab({
       winRate: e.winRate,
       topUsers: e.topUsers,
     }));
-  }, [variant, log]);
+  }, [variant, log, range]);
 
   const view = useMemo(() => {
     const k = keyword.trim();
@@ -157,6 +172,21 @@ export function RankingTab({
       <p className="muted" style={{ margin: 0, fontSize: 13 }}>
         {copy.description}
       </p>
+
+      <div className="tmx-periods" role="tablist" aria-label="集計期間">
+        {periods.map((p) => (
+          <button
+            key={p.key}
+            type="button"
+            role="tab"
+            aria-selected={periodKey === p.key}
+            className={"tmx-period" + (periodKey === p.key ? " active" : "")}
+            onClick={() => setPeriodKey(p.key)}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
 
       <div className="stat-grid">
         <div className="stat">

@@ -6,6 +6,7 @@ import {
   parseBattleLine,
   parseBattleEntriesChecked,
   normalizeDisplayToken,
+  normalizeWidth,
   isSpecialToken,
   battleKey,
 } from "./parser";
@@ -105,6 +106,28 @@ describe("parseBattleCard", () => {
 
   it("【N戦目】で始まらない行は null", () => {
     expect(parseBattleCard("ただのテキスト")).toBeNull();
+  });
+});
+
+describe("全角の数字・日時（normalizeWidth）", () => {
+  it("normalizeWidth は全角数字・スラッシュ・コロンだけを半角化する", () => {
+    expect(normalizeWidth("０４／１２ １２：００")).toBe("04/12 12:00");
+    expect(normalizeWidth("１７００年４月")).toBe("1700年4月");
+    // 日本語や他の文字は変えない。
+    expect(normalizeWidth("信長 騎馬隊")).toBe("信長 騎馬隊");
+  });
+
+  it("パーサ自体は全角表記を保持する（読み取り側で正規化する方針）", () => {
+    const zen =
+      "【１戦目】 １７００年４月 ０４／１０ １０：２３ 京都 織田 信長 織田家 武特 騎馬隊 騎兵 槍 鎧 V.S. 武田 勝頼 武田家 統特 騎馬隊 騎兵 馬 旗 信長の勝利 １２";
+    const card = parseBattleCard(zen);
+    expect(card).not.toBeNull();
+    // battleAt は貼られたまま（全角）を保持し、武将名や勝敗判定は従来どおり動く。
+    // 年・時刻の半角化は gameYear / parseActionDate など読み取り側で行う。
+    expect(card!.battleAt).toContain("１７００年４月");
+    expect(card!.left.name).toBe("信長");
+    expect(card!.right.name).toBe("勝頼");
+    expect(card!.winner).toBe("left");
   });
 });
 

@@ -10,14 +10,11 @@ import { getMyWarlord, setMyWarlord } from "@/lib/myWarlord";
 import {
   collectWarlordBattles,
   summarize,
-  selfUnitStats,
-  opponentTraitStats,
-  opponentStats,
-  metaOverview,
   latestSelfProfile,
-  weeklyWinRateTrend,
+  yearlyWinRates,
   formatWinRate,
   type BattleOutcome,
+  type YearlyWinRate,
 } from "@/lib/stats";
 import { SearchBox } from "@/components/SearchBox";
 import { WinRateBar } from "@/components/detail/DetailParts";
@@ -31,71 +28,185 @@ interface Props {
   onSelectFaction: (name: string) => void;
 }
 
-/** 時系列（新しい順）の結果から、現在の連勝／連敗を表すラベルを返す。 */
-function streakLabel(outcomes: BattleOutcome[]): string {
-  let count = 0;
-  let kind: "win" | "loss" | null = null;
-  for (const o of outcomes) {
-    if (o.result !== "win" && o.result !== "loss") continue;
-    if (kind === null) {
-      kind = o.result;
-      count = 1;
-    } else if (o.result === kind) {
-      count++;
-    } else break;
-  }
-  if (kind === null) return "対戦中";
-  return kind === "win" ? `${count}連勝中` : `${count}連敗中`;
+/** グラフに表示できる系列（勝利数=緑・敗北数=赤）。 */
+const SERIES_OPTIONS: {
+  key: string;
+  label: string;
+  color: string;
+  valueOf: (y: YearlyWinRate) => number;
+}[] = [
+  { key: "wins", label: "勝利数", color: "#22c55e", valueOf: (y) => y.wins },
+  { key: "losses", label: "敗北数", color: "#ef4444", valueOf: (y) => y.losses },
+];
+
+/** これ以上戦闘のない年が続いたら「非戦期間」としてマスク表示する閾値（年）。 */
+const NON_BATTLE_MIN_YEARS = 4;
+
+/** 折れ線グラフ 1 系列分（共通の年軸に沿った値[勝利数 or 敗北数]の点列）。 */
+interface ChartSeries {
+  key: string;
+  label: string;
+  color: string;
+  points: { value: number; decided: number }[];
 }
 
-/** 勝率に応じたトーン（good=勝ち越し / bad=負け越し）。 */
-function rateTone(winRate: number, decided: number): string {
-  if (decided <= 0) return "";
-  if (winRate > 0.5) return " good";
-  if (winRate < 0.5) return " bad";
-  return " even";
-}
-
-/** 勝率を 1 本のバー＋数値で示す行（兵種別勝率・敵タイプ別勝率で共用）。 */
-function RateRow({
-  label,
-  battles,
-  wins,
-  losses,
-  decided,
-  winRate,
-  onClick,
+/** 勝敗数推移の折れ線グラフ（系列ごとに勝利数=実線・敗北数=破線、Y 軸=戦闘数）。 */
+function WinLossLineChart({
+  years,
+  series,
+  maskRanges,
 }: {
-  label: ReactNode;
-  battles: number;
-  wins: number;
-  losses: number;
-  decided: number;
-  winRate: number;
-  onClick?: () => void;
+  years: number[];
+  series: ChartSeries[];
+  maskRanges: { fromIdx: number; toIdx: number }[];
 }) {
-  const pct = decided > 0 ? Math.round(winRate * 100) : 0;
-  return (
-    <div className="home-rate-row">
-      <div className="home-rate-label">
-        {onClick ? (
-          <button type="button" className="link-btn" onClick={onClick}>
-            {label}
-          </button>
-        ) : (
-          <span>{label}</span>
-        )}
-        <span className="muted home-rate-count">
-          {wins}勝{losses}敗 / {battles}戦
-        </span>
-      </div>
-      <div className="home-rate-bar">
-        <div
-          className={"home-rate-fill" + rateTone(winRate, decided)}
-          style={{ width: `${pct}%` }}
+  const W = 640;
+  const H = 220;
+  const padL = 30;
+  const padR = 10;
+  const padT = 10;
+  const padB = 22;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  const n = years.length;
+  const xAt = (i: number) =>
+    padL + (n <= 1 ? plotW / 2 : (i / (n - 1)) * plotW);
+  // Y 軸は戦闘数。全系列・全年の最大値をきりの良い数へ切り上げてスケールにする。
+  const maxCount = Math.max(
+    1,
+    ...series.flatMap((s) => s.points.map((p) => p.value))
+  );
+  const niceMax = Math.max(4, Math.ceil(maxCount / 4) * 4);
+  const yAt = (count: number) => padT + (1 - count / niceMax) * plotH;
+
+  // データのある点（decided>0）を非戦期間マスクの区間でのみ分断してセグメント化する。
+  const buildSegs = (pts: { i: number; value: number }[]) => {
+    const segs: { i: number; value: number }[][] = [];
+    let cur: { i: number; value: number }[] = [];
+    for (const pt of pts) {
+      if (cur.length > 0) {
+        const prev = cur[cur.length - 1];
+        const maskedBetween = maskRanges.some(
+          (m) => m.fromIdx > prev.i && m.toIdx < pt.i
+        );
+        if (maskedBetween) {
+          segs.push(cur);
+          cur = [];
+        }
+      }
+      cur.push({ i: pt.i, value: pt.value });
+    }
+    if (cur.length) segs.push(cur);
+    return segs;
+  };
+
+  // セグメント群を描画する（1 点のみは点、複数は線）。
+  const renderSegs = (
+    segs: { i: number; value: number }[][],
+    color: string,
+    keyPrefix: string
+  ) =>
+    segs.map((seg, si) =>
+      seg.length === 1 ? (
+        <circle
+          key={`${keyPrefix}${si}`}
+          className="home-line-dot"
+          cx={xAt(seg[0].i)}
+          cy={yAt(seg[0].value)}
+          r={2.5}
+          style={{ fill: color }}
         />
-      </div>
-      <div className="home-rate-val">{formatWinRate(winRate, decided)}</div>
+      ) : (
+        <polyline
+          key={`${keyPrefix}${si}`}
+          className="home-line-path"
+          points={seg.map((pt) => `${xAt(pt.i)},${yAt(pt.value)}`).join(" ")}
+          style={{ stroke: color }}
+        />
+      )
+    );
+
+  return (
+    <div className="home-line-wrap">
+      <svg
+        className="home-linechart"
+        viewBox={`0 0 ${W} ${H}`}
+        role="img"
+        aria-label="年別の勝敗数推移グラフ"
+      >
+        {[0, 0.25, 0.5, 0.75, 1].map((g) => {
+          const count = Math.round(niceMax * g);
+          return (
+            <g key={g}>
+              <line
+                className="home-line-grid"
+                x1={padL}
+                y1={yAt(count)}
+                x2={W - padR}
+                y2={yAt(count)}
+              />
+              <text
+                className="home-line-ytick"
+                x={padL - 4}
+                y={yAt(count) + 3}
+              >
+                {count}
+              </text>
+            </g>
+          );
+        })}
+        {maskRanges.map((m, mi) => {
+          const step = n <= 1 ? plotW : plotW / (n - 1);
+          const x1 = Math.max(padL, xAt(m.fromIdx) - step / 2);
+          const x2 = Math.min(W - padR, xAt(m.toIdx) + step / 2);
+          const maskW = Math.max(0, x2 - x1);
+          return (
+            <g key={`mask-${mi}`}>
+              <rect
+                className="home-line-mask"
+                x={x1}
+                y={padT}
+                width={maskW}
+                height={plotH}
+              />
+              <text
+                className="home-line-masklabel"
+                x={x1 + maskW / 2}
+                y={padT + plotH / 2}
+                textAnchor="middle"
+                dominantBaseline="middle"
+              >
+                非戦中
+              </text>
+            </g>
+          );
+        })}
+        {years.map((yr, i) =>
+          yr % 10 === 0 ? (
+            <text
+              key={yr}
+              className="home-line-xtick"
+              x={xAt(i)}
+              y={H - 6}
+              textAnchor="middle"
+            >
+              {yr}
+            </text>
+          ) : null
+        )}
+        {series.map((s) => {
+          // データのある年（decided>0）の値を折れ線で描く。
+          // 非戦期間マスクで分断し、短い空白年は線で結ぶ。
+          const pts = s.points
+            .map((p, i) => ({ i, value: p.value, decided: p.decided }))
+            .filter((p) => p.decided > 0);
+          return (
+            <g key={s.key}>
+              {renderSegs(buildSegs(pts), s.color, `${s.key}-`)}
+            </g>
+          );
+        })}
+      </svg>
     </div>
   );
 }
@@ -124,13 +235,31 @@ export function HomeTab({
   const [name, setName] = useState<string | null>(() => getMyWarlord());
   const [editing, setEditing] = useState(false);
   const [query, setQuery] = useState("");
+  // 折れ線グラフで表示中の系列（初期は勝利数・敗北数の両方）。
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([
+    "wins",
+    "losses",
+  ]);
 
-  // 武将選択の候補（全 DB の名前から検索）。
+  // 武将選択の候補は最新の期に登録された武将のみに絞る。
+  const latestTerm = useMemo(() => {
+    let max: number | null = null;
+    for (const w of Object.values(db)) {
+      if (typeof w.term === "number" && (max == null || w.term > max)) {
+        max = w.term;
+      }
+    }
+    return max;
+  }, [db]);
   const allNames = useMemo(() => {
     const set = new Set<string>();
-    for (const w of Object.values(db)) if (w.name) set.add(w.name);
+    for (const w of Object.values(db)) {
+      if (!w.name) continue;
+      if (latestTerm != null && w.term !== latestTerm) continue;
+      set.add(w.name);
+    }
     return Array.from(set).sort((a, b) => a.localeCompare(b, "ja"));
-  }, [db]);
+  }, [db, latestTerm]);
 
   const suggestions = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -147,58 +276,60 @@ export function HomeTab({
     () => (name ? collectWarlordBattles(log, name, aliases) : []),
     [log, name, aliases]
   );
-  const recent30 = useMemo(() => outcomes.slice(0, 30), [outcomes]);
-  const summary30 = useMemo(() => summarize(recent30), [recent30]);
   const overall = useMemo(() => summarize(outcomes), [outcomes]);
-  const unitProf = useMemo(() => selfUnitStats(outcomes), [outcomes]);
-  const traitStats = useMemo(() => opponentTraitStats(outcomes), [outcomes]);
-  const opponents = useMemo(
-    () =>
-      opponentStats(outcomes)
-        .filter((o) => o.battles >= 2)
-        .sort((a, b) => b.battles - a.battles || b.decided - a.decided),
-    [outcomes]
-  );
-  const meta = useMemo(() => metaOverview(log), [log]);
+  // 年別の勝敗数推移。全系列で共通の X 軸（年）に使う。
+  const yearly = useMemo(() => yearlyWinRates(outcomes), [outcomes]);
+  // X 軸はデータのある年範囲に限定する（先頭・末尾の空白年を除いて間延びを防ぐ）。
+  const years = useMemo(() => {
+    const withData = yearly.filter((y) => y.battles > 0);
+    if (withData.length === 0) return [];
+    const minYear = withData[0].year;
+    const maxYear = withData[withData.length - 1].year;
+    return yearly
+      .filter((y) => y.year >= minYear && y.year <= maxYear)
+      .map((y) => y.year);
+  }, [yearly]);
+  // 4 年以上戦闘のない区間（非戦期間）を検出し、グラフ上に灰色マスクで示す。
+  const maskRanges = useMemo(() => {
+    const battleByYear = new Map(
+      yearly.map((y) => [y.year, y.battles] as const)
+    );
+    const ranges: { fromIdx: number; toIdx: number }[] = [];
+    let start = -1;
+    for (let i = 0; i < years.length; i++) {
+      const hasBattle = (battleByYear.get(years[i]) ?? 0) > 0;
+      if (!hasBattle) {
+        if (start < 0) start = i;
+      } else {
+        if (start >= 0 && i - start >= NON_BATTLE_MIN_YEARS) {
+          ranges.push({ fromIdx: start, toIdx: i - 1 });
+        }
+        start = -1;
+      }
+    }
+    return ranges;
+  }, [years, yearly]);
 
-  // 先週比の勝率トレンド（最新の戦闘日時を基準に今週 vs 先週）。
-  const weekly = useMemo(() => weeklyWinRateTrend(outcomes), [outcomes]);
+  const toggleSeries = (key: string) =>
+    setSelectedKeys((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
 
-  const trend = useMemo(
-    () => [
-      { label: "直近10戦", s: summarize(outcomes.slice(0, 10)) },
-      { label: "直近30戦", s: summary30 },
-      { label: "全期間", s: overall },
-    ],
-    [outcomes, summary30, overall]
-  );
-
-  // 苦手な相手タイプ（5戦以上・全体勝率より明確に低い）と、得意なタイプ。
-  const eligTraits = useMemo(
-    () => traitStats.filter((t) => t.decided >= 5),
-    [traitStats]
-  );
-  const weakTrait = useMemo(() => {
-    if (eligTraits.length === 0) return null;
-    const w = eligTraits.reduce((m, t) => (t.winRate < m.winRate ? t : m));
-    return w.winRate < overall.winRate - 0.05 ? w : null;
-  }, [eligTraits, overall.winRate]);
-  const strongTrait = useMemo(
-    () =>
-      eligTraits.length === 0
-        ? null
-        : eligTraits.reduce((m, t) => (t.winRate > m.winRate ? t : m)),
-    [eligTraits]
-  );
-
-  const rival = opponents[0] ?? null;
-  const rivalOutcomes = useMemo(
-    () =>
-      rival
-        ? outcomes.filter((o) => o.opponent.name?.trim() === rival.name)
-        : [],
-    [outcomes, rival]
-  );
+  // 選択された系列を、共通の年軸（years）に沿った値（勝利数 or 敗北数）の点列に変換する。
+  const chartSeries = useMemo<ChartSeries[]>(() => {
+    const yearlyMap = new Map(yearly.map((y) => [y.year, y] as const));
+    return selectedKeys
+      .map((key) => {
+        const opt = SERIES_OPTIONS.find((o) => o.key === key);
+        if (!opt) return null;
+        const points = years.map((yr) => {
+          const e = yearlyMap.get(yr);
+          return { value: e ? opt.valueOf(e) : 0, decided: e?.decided ?? 0 };
+        });
+        return { key, label: opt.label, color: opt.color, points };
+      })
+      .filter((s): s is ChartSeries => s !== null);
+  }, [selectedKeys, yearly, years]);
 
   const dbInfo = name ? lookup(db, name) : undefined;
   const profile = latestSelfProfile(outcomes);
@@ -284,28 +415,6 @@ export function HomeTab({
     </>
   );
 
-  const weekPct = weekly.delta == null ? null : Math.round(weekly.delta * 100);
-  const weekText =
-    weekPct == null
-      ? "—"
-      : weekPct > 0
-        ? `▲ +${weekPct}%`
-        : weekPct < 0
-          ? `▼ ${weekPct}%`
-          : "→ ±0%";
-  const weekTone =
-    weekPct == null ? "" : weekPct > 0 ? " good" : weekPct < 0 ? " bad" : "";
-
-  const metaTop = meta.units[0] ?? null;
-  const rivalVerdict =
-    rival && rival.decided > 0
-      ? rival.winRate > 0.5
-        ? "勝ち越し"
-        : rival.winRate < 0.5
-          ? "負け越し"
-          : "五分"
-      : null;
-
   return (
     <section className="panel home-panel">
       <div className="home-dash">
@@ -361,12 +470,6 @@ export function HomeTab({
                   <div className="home-bigstat-label">勝敗</div>
                 </div>
                 <div className="home-bigstat">
-                  <div className={"home-bigstat-val" + weekTone}>
-                    {weekText}
-                  </div>
-                  <div className="home-bigstat-label">先週比</div>
-                </div>
-                <div className="home-bigstat">
                   <div className="home-bigstat-val">
                     {overall.battles.toLocaleString("ja-JP")}
                   </div>
@@ -380,98 +483,53 @@ export function HomeTab({
 
         {outcomes.length > 0 && (
           <div className="home-grid">
-            {/* 🎖️ 兵種別勝率 TOP3 */}
-            <div className="home-card">
-              <h3 className="home-card-title">🎖️ 兵種別勝率（TOP3）</h3>
-              {unitProf.length === 0 ? (
+            {/* 📈 勝敗数の推移（折れ線・複数系列） */}
+            <div className="home-card home-card-wide">
+              <h3 className="home-card-title">📈 勝敗数の推移（年別）</h3>
+              {years.length === 0 ? (
                 <p className="muted">データがありません。</p>
               ) : (
-                <div className="home-rate-list">
-                  {unitProf.slice(0, 3).map((u) => (
-                    <RateRow
-                      key={u.unit}
-                      label={u.unit}
-                      battles={u.battles}
-                      wins={u.wins}
-                      losses={u.losses}
-                      decided={u.decided}
-                      winRate={u.winRate}
-                      onClick={() => onSelectUnit(u.unit)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* 📈 トレンド（直近N戦） */}
-            <div className="home-card">
-              <h3 className="home-card-title">📈 トレンド（勝率推移）</h3>
-              <div className="home-trend">
-                {trend.map((t) => (
-                  <div className="home-trend-item" key={t.label}>
-                    <div className="home-trend-label muted">{t.label}</div>
-                    <div
-                      className={
-                        "home-trend-val" + rateTone(t.s.winRate, t.s.decided)
-                      }
-                    >
-                      {formatWinRate(t.s.winRate, t.s.decided)}
-                    </div>
-                    <div className="home-trend-sub muted">
-                      {t.s.wins}-{t.s.losses}
-                    </div>
+                <>
+                  <p className="muted home-series-hint">
+                    勝利数（緑）・敗北数（赤）の年別推移です。下のチェックで表示を切り替えられます。
+                  </p>
+                  <div className="home-series-picker">
+                    {SERIES_OPTIONS.map((opt) => {
+                      const active = selectedKeys.includes(opt.key);
+                      return (
+                        <label
+                          key={opt.key}
+                          className={
+                            "home-series-check" + (active ? " active" : "")
+                          }
+                          style={
+                            active ? { borderColor: opt.color } : undefined
+                          }
+                        >
+                          <input
+                            type="checkbox"
+                            checked={active}
+                            onChange={() => toggleSeries(opt.key)}
+                          />
+                          <span
+                            className="home-series-dot"
+                            style={{ background: opt.color }}
+                          />
+                          {opt.label}
+                        </label>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* ⚔️ 敵武将タイプ別の勝率 */}
-            <div className="home-card">
-              <h3 className="home-card-title">⚔️ 敵武将タイプ別の勝率</h3>
-              {traitStats.length === 0 ? (
-                <p className="muted">データがありません。</p>
-              ) : (
-                <div className="home-rate-list">
-                  {traitStats.slice(0, 5).map((t) => (
-                    <RateRow
-                      key={t.trait}
-                      label={t.trait}
-                      battles={t.battles}
-                      wins={t.wins}
-                      losses={t.losses}
-                      decided={t.decided}
-                      winRate={t.winRate}
+                  {chartSeries.length === 0 ? (
+                    <p className="muted">表示する系列を選択してください。</p>
+                  ) : (
+                    <WinLossLineChart
+                      years={years}
+                      series={chartSeries}
+                      maskRanges={maskRanges}
                     />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* 🎯 傾向分析 */}
-            <div className="home-card">
-              <h3 className="home-card-title">🎯 傾向分析</h3>
-              {weakTrait ? (
-                <div className="home-action home-action-warn">
-                  <p className="home-action-head">
-                    ⚠️ <strong>{weakTrait.trait}</strong> が苦手です
-                  </p>
-                  <p className="muted">
-                    勝率 {formatWinRate(weakTrait.winRate, weakTrait.decided)}
-                    （全体 {formatWinRate(overall.winRate, overall.decided)}）。
-                    このタイプが相手のときは兵種・装備の見直しを検討しましょう。
-                  </p>
-                </div>
-              ) : (
-                <div className="home-action home-action-ok">
-                  <p className="home-action-head">✅ 大きな弱点はありません</p>
-                  <p className="muted">タイプ別の勝率が安定しています。</p>
-                </div>
-              )}
-              {strongTrait && (
-                <p className="home-action-foot muted">
-                  得意: <strong>{strongTrait.trait}</strong>（勝率{" "}
-                  {formatWinRate(strongTrait.winRate, strongTrait.decided)}）
-                </p>
+                  )}
+                </>
               )}
             </div>
 
@@ -524,105 +582,6 @@ export function HomeTab({
                   </tbody>
                 </table>
               </div>
-            </div>
-
-            {/* 🔥 メタ環境 */}
-            <div className="home-card">
-              <h3 className="home-card-title">🔥 メタ環境（採用率トップ）</h3>
-              {!metaTop ? (
-                <p className="muted">データがありません。</p>
-              ) : (
-                <div className="home-meta">
-                  <div className="home-meta-top">
-                    <button
-                      type="button"
-                      className="link-btn home-meta-unit"
-                      onClick={() => onSelectUnit(metaTop.unit)}
-                    >
-                      {metaTop.unit}
-                    </button>
-                    <span className="tag tier">{metaTop.tier}</span>
-                  </div>
-                  <div className="home-meta-stats">
-                    <span>採用率 {Math.round(metaTop.pickRate * 100)}%</span>
-                    <span>
-                      勝率 {formatWinRate(metaTop.winRate, metaTop.decided)}
-                    </span>
-                  </div>
-                  {meta.warnings[0] && (
-                    <p className="home-warn muted">⚠️ {meta.warnings[0].message}</p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* 🆚 宿敵分析 */}
-            <div className="home-card">
-              <h3 className="home-card-title">🆚 宿敵分析</h3>
-              {!rival ? (
-                <p className="muted">
-                  対戦数が少なく、宿敵はまだいません。
-                </p>
-              ) : (
-                <div className="home-rival">
-                  <div className="home-rival-head">
-                    <button
-                      type="button"
-                      className="link-btn home-rival-name"
-                      onClick={() => onSelectWarlord(rival.name)}
-                    >
-                      {rival.name}
-                    </button>
-                    {rival.faction && (
-                      <button
-                        type="button"
-                        className="tag faction faction-link"
-                        style={factionBadgeStyle(rival.faction, colors)}
-                        onClick={() => onSelectFaction(rival.faction!)}
-                      >
-                        {rival.faction}
-                      </button>
-                    )}
-                  </div>
-                  <div className="home-rival-stats">
-                    <span>{rival.battles}戦</span>
-                    <span className="home-res-win">{rival.wins}勝</span>
-                    <span className="home-res-loss">{rival.losses}敗</span>
-                    <span>
-                      勝率 {formatWinRate(rival.winRate, rival.decided)}
-                    </span>
-                  </div>
-                  <div className="home-rival-streak">
-                    {streakLabel(rivalOutcomes)}
-                    {rivalVerdict ? `・${rivalVerdict}` : ""}
-                  </div>
-                  <div className="home-rival-recent">
-                    {rivalOutcomes.slice(0, 5).map((o, i) => {
-                      const badge = resultBadge(o);
-                      return (
-                        <span
-                          key={o.record.id ?? `${o.record.savedAt}-${i}`}
-                          className={"home-rival-dot " + badge.cls}
-                          title={badge.text}
-                        >
-                          {o.result === "win"
-                            ? "勝"
-                            : o.result === "loss"
-                              ? "敗"
-                              : "分"}
-                        </span>
-                      );
-                    })}
-                  </div>
-                  <button
-                    type="button"
-                    className="link-btn home-rival-more"
-                    onClick={() => onSelectWarlord(rival.name)}
-                  >
-                    詳細を見る →
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         )}
