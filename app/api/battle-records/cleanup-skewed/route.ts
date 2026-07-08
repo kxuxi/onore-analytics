@@ -38,16 +38,24 @@ export async function DELETE(_req: NextRequest) {
       }
     }
 
-    // ずれて登録された武将（type/branch が空でなく既知でない）も削除する。
-    // type/branch が空の武将は能力値ランキングのみの登録＝正常なので残す。
+    // ずれて登録された武将も削除する。
+    // (1) type/branch が空でなく既知でない（項目ずれ）。
+    // (2) name が他武将の faction（＝国名）になっている（武将名の位置に国名が入り、
+    //     faction に都市名などが入り込んだ誤り。国一覧に都市名が出る原因）。
+    // ※ type/branch が空の武将は能力値ランキングのみの登録＝正常なので残す。
     const warlords = await prisma.warlord.findMany({
-      select: { name: true, type: true, branch: true },
+      select: { name: true, type: true, branch: true, faction: true },
     });
+    // 他の武将の faction として使われている値（＝実在する国名）の集合。
+    const factionSet = new Set(
+      warlords.map((w) => w.faction?.trim()).filter((f): f is string => !!f)
+    );
     const warlordNames = warlords
       .filter(
         (w) =>
           (w.type !== "" && !KNOWN_WARLORD_TYPES.has(w.type)) ||
-          (w.branch !== "" && !KNOWN_BRANCHES.has(w.branch))
+          (w.branch !== "" && !KNOWN_BRANCHES.has(w.branch)) ||
+          factionSet.has(w.name.trim())
       )
       .map((w) => w.name);
 

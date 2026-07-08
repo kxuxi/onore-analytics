@@ -499,13 +499,20 @@ export default function HomePage() {
         return !(isSkewedSide(card.left) || isSkewedSide(card.right));
       });
       setBattleLog(newLog);
-      // ずれて登録された武将（type/branch が空でなく既知でない）を DB 名簿からも除去する。
+      // ずれて登録された武将を DB 名簿からも除去する。
+      // (1) type/branch が空でなく既知でない、(2) name が国名（他武将の faction）。
+      const factionSet = new Set(
+        Object.values(db)
+          .map((w) => w.faction?.trim())
+          .filter((f): f is string => !!f)
+      );
       const newDb = Object.fromEntries(
         Object.entries(db).filter(
           ([, w]) =>
             !(
               (w.type !== "" && !KNOWN_WARLORD_TYPES.has(w.type)) ||
-              (w.branch !== "" && !KNOWN_BRANCHES.has(w.branch))
+              (w.branch !== "" && !KNOWN_BRANCHES.has(w.branch)) ||
+              factionSet.has(w.name.trim())
             )
         )
       );
