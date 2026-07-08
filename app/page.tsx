@@ -448,6 +448,34 @@ export default function HomePage() {
     [battleLog, setBattleLog, pushToast]
   );
 
+  const handleDeleteFaction = useCallback(
+    async (faction: string) => {
+      try {
+        const { deleteBattleRecordsByFaction } = await import("@/lib/api");
+        const { parseBattleCard } = await import("@/lib/parser");
+        const deleted = await deleteBattleRecordsByFaction(faction);
+        // 削除後、その国が関わる戦闘を全期間の履歴から除去する。
+        const newLog = battleLog.filter((r) => {
+          const card = parseBattleCard(r.line);
+          if (!card) return true;
+          return !(
+            card.left.faction?.trim() === faction ||
+            card.right.faction?.trim() === faction
+          );
+        });
+        setBattleLog(newLog);
+        pushToast(
+          "success",
+          `「${faction}」が関わる戦闘記録を${deleted}件削除しました`
+        );
+      } catch {
+        pushToast("error", "削除に失敗しました。もう一度お試しください。");
+        throw new Error("削除失敗");
+      }
+    },
+    [battleLog, setBattleLog, pushToast]
+  );
+
 
   const handleRegister = useCallback(
     async (text: string) => {
@@ -671,6 +699,8 @@ export default function HomePage() {
             onSelectFaction={selectFaction}
             themePref={themePref}
             onChangeTheme={handleChangeTheme}
+            isAdmin={isAdmin}
+            onDeleteFaction={handleDeleteFaction}
           />
         );
       default:
@@ -690,6 +720,7 @@ export default function HomePage() {
     handleChangeFactionColors,
     handleChangeTheme,
     handleDeleteBattle,
+    handleDeleteFaction,
     selectWarlord,
     selectWarlordNormalized,
     selectUnit,

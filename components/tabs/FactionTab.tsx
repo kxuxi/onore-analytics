@@ -18,6 +18,8 @@ interface Props {
   colors: FactionColorMap;
   onChange: (next: FactionColorMap) => void;
   onSelectFaction: (name: string) => void;
+  isAdmin?: boolean;
+  onDeleteFaction?: (faction: string) => Promise<void> | void;
 }
 
 /** 入力された文字列を #RRGGBB（大文字）へ正規化する。3桁/6桁・先頭#の有無に対応。
@@ -38,10 +40,20 @@ function normalizeHex(input: string): string | null {
   return null;
 }
 
-export function FactionTab({ db, log, colors, onChange, onSelectFaction }: Props) {
+export function FactionTab({
+  db,
+  log,
+  colors,
+  onChange,
+  onSelectFaction,
+  isAdmin = false,
+  onDeleteFaction,
+}: Props) {
   const [openFor, setOpenFor] = useState<string | null>(null);
   // カスタムHEX入力の作業値（パレットを開いている国の現在色で初期化）。
   const [customHex, setCustomHex] = useState("");
+  // 国の戦闘記録を削除中の対象国名（ボタンの二重押下防止）。
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     setCustomHex(openFor ? colors[openFor] ?? "" : "");
@@ -73,6 +85,22 @@ export function FactionTab({ db, log, colors, onChange, onSelectFaction }: Props
     delete next[faction];
     onChange(next);
     setOpenFor(null);
+  };
+
+  const handleDelete = async (faction: string) => {
+    if (!onDeleteFaction) return;
+    const ok = window.confirm(
+      `「${faction}」が関わる戦闘記録をすべて削除します（全期間が対象）。\n` +
+        `両陣営で戦った記録のため、相手国の履歴からも消えます。\n` +
+        `この操作は取り消せません。よろしいですか？`
+    );
+    if (!ok) return;
+    setDeleting(faction);
+    try {
+      await onDeleteFaction(faction);
+    } finally {
+      setDeleting(null);
+    }
   };
 
   const resetAll = () => {
@@ -230,6 +258,17 @@ export function FactionTab({ db, log, colors, onChange, onSelectFaction }: Props
                     onClick={() => clearColor(f)}
                   >
                     クリア
+                  </button>
+                )}
+                {isAdmin && onDeleteFaction && (
+                  <button
+                    type="button"
+                    className="btn faction-delete"
+                    onClick={() => handleDelete(f)}
+                    disabled={deleting === f}
+                    title={`${f} が関わる戦闘記録をすべて削除`}
+                  >
+                    {deleting === f ? "削除中…" : "削除"}
                   </button>
                 )}
               </div>

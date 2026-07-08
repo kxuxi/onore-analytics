@@ -1753,6 +1753,19 @@ mark.hl {
   padding: 8px 12px;
 }
 
+.faction-delete {
+  color: var(--danger, #e5484d);
+  border-color: color-mix(in srgb, var(--danger, #e5484d) 40%, var(--border));
+}
+.faction-delete:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger, #e5484d) 12%, transparent);
+  border-color: var(--danger, #e5484d);
+}
+.faction-delete:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .faction-picker {
   position: relative;
   margin-left: auto;
