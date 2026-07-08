@@ -90,9 +90,14 @@ export async function deleteBattleRecord(id: number): Promise<void> {
 }
 
 /** 指定した国が関わる戦闘履歴をすべて削除（管理者のみ）。削除できた件数を返す。 */
-export async function deleteBattleRecordsByFaction(
+/**
+ * 指定した国を削除する（管理者のみ）。
+ * その国が関わる戦闘記録と、その国に所属する武将（DB 名簿）をまとめて削除する。
+ * @returns 削除した戦闘記録数（records）と武将数（warlords）
+ */
+export async function deleteFaction(
   faction: string
-): Promise<number> {
+): Promise<{ records: number; warlords: number }> {
   const res = await fetch(
     `/api/battle-records/by-faction/${encodeURIComponent(faction)}`,
     { method: "DELETE" }
@@ -101,7 +106,10 @@ export async function deleteBattleRecordsByFaction(
   if (!res.ok) {
     throw new Error(data?.error ?? "削除に失敗しました");
   }
-  return data?.deleted ?? 0;
+  return {
+    records: data?.deleted ?? 0,
+    warlords: data?.deletedWarlords ?? 0,
+  };
 }
 
 /** 兵種一覧のメモリキャッシュ。画面ごとの重複取得を避ける。

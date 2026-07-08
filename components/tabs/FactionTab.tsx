@@ -90,8 +90,10 @@ export function FactionTab({
   const handleDelete = async (faction: string) => {
     if (!onDeleteFaction) return;
     const ok = window.confirm(
-      `「${faction}」が関わる戦闘記録をすべて削除します（全期間が対象）。\n` +
-        `両陣営で戦った記録のため、相手国の履歴からも消えます。\n` +
+      `「${faction}」を削除します（全期間が対象）。\n` +
+        `・この国が関わる戦闘記録をすべて削除します。\n` +
+        `　両陣営で戦った記録のため、相手国の履歴からも消えます。\n` +
+        `・この国に所属する武将も削除し、国一覧から消えます。\n` +
         `この操作は取り消せません。よろしいですか？`
     );
     if (!ok) return;

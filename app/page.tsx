@@ -451,9 +451,9 @@ export default function HomePage() {
   const handleDeleteFaction = useCallback(
     async (faction: string) => {
       try {
-        const { deleteBattleRecordsByFaction } = await import("@/lib/api");
+        const { deleteFaction } = await import("@/lib/api");
         const { parseBattleCard } = await import("@/lib/parser");
-        const deleted = await deleteBattleRecordsByFaction(faction);
+        const { records, warlords } = await deleteFaction(faction);
         // 削除後、その国が関わる戦闘を全期間の履歴から除去する。
         const newLog = battleLog.filter((r) => {
           const card = parseBattleCard(r.line);
@@ -464,16 +464,21 @@ export default function HomePage() {
           );
         });
         setBattleLog(newLog);
+        // その国に所属する武将を DB 名簿からも除去し、国一覧から消えるようにする。
+        const newDb = Object.fromEntries(
+          Object.entries(db).filter(([, w]) => w.faction?.trim() !== faction)
+        );
+        setDb(newDb);
         pushToast(
           "success",
-          `「${faction}」が関わる戦闘記録を${deleted}件削除しました`
+          `「${faction}」を削除しました（戦闘記録${records}件 / 武将${warlords}人）`
         );
       } catch {
         pushToast("error", "削除に失敗しました。もう一度お試しください。");
         throw new Error("削除失敗");
       }
     },
-    [battleLog, setBattleLog, pushToast]
+    [battleLog, db, setBattleLog, setDb, pushToast]
   );
 
 
