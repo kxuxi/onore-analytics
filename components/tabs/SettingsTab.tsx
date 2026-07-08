@@ -14,6 +14,8 @@ interface Props {
   onSelectFaction: (name: string) => void;
   themePref: ThemePref;
   onChangeTheme: (pref: ThemePref) => void;
+  isAdmin?: boolean;
+  onDeleteFaction?: (faction: string) => Promise<void> | void;
 }
 
 const THEME_CHOICES: { value: ThemePref; label: string }[] = [
@@ -32,6 +34,8 @@ export function SettingsTab({
   onSelectFaction,
   themePref,
   onChangeTheme,
+  isAdmin = false,
+  onDeleteFaction,
 }: Props) {
   // 解決済みテーマ（時間帯依存）は描画後に算出し、SSR との不一致を避ける。
   const [resolved, setResolved] = useState<ResolvedTheme | null>(null);
@@ -86,6 +90,8 @@ export function SettingsTab({
         colors={colors}
         onChange={onChangeColors}
         onSelectFaction={onSelectFaction}
+        isAdmin={isAdmin}
+        onDeleteFaction={onDeleteFaction}
       />
     </>
   );

@@ -89,6 +89,21 @@ export async function deleteBattleRecord(id: number): Promise<void> {
   }
 }
 
+/** 指定した国が関わる戦闘履歴をすべて削除（管理者のみ）。削除できた件数を返す。 */
+export async function deleteBattleRecordsByFaction(
+  faction: string
+): Promise<number> {
+  const res = await fetch(
+    `/api/battle-records/by-faction/${encodeURIComponent(faction)}`,
+    { method: "DELETE" }
+  );
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(data?.error ?? "削除に失敗しました");
+  }
+  return data?.deleted ?? 0;
+}
+
 /** 兵種一覧のメモリキャッシュ。画面ごとの重複取得を避ける。
  *  追加 / 更新 / 削除のたびに失効させ、次回取得で最新を取り直す。 */
 let unitTypesCache: UnitType[] | null = null;
