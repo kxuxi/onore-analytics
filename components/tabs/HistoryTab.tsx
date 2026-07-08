@@ -99,6 +99,21 @@ function cardSearchText(
   return parts.join(" ").toLowerCase();
 }
 
+/** 戦闘時刻からゲーム内年月の順序値（year*12+month）を返す。取得できなければ null。 */
+function gameMonthOrder(time: string | undefined): number | null {
+  if (!time) return null;
+  const m = time.match(/(\d+)\s*年\s*(\d+)\s*月/);
+  if (!m) return null;
+  return Number(m[1]) * 12 + Number(m[2]);
+}
+
+/** ゲーム内年月の順序値を "1684年3月" 形式のラベルに変換する。 */
+function gameMonthLabel(order: number): string {
+  const month = ((order - 1) % 12) + 1;
+  const year = Math.floor((order - 1) / 12);
+  return `${year}年${month}月`;
+}
+
 const PLACEHOLDER = `戦闘履歴をここに貼り付けてください。（スマホからのコピー＆ペーストにも対応しています）`;
 
 export function HistoryTab({
@@ -115,6 +130,12 @@ export function HistoryTab({
   const [keyword, setKeyword] = useState("");
   const [factionFilter, setFactionFilter] = useState("");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+  // ゲーム内年月の範囲（order = year*12+month）。null は未指定。
+  const [fromYm, setFromYm] = useState<number | null>(null);
+  const [toYm, setToYm] = useState<number | null>(null);
+  // 実際の日付の範囲（"YYYY-MM-DD"）。空文字は未指定。
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [showFilter, setShowFilter] = useState(false);
   const [page, setPage] = useState(1);
   // 入力中の体感を軽く保つため、フィルタ計算は遅延値で行う（大量履歴対策）。
@@ -239,21 +260,57 @@ export function HistoryTab({
     return Array.from(set).sort((a, b) => a.localeCompare(b, "ja"));
   }, [cards]);
 
-  // 戦闘時刻順で表示（新しい順 / 古い順）。キーワード・国で絞り込み。
+  // フィルター用のゲーム内年月一覧（新しい順）。
+  const yearMonthOptions = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const { record } of cards) {
+      const order = gameMonthOrder(record.time);
+      if (order != null && !map.has(order)) {
+        map.set(order, gameMonthLabel(order));
+      }
+    }
+    return Array.from(map.entries())
+      .sort((a, b) => b[0] - a[0])
+      .map(([order, label]) => ({ order, label }));
+  }, [cards]);
+
+  // 戦闘時刻順で表示（新しい順 / 古い順）。キーワード・国・期間で絞り込み。
   const visibleLog = useMemo(() => {
     const k = deferredKeyword.trim().toLowerCase();
+    const now = new Date();
+    // ゲーム内年月の範囲（未指定側は開放）。
+    const ymLo =
+      fromYm != null && toYm != null ? Math.min(fromYm, toYm) : fromYm ?? toYm;
+    const ymHi =
+      fromYm != null && toYm != null ? Math.max(fromYm, toYm) : fromYm ?? toYm;
+    // 実日付の範囲（その日の 00:00〜23:59 を含む）。
+    const dateLo = fromDate ? new Date(`${fromDate}T00:00:00`).getTime() : null;
+    const dateHi = toDate ? new Date(`${toDate}T23:59:59`).getTime() : null;
     const list = cards.filter((item) => {
       if (k && !item.search.includes(k)) return false;
-      const { card } = item;
+      const { card, record } = item;
       if (factionFilter) {
         const f =
           card?.left.faction === factionFilter ||
           card?.right.faction === factionFilter;
         if (!f) return false;
       }
+      // ゲーム内年月で絞り込み。
+      if (ymLo != null || ymHi != null) {
+        const order = gameMonthOrder(record.time);
+        if (order == null) return false;
+        if (ymLo != null && order < ymLo) return false;
+        if (ymHi != null && order > ymHi) return false;
+      }
+      // 実日付で絞り込み。
+      if (dateLo != null || dateHi != null) {
+        const d = parseActionDate(record.time, now)?.getTime() ?? null;
+        if (d == null) return false;
+        if (dateLo != null && d < dateLo) return false;
+        if (dateHi != null && d > dateHi) return false;
+      }
       return true;
     });
-    const now = new Date();
     const timeOf = (r: BattleRecord) =>
       parseActionDate(r.time, now)?.getTime() ?? null;
     // newest=1（降順）/ oldest=-1（昇順）。時刻が無い行は常に末尾。
@@ -269,13 +326,32 @@ export function HistoryTab({
       if (tb != null) return 1;
       return (b.record.savedAt - a.record.savedAt) * dir;
     });
-  }, [cards, deferredKeyword, factionFilter, sortOrder]);
+  }, [
+    cards,
+    deferredKeyword,
+    factionFilter,
+    sortOrder,
+    fromYm,
+    toYm,
+    fromDate,
+    toDate,
+  ]);
 
-  const hasActiveFilter = keyword.trim() !== "" || factionFilter !== "";
+  const hasActiveFilter =
+    keyword.trim() !== "" ||
+    factionFilter !== "" ||
+    fromYm != null ||
+    toYm != null ||
+    fromDate !== "" ||
+    toDate !== "";
 
   const clearFilters = () => {
     setKeyword("");
     setFactionFilter("");
+    setFromYm(null);
+    setToYm(null);
+    setFromDate("");
+    setToDate("");
   };
 
   const totalPages = Math.max(1, Math.ceil(visibleLog.length / PAGE_SIZE));
@@ -285,10 +361,10 @@ export function HistoryTab({
     setPage((p) => Math.min(Math.max(1, p), totalPages));
   }, [totalPages]);
 
-  // キーワード・国・並び順の変更時は1ページ目へ
+  // キーワード・国・並び順・期間の変更時は1ページ目へ
   useEffect(() => {
     setPage(1);
-  }, [deferredKeyword, factionFilter, sortOrder]);
+  }, [deferredKeyword, factionFilter, sortOrder, fromYm, toYm, fromDate, toDate]);
 
   // ページ送り時に一覧の先頭へスクロールする。
   const scrollToListTop = () => {
@@ -438,7 +514,14 @@ export function HistoryTab({
             type="button"
             className={
               "btn filter-toggle" +
-              (showFilter || factionFilter ? " active" : "")
+              (showFilter ||
+              factionFilter ||
+              fromYm != null ||
+              toYm != null ||
+              fromDate ||
+              toDate
+                ? " active"
+                : "")
             }
             onClick={() => setShowFilter((v) => !v)}
             aria-expanded={showFilter}
@@ -475,6 +558,60 @@ export function HistoryTab({
                   </option>
                 ))}
               </select>
+            </label>
+            <label className="filter">
+              <span>年月（開始）</span>
+              <select
+                className="select"
+                value={fromYm ?? ""}
+                onChange={(e) =>
+                  setFromYm(e.target.value ? Number(e.target.value) : null)
+                }
+              >
+                <option value="">指定なし</option>
+                {yearMonthOptions.map(({ order, label }) => (
+                  <option key={order} value={order}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="filter">
+              <span>年月（終了）</span>
+              <select
+                className="select"
+                value={toYm ?? ""}
+                onChange={(e) =>
+                  setToYm(e.target.value ? Number(e.target.value) : null)
+                }
+              >
+                <option value="">指定なし</option>
+                {yearMonthOptions.map(({ order, label }) => (
+                  <option key={order} value={order}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="filter">
+              <span>日付（開始）</span>
+              <input
+                type="date"
+                className="text-input"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                aria-label="実際の日付で絞り込む（開始）"
+              />
+            </label>
+            <label className="filter">
+              <span>日付（終了）</span>
+              <input
+                type="date"
+                className="text-input"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                aria-label="実際の日付で絞り込む（終了）"
+              />
             </label>
           </div>
         )}
