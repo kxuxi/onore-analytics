@@ -16,6 +16,7 @@ interface Props {
   onChangeTheme: (pref: ThemePref) => void;
   isAdmin?: boolean;
   onDeleteFaction?: (faction: string) => Promise<void> | void;
+  onCleanupSkewed?: () => Promise<void> | void;
 }
 
 const THEME_CHOICES: { value: ThemePref; label: string }[] = [
@@ -36,12 +37,32 @@ export function SettingsTab({
   onChangeTheme,
   isAdmin = false,
   onDeleteFaction,
+  onCleanupSkewed,
 }: Props) {
   // 解決済みテーマ（時間帯依存）は描画後に算出し、SSR との不一致を避ける。
   const [resolved, setResolved] = useState<ResolvedTheme | null>(null);
   useEffect(() => {
     setResolved(resolveTheme(themePref));
   }, [themePref]);
+
+  // データ整理（項目ずれの削除）の実行中フラグ。
+  const [cleaning, setCleaning] = useState(false);
+  const handleCleanup = async () => {
+    if (!onCleanupSkewed) return;
+    const ok = window.confirm(
+      "項目がずれて登録された戦闘記録と武将を削除します。\n" +
+        "（オリジナル兵名や装備名のスペースで項目がずれ、タイプ欄に兵種名・" +
+        "兵科欄に装備名が入り込んだデータが対象です）\n" +
+        "ランキングや被弾表などの集計から取り除かれます。この操作は取り消せません。よろしいですか？"
+    );
+    if (!ok) return;
+    setCleaning(true);
+    try {
+      await onCleanupSkewed();
+    } finally {
+      setCleaning(false);
+    }
+  };
 
   return (
     <>
@@ -93,6 +114,30 @@ export function SettingsTab({
         isAdmin={isAdmin}
         onDeleteFaction={onDeleteFaction}
       />
+
+      {isAdmin && onCleanupSkewed && (
+        <section className="panel">
+          <div className="history-head">
+            <h2>データの整理</h2>
+          </div>
+          <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+            項目がずれて登録された戦闘記録・武将を削除します。オリジナル兵名や
+            装備名にスペースが含まれると項目が 1 つずれ、タイプ欄に兵種名・兵科欄に
+            装備名が入り込むことがあります。これらはランキングや被弾表などの集計に
+            誤って含まれるため、削除すると集計が正しくなります。
+          </p>
+          <div className="row" style={{ marginTop: 12 }}>
+            <button
+              type="button"
+              className="btn faction-delete"
+              onClick={handleCleanup}
+              disabled={cleaning}
+            >
+              {cleaning ? "整理中…" : "ずれたデータを整理する"}
+            </button>
+          </div>
+        </section>
+      )}
     </>
   );
 }

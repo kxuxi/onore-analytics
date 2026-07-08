@@ -112,6 +112,29 @@ export async function deleteFaction(
   };
 }
 
+/**
+ * 項目ずれ（トークンずれ）を起こした戦闘記録と武将をまとめて削除する（管理者のみ）。
+ * オリジナル兵名・装備名のスペースで項目がずれ、type に兵種名・branch に装備名が
+ * 入り込んだデータが対象。
+ * @returns 削除した戦闘記録数（records）と武将数（warlords）
+ */
+export async function cleanupSkewedData(): Promise<{
+  records: number;
+  warlords: number;
+}> {
+  const res = await fetch("/api/battle-records/cleanup-skewed", {
+    method: "DELETE",
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(data?.error ?? "データの整理に失敗しました");
+  }
+  return {
+    records: data?.deleted ?? 0,
+    warlords: data?.deletedWarlords ?? 0,
+  };
+}
+
 /** 兵種一覧のメモリキャッシュ。画面ごとの重複取得を避ける。
  *  追加 / 更新 / 削除のたびに失効させ、次回取得で最新を取り直す。 */
 let unitTypesCache: UnitType[] | null = null;

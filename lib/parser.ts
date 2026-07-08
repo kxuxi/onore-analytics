@@ -323,6 +323,29 @@ export interface BattleSide {
   equip2?: string;
 }
 
+/** 既知の武将タイプ。これ以外が type に入っていたらトークンずれの疑い。 */
+export const KNOWN_WARLORD_TYPES = new Set([
+  "武特", "知特", "統特",
+  "武統", "統武", "武知", "知武", "武政", "政武",
+  "統知", "知統", "統政", "政統", "知政", "政知",
+  "政治家", "謎", "戦闘狂",
+]);
+
+/** 既知の兵科。これ以外が branch に入っていたらトークンずれの疑い。 */
+export const KNOWN_BRANCHES = new Set([
+  "万能", "騎兵", "歩兵", "弓兵", "妖怪", "壁", "小型船", "特殊船", "軍艦",
+]);
+
+/**
+ * 戦闘カードの片側がトークンずれ（項目ずれ）を起こしているか判定する。
+ * type が既知タイプでない、または branch が既知兵科でない場合にずれと見なす。
+ * オリジナル兵名や装備名にスペースが混じると項目が 1 つずれ、type に兵種名・
+ * branch に装備名が入り込む（例: type="イェニチェリ" / branch="銀の腕輪"）。
+ */
+export function isSkewedSide(side: BattleSide): boolean {
+  return !KNOWN_WARLORD_TYPES.has(side.type) || !KNOWN_BRANCHES.has(side.branch);
+}
+
 /** 1 戦闘行をカード表示用に構造化したもの */
 export interface BattleCard {
   /** 例: "1戦目" */

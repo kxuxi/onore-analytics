@@ -482,6 +482,45 @@ export default function HomePage() {
   );
 
 
+  const handleCleanupSkewed = useCallback(async () => {
+    try {
+      const { cleanupSkewedData } = await import("@/lib/api");
+      const {
+        parseBattleCard,
+        isSkewedSide,
+        KNOWN_WARLORD_TYPES,
+        KNOWN_BRANCHES,
+      } = await import("@/lib/parser");
+      const { records, warlords } = await cleanupSkewedData();
+      // 項目ずれの戦闘記録をローカルのログからも除去する。
+      const newLog = battleLog.filter((r) => {
+        const card = parseBattleCard(r.line);
+        if (!card) return true;
+        return !(isSkewedSide(card.left) || isSkewedSide(card.right));
+      });
+      setBattleLog(newLog);
+      // ずれて登録された武将（type/branch が空でなく既知でない）を DB 名簿からも除去する。
+      const newDb = Object.fromEntries(
+        Object.entries(db).filter(
+          ([, w]) =>
+            !(
+              (w.type !== "" && !KNOWN_WARLORD_TYPES.has(w.type)) ||
+              (w.branch !== "" && !KNOWN_BRANCHES.has(w.branch))
+            )
+        )
+      );
+      setDb(newDb);
+      pushToast(
+        "success",
+        `ずれたデータを整理しました（戦闘記録${records}件 / 武将${warlords}人）`
+      );
+    } catch {
+      pushToast("error", "データの整理に失敗しました。もう一度お試しください。");
+      throw new Error("整理失敗");
+    }
+  }, [battleLog, db, setBattleLog, setDb, pushToast]);
+
+
   const handleRegister = useCallback(
     async (text: string) => {
       const { entries, rejected } = parseBattleEntriesChecked(text);
@@ -706,6 +745,7 @@ export default function HomePage() {
             onChangeTheme={handleChangeTheme}
             isAdmin={isAdmin}
             onDeleteFaction={handleDeleteFaction}
+            onCleanupSkewed={handleCleanupSkewed}
           />
         );
       default:
@@ -726,6 +766,7 @@ export default function HomePage() {
     handleChangeTheme,
     handleDeleteBattle,
     handleDeleteFaction,
+    handleCleanupSkewed,
     selectWarlord,
     selectWarlordNormalized,
     selectUnit,

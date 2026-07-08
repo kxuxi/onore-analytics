@@ -9,6 +9,7 @@ import {
   normalizeWidth,
   isSpecialToken,
   battleKey,
+  isSkewedSide,
 } from "./parser";
 
 // スペース区切りでも parser は [\s\u3000]+ で分割するためタブ無しで再現できる。
@@ -341,5 +342,32 @@ describe("parseBattleEntriesChecked（項目の過不足の検出）", () => {
     );
     expect(entries).toHaveLength(0);
     expect(rejected).toHaveLength(0);
+  });
+});
+
+describe("isSkewedSide（項目ずれの判定）", () => {
+  it("正常な type/branch はずれと判定しない", () => {
+    const card = parseBattleCard(LINE_PLAIN);
+    expect(card).not.toBeNull();
+    expect(isSkewedSide(card!.left)).toBe(false);
+    expect(isSkewedSide(card!.right)).toBe(false);
+  });
+
+  it("オリジナル兵名のスペースで項目がずれた行はずれと判定する", () => {
+    // 兵種名「*中指 末弟・末妹(ライフル銃兵)」がスペースで 2 トークンになり、
+    // type に兵種名・branch に装備名がずれ込む。
+    const line =
+      "【1戦目】 1666年4月 05/20 21:18 戸坂 己鯖 ヒースクリフ 中指 統特 *中指 末弟・末妹(ライフル銃兵) 弓兵 孟徳新書 カルバリン砲 V.S. 敵国 広島ファン 広島ファン家 統特 ミニエー銃兵 弓兵 金の護符 金タライ 広島ファンの勝利 5";
+    const card = parseBattleCard(line);
+    expect(card).not.toBeNull();
+    // 攻撃側の type が兵種名「*中指」になっている＝ずれ。
+    expect(isSkewedSide(card!.left)).toBe(true);
+  });
+
+  it("branch に装備名が入り込んだ側はずれと判定する", () => {
+    // type が既知でも branch が装備名ならずれ。
+    const card = parseBattleCard(LINE_PLAIN);
+    const skewed = { ...card!.left, branch: "銀の腕輪" };
+    expect(isSkewedSide(skewed)).toBe(true);
   });
 });
