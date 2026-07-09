@@ -7,10 +7,12 @@ import {
   summarize,
   factionMemberStats,
   latestUnitsByBranch,
+  factionMemberUnitTrends,
+  latestGameYear,
   branchStats,
   formatWinRate,
 } from "@/lib/stats";
-import type { FactionMemberStat } from "@/lib/stats";
+import type { FactionMemberStat, MemberUnitTrend } from "@/lib/stats";
 import {
   factionNameStyle,
   type FactionColorMap,
@@ -43,6 +45,8 @@ interface MemberRow {
   branch?: string;
   /** その国に在籍していた期間（最後に在籍した区間）の戦績。 */
   stat?: FactionMemberStat;
+  /** 過去10年間にこの国で使った兵種の傾向。 */
+  unitTrend?: MemberUnitTrend;
 }
 
 export function FactionDetail({
@@ -68,6 +72,13 @@ export function FactionDetail({
     const target = name.trim();
     const statMap = new Map<string, FactionMemberStat>();
     for (const s of factionMemberStats(log, target)) statMap.set(s.name, s);
+    // 過去10年間（最新のゲーム内年から遡って10年）の兵種傾向。
+    const latest = latestGameYear(log);
+    const trendMap = factionMemberUnitTrends(
+      log,
+      target,
+      latest != null ? latest - 9 : null
+    );
     const rows: MemberRow[] = Array.from(statMap.keys()).map((n) => {
       const w = db[n];
       return {
@@ -75,6 +86,7 @@ export function FactionDetail({
         type: w?.type,
         branch: w?.branch,
         stat: statMap.get(n),
+        unitTrend: trendMap.get(n),
       };
     });
     return rows.sort((a, b) => {
@@ -144,6 +156,7 @@ export function FactionDetail({
           <FactionMembers
             members={members}
             onSelectWarlord={onSelectWarlord}
+            onSelectUnit={onSelectUnit}
           />
 
           {outcomes.length > 0 && (
@@ -278,9 +291,11 @@ const INITIAL_MEMBERS = 8;
 function FactionMembers({
   members,
   onSelectWarlord,
+  onSelectUnit,
 }: {
   members: MemberRow[];
   onSelectWarlord: (name: string) => void;
+  onSelectUnit: (name: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   if (members.length === 0) return null;
@@ -289,7 +304,8 @@ function FactionMembers({
   return (
     <Section title="所属武将" count={`${members.length}人`} mobileCollapsed>
       <p className="detail-note muted">
-        勝率は各武将がこの国に在籍していた期間の戦績です。
+        勝率は各武将がこの国に在籍していた期間の戦績です。兵種は過去10年間に
+        この国で使ったものを多い順に表示します。
       </p>
       <ul className="user-winrate-list">
         {shown.map((m) => {
@@ -335,6 +351,22 @@ function FactionMembers({
                   style={{ width: `${decided > 0 ? pct : 0}%` }}
                 />
               </span>
+              {m.unitTrend && m.unitTrend.units.length > 0 && (
+                <div className="member-units">
+                  {m.unitTrend.units.slice(0, 4).map((u) => (
+                    <button
+                      key={u.unit}
+                      type="button"
+                      className="member-unit-chip"
+                      onClick={() => onSelectUnit(u.unit)}
+                      title={`${u.unit} の詳細を見る`}
+                    >
+                      <span className="member-unit-name">{u.unit}</span>
+                      <span className="member-unit-count">{u.count}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </li>
           );
         })}

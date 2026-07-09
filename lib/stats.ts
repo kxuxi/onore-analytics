@@ -1142,6 +1142,62 @@ export function latestUnitsByBranch(
   });
 }
 
+/** 所属武将ごとの兵種傾向（期間内にその国の旗で使った兵種の頻度）。 */
+export interface MemberUnitTrend {
+  /** 兵種名（正規化済み）と使用回数（多い順）。 */
+  units: { unit: string; count: number }[];
+  /** 対象期間にその国の旗で戦った総数（兵種不明も含む）。 */
+  total: number;
+}
+
+/**
+ * 指定した国の所属武将ごとに、期間内でその国の旗を掲げて使った兵種の傾向を集計する。
+ * sinceYear 以降（ゲーム内年）の戦闘のみを対象にする（null なら全期間）。
+ * 返り値は 武将名 → 兵種頻度。国ページで各武将の得意兵種を出すのに使う。
+ */
+export function factionMemberUnitTrends(
+  log: BattleRecord[],
+  faction: string,
+  sinceYear: number | null
+): Map<string, MemberUnitTrend> {
+  const target = faction.trim();
+  const cards = dedupedCards(log);
+  const unitCounts = new Map<string, Map<string, number>>();
+  const totals = new Map<string, number>();
+  for (const { card } of cards) {
+    const year = gameYear(card);
+    if (sinceYear != null && (year == null || year < sinceYear)) continue;
+    for (const side of ["left", "right"] as SideKey[]) {
+      const s = side === "left" ? card.left : card.right;
+      if (s.faction?.trim() !== target) continue;
+      const name = s.name?.trim();
+      if (!name) continue;
+      totals.set(name, (totals.get(name) ?? 0) + 1);
+      const unit = s.unit ? normalizeDisplayToken(s.unit) : "";
+      if (!unit) continue;
+      let units = unitCounts.get(name);
+      if (!units) {
+        units = new Map<string, number>();
+        unitCounts.set(name, units);
+      }
+      units.set(unit, (units.get(unit) ?? 0) + 1);
+    }
+  }
+  const out = new Map<string, MemberUnitTrend>();
+  for (const name of totals.keys()) {
+    const units = unitCounts.get(name);
+    const list = units
+      ? Array.from(units.entries())
+          .map(([unit, count]) => ({ unit, count }))
+          .sort(
+            (a, b) => b.count - a.count || a.unit.localeCompare(b.unit, "ja")
+          )
+      : [];
+    out.set(name, { units: list, total: totals.get(name) ?? 0 });
+  }
+  return out;
+}
+
 /* ---------- 兵種ページ：相性の良い／苦手な敵兵種 ---------- */
 
 /** 注目兵種から見た、ある敵兵種に対する戦績。 */

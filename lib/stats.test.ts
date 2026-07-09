@@ -14,6 +14,7 @@ import {
   factionSummaries,
   factionMemberStats,
   latestUnitsByBranch,
+  factionMemberUnitTrends,
   unitMatchupRanking,
   userWinRates,
   unitUsageTrend,
@@ -452,6 +453,44 @@ describe("latestUnitsByBranch", () => {
     expect(groups.find((g) => g.branch === "その他")!.units).toEqual([
       { unit: "ぬりかべ", count: 1 },
     ]);
+  });
+});
+
+describe("factionMemberUnitTrends", () => {
+  const line = (opts: {
+    year: number;
+    self: string;
+    faction: string;
+    unit: string;
+    opp: string;
+  }) =>
+    `【1戦目】 ${opts.year}年4月 04/10 10:00 京都 ${opts.faction} ${opts.self} 某家 武特 ${opts.unit} 弓兵 槍 鎧 V.S. 敵国 ${opts.opp} 敵家 統特 騎馬隊 騎兵 馬 旗 ${opts.self}の勝利 12`;
+
+  it("武将ごとに期間内の兵種頻度を多い順に集計する", () => {
+    const log: BattleRecord[] = [
+      rec(line({ year: 1700, self: "山田", faction: "織田", unit: "ロングボウ", opp: "A" }), 1),
+      rec(line({ year: 1701, self: "山田", faction: "織田", unit: "ロングボウ", opp: "B" }), 2),
+      rec(line({ year: 1702, self: "山田", faction: "織田", unit: "剛弓", opp: "C" }), 3),
+      // 過去10年より前の年は除外される。
+      rec(line({ year: 1680, self: "山田", faction: "織田", unit: "丸木弓足軽", opp: "D" }), 4),
+    ];
+    const trends = factionMemberUnitTrends(log, "織田", 1693); // 1693以降=過去10年
+    const yamada = trends.get("山田")!;
+    expect(yamada.units).toEqual([
+      { unit: "ロングボウ", count: 2 },
+      { unit: "剛弓", count: 1 },
+    ]);
+    expect(yamada.units.find((u) => u.unit === "丸木弓足軽")).toBeUndefined();
+  });
+
+  it("別の国で使った兵種は含めない", () => {
+    const log: BattleRecord[] = [
+      rec(line({ year: 1700, self: "佐藤", faction: "織田", unit: "母衣衆", opp: "A" }), 1),
+      rec(line({ year: 1700, self: "佐藤", faction: "武田", unit: "赤備", opp: "B" }), 2),
+    ];
+    const trends = factionMemberUnitTrends(log, "織田", null);
+    const sato = trends.get("佐藤")!;
+    expect(sato.units).toEqual([{ unit: "母衣衆", count: 1 }]);
   });
 });
 
