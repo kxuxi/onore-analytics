@@ -73,6 +73,33 @@ export function extractBattleUrl(line: string): { line: string; url?: string } {
 }
 
 /**
+ * オリジナル兵の括弧付き表記（`*名前(兵種)` / `オリジナル兵(兵種)`）は、命名部分
+ * （マーカー〜開き括弧の直前）に半角空白が含まれることがある。そのまま空白で
+ * 分割すると 1 項目が複数トークンに割れて以降の項目がずれてしまう。分割前に
+ * この構文内の空白を取り除いて 1 トークンにまとめることで項目ずれを防ぐ。
+ *
+ * 反対側の武将（V.S. の先）の括弧まで巻き込まないよう、V.S. 区切りは跨がない。
+ */
+function collapseOriginalUnitSpaces(line: string): string {
+  return line.replace(
+    /(?:\*|オリジナル兵)(?:(?!v\.?s\.?)[^（(])*?[（(][^（()）]*[）)]/gi,
+    (matched) => matched.replace(/[\s\u3000]+/g, "")
+  );
+}
+
+/**
+ * 戦闘行を空白（タブ/半角/全角）区切りのトークンに分解する。
+ * 分割前に collapseOriginalUnitSpaces でオリジナル兵の括弧付き表記を 1 トークンへ寄せ、
+ * 命名に半角空白が含まれていても以降の項目がずれないようにする。
+ */
+function tokenizeBattleLine(raw: string): string[] {
+  return collapseOriginalUnitSpaces(raw)
+    .split(/[\s\u3000]+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0);
+}
+
+/**
  * 戦闘履歴 1 行を解析して攻撃側・防衛側の武将情報を取り出す。
  *
  * 実データはタブと半角スペースが混在しており、戦闘部分は 1 つのフィールド内で
@@ -89,10 +116,8 @@ export function parseBattleLine(line: string): Warlord[] {
   if (!raw) return [];
 
   // タブ・半角スペース・全角スペースをまとめて区切りにする。
-  const tokens = raw
-    .split(/[\s\u3000]+/)
-    .map((t) => t.trim())
-    .filter((t) => t.length > 0);
+  // 先にオリジナル兵の括弧付き表記を 1 トークンへ寄せてから分割する。
+  const tokens = tokenizeBattleLine(raw);
 
   // 【N戦目】 で始まる行のみ対象
   if (tokens.length === 0 || !/^【.*戦目】/.test(tokens[0])) {
@@ -253,10 +278,7 @@ function battleNoOf(seg: string): string | undefined {
  */
 function battleRejectReason(seg: string): string {
   const { line: raw } = extractBattleUrl(seg.replace(/\r/g, "").trim());
-  const tokens = raw
-    .split(/[\s\u3000]+/)
-    .map((t) => t.trim())
-    .filter((t) => t.length > 0);
+  const tokens = tokenizeBattleLine(raw);
   const vsIndex = tokens.findIndex((t) => /^v\.?s\.?$/i.test(t));
   if (vsIndex < 0) return "「V.S.」の区切りが見つかりません";
   if (vsIndex < 8) return "攻撃側の項目数が不足しています";
@@ -474,10 +496,7 @@ function computeBattleCard(line: string): BattleCard | null {
   const { line: raw, url } = extractBattleUrl(line.replace(/\r/g, "").trim());
   if (!raw) return null;
 
-  const tokens = raw
-    .split(/[\s\u3000]+/)
-    .map((t) => t.trim())
-    .filter((t) => t.length > 0);
+  const tokens = tokenizeBattleLine(raw);
 
   if (tokens.length === 0 || !/^【.*戦目】/.test(tokens[0])) return null;
 

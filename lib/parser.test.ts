@@ -157,6 +157,32 @@ describe("parseBattleLine の兵種正規化", () => {
     const w = parseBattleLine(withUnit("*ノクスミーティア"));
     expect(w[0].unit).toBe("*ノクスミーティア");
   });
+
+  it("命名に半角空白を含むオリジナル兵も 1 トークンとして解析する", () => {
+    // 「*中指 末弟・末妹(ライフル銃兵)」は命名に空白があるが、分割前に
+    // 1 トークンへまとめるため以降の項目（兵科・装備）がずれない。
+    const w = parseBattleLine(withUnit("*中指 末弟・末妹(ライフル銃兵)"));
+    expect(w[0].unit).toBe("ライフル銃兵");
+    expect(w[0].type).toBe("武特");
+    expect(w[0].branch).toBe("騎兵");
+  });
+
+  it("V.S. の前後に空白入りオリジナル兵があっても両側を取り違えない", () => {
+    // 攻撃側・防衛側の両方が命名に空白を含むオリジナル兵でも、
+    // V.S. を跨いで巻き込まず、それぞれ 1 トークンにまとまる。
+    const line =
+      "【1戦目】 1583年4月 04/10 10:23 京都 織田 信長 織田家 武特 " +
+      "*天翔 龍騎兵(カノン砲) 騎兵 槍 鎧 V.S. 武田 勝頼 武田家 統特 " +
+      "*疾風 白虎隊(ドラグーン) 騎兵 馬 旗 信長の勝利 12";
+    const w = parseBattleLine(line);
+    expect(w).toHaveLength(2);
+    expect(w[0].name).toBe("信長");
+    expect(w[0].unit).toBe("カノン砲");
+    expect(w[0].branch).toBe("騎兵");
+    expect(w[1].name).toBe("勝頼");
+    expect(w[1].unit).toBe("ドラグーン");
+    expect(w[1].branch).toBe("騎兵");
+  });
 });
 
 describe("スマホ貼り付け（リンク喪失で詰まった形式）", () => {
@@ -353,15 +379,18 @@ describe("isSkewedSide（項目ずれの判定）", () => {
     expect(isSkewedSide(card!.right)).toBe(false);
   });
 
-  it("オリジナル兵名のスペースで項目がずれた行はずれと判定する", () => {
-    // 兵種名「*中指 末弟・末妹(ライフル銃兵)」がスペースで 2 トークンになり、
-    // type に兵種名・branch に装備名がずれ込む。
+  it("オリジナル兵名にスペースがあっても項目はずれない（分割前に 1 トークン化）", () => {
+    // 兵種名「*中指 末弟・末妹(ライフル銃兵)」は命名に空白を含むが、
+    // 分割前に 1 トークンへまとめるため type/branch が正しい位置に収まる。
     const line =
       "【1戦目】 1666年4月 05/20 21:18 戸坂 己鯖 ヒースクリフ 中指 統特 *中指 末弟・末妹(ライフル銃兵) 弓兵 孟徳新書 カルバリン砲 V.S. 敵国 広島ファン 広島ファン家 統特 ミニエー銃兵 弓兵 金の護符 金タライ 広島ファンの勝利 5";
     const card = parseBattleCard(line);
     expect(card).not.toBeNull();
-    // 攻撃側の type が兵種名「*中指」になっている＝ずれ。
-    expect(isSkewedSide(card!.left)).toBe(true);
+    // ずれが解消され、type=統特 / branch=弓兵 / unit=ライフル銃兵 に収まる。
+    expect(isSkewedSide(card!.left)).toBe(false);
+    expect(card!.left.type).toBe("統特");
+    expect(card!.left.branch).toBe("弓兵");
+    expect(normalizeDisplayToken(card!.left.unit ?? "")).toBe("ライフル銃兵");
   });
 
   it("branch に装備名が入り込んだ側はずれと判定する", () => {
