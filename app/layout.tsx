@@ -4,7 +4,7 @@ import "./globals.css";
 
 const SITE_NAME = "ONORE ANALYTICS";
 const SITE_DESCRIPTION =
-  "ゲーム「己鯖」の戦闘履歴から武将のタイプ・兵科を登録し、偵察リストから即座に検索できるツール。";
+  "ゲーム「己鯖」のちょっとしたデータが見られるツール。管理人が個人的に作ったものなので、データの正確性は保証されません。";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 export const metadata: Metadata = {
