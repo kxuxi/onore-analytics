@@ -19,6 +19,9 @@ type SortKey = "antiRate" | "antiContacts" | "breakthrough";
 /** ノイズ除去用の最低戦闘数の選択肢。 */
 const MIN_CONTACT_OPTIONS = [1, 5, 10, 20, 30];
 
+/** サマリーで各指標を上位何位まで出すか。 */
+const TOP_N = 5;
+
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "antiRate", label: "Anti-Contact率" },
   { key: "antiContacts", label: "Anti-Contact数" },
@@ -45,6 +48,102 @@ function formatRate(rate: number, contacts: number): string {
   return `${Math.round(rate * 100)}%`;
 }
 
+/** 指標 metric における行 r のバー用の数値。 */
+function metricValue(r: MetricRow, metric: SortKey): number {
+  return metric === "antiRate"
+    ? r.antiRate
+    : metric === "breakthrough"
+      ? r.breakthrough
+      : r.antiContacts;
+}
+
+/** 指標 metric における行 r の表示用ラベル。 */
+function metricLabel(r: MetricRow, metric: SortKey): string {
+  return metric === "antiRate"
+    ? formatRate(r.antiRate, r.contacts)
+    : metric === "breakthrough"
+      ? r.breakthrough.toLocaleString("ja-JP")
+      : r.antiContacts.toLocaleString("ja-JP");
+}
+
+/** 指標 metric で降順に並べ替えた新しい配列を返す。 */
+function sortByMetric(rows: MetricRow[], metric: SortKey): MetricRow[] {
+  return [...rows].sort((a, b) => {
+    if (metric === "breakthrough") {
+      if (b.breakthrough !== a.breakthrough)
+        return b.breakthrough - a.breakthrough;
+      return b.sorties - a.sorties;
+    }
+    if (metric === "antiRate") {
+      if (b.antiRate !== a.antiRate) return b.antiRate - a.antiRate;
+      return b.antiContacts - a.antiContacts;
+    }
+    if (b.antiContacts !== a.antiContacts) return b.antiContacts - a.antiContacts;
+    return b.antiRate - a.antiRate;
+  });
+}
+
+/** ランキング 1 行（サマリー・詳細で共用）。 */
+function MetricRowItem({
+  r,
+  rank,
+  metric,
+  maxValue,
+  onSelectWarlord,
+}: {
+  r: MetricRow;
+  rank: number;
+  metric: SortKey;
+  maxValue: number;
+  onSelectWarlord: (name: string) => void;
+}) {
+  const value = metricValue(r, metric);
+  const label = metricLabel(r, metric);
+  const pct = maxValue > 0 ? (value / maxValue) * 100 : 0;
+  return (
+    <li className="swi-row">
+      <span className="swi-rank">{rank}</span>
+      <div className="swi-main">
+        <div className="swi-head">
+          <button
+            type="button"
+            className="swi-name link-like"
+            onClick={() => onSelectWarlord(r.name)}
+            title={`${r.name} の戦績を見る`}
+          >
+            {r.name}
+          </button>
+          <span className="swi-value">{label}</span>
+        </div>
+        <span
+          className="swi-bar"
+          role="progressbar"
+          aria-valuenow={Math.round(pct)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`${r.name} ${label}`}
+        >
+          <span className="swi-bar-fill" style={{ width: `${pct}%` }} />
+        </span>
+        <div className="swi-meta muted">
+          {metric === "breakthrough" ? (
+            <span className="rank-side-active">
+              枚数率 {r.breakthrough.toLocaleString("ja-JP")} ／ 出撃{" "}
+              {r.sorties.toLocaleString("ja-JP")}
+            </span>
+          ) : (
+            <span className="rank-side-active">
+              アンチ {r.antiContacts.toLocaleString("ja-JP")} ／ 戦闘{" "}
+              {r.contacts.toLocaleString("ja-JP")}（率{" "}
+              {formatRate(r.antiRate, r.contacts)}）
+            </span>
+          )}
+        </div>
+      </div>
+    </li>
+  );
+}
+
 /**
  * 指標タブ。武将ごとの Anti-Contact 数・率を表示する。
  *
@@ -54,7 +153,8 @@ function formatRate(rate: number, contacts: number): string {
 export function MetricsTab({ log, db, onSelectWarlord }: Props) {
   const [unitTypes, setUnitTypes] = useState<UnitType[] | null>(null);
   const [loadError, setLoadError] = useState(false);
-  const [sortKey, setSortKey] = useState<SortKey>("antiRate");
+  // null = サマリー（各指標TOP5）、非null = その指標の詳細ランキング。
+  const [activeMetric, setActiveMetric] = useState<SortKey | null>(null);
   const [minContacts, setMinContacts] = useState(1);
   const [query, setQuery] = useState("");
   const [branch, setBranch] = useState("");
@@ -129,8 +229,19 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
     [ranking]
   );
 
-  // 絞り込み・並べ替えを適用した表示用リスト。
-  const view = useMemo(() => {
+  // サマリー：指標ごとに上位 TOP_N を切り出す（絞り込みなしの全体ランキング）。
+  const summaries = useMemo(
+    () =>
+      SORT_OPTIONS.map((opt) => ({
+        opt,
+        rows: sortByMetric(ranking, opt.key).slice(0, TOP_N),
+      })),
+    [ranking]
+  );
+
+  // 詳細：選択中の指標で絞り込み・並べ替えた全ランキング。
+  const detailRows = useMemo(() => {
+    if (!activeMetric) return [];
     const q = query.trim();
     const filtered = ranking.filter(
       (r) =>
@@ -138,41 +249,41 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
         (branch ? r.branch === branch : true) &&
         (q ? r.name.includes(q) : true)
     );
-    return [...filtered].sort((a, b) => {
-      if (sortKey === "breakthrough") {
-        if (b.breakthrough !== a.breakthrough)
-          return b.breakthrough - a.breakthrough;
-        return b.sorties - a.sorties;
-      }
-      if (sortKey === "antiRate") {
-        if (b.antiRate !== a.antiRate) return b.antiRate - a.antiRate;
-        return b.antiContacts - a.antiContacts;
-      }
-      if (b.antiContacts !== a.antiContacts) return b.antiContacts - a.antiContacts;
-      return b.antiRate - a.antiRate;
-    });
-  }, [ranking, query, branch, minContacts, sortKey]);
+    return sortByMetric(filtered, activeMetric);
+  }, [ranking, activeMetric, query, branch, minContacts]);
 
-  const valueOf = (r: MetricRow) =>
-    sortKey === "antiRate"
-      ? r.antiRate
-      : sortKey === "breakthrough"
-        ? r.breakthrough
-        : r.antiContacts;
+  // バー幅の基準となる最大値（詳細表示の最大）。
+  const detailMax =
+    detailRows.reduce(
+      (m, r) => Math.max(m, activeMetric ? metricValue(r, activeMetric) : 0),
+      0
+    ) || 1;
 
-  // バー幅の基準となる最大値（表示対象の最大）。
-  const maxValue = view.reduce((m, r) => Math.max(m, valueOf(r)), 0) || 1;
+  const activeLabel = activeMetric
+    ? SORT_OPTIONS.find((o) => o.key === activeMetric)?.label ?? ""
+    : "";
 
-  const formatValue = (r: MetricRow) =>
-    sortKey === "antiRate"
-      ? formatRate(r.antiRate, r.contacts)
-      : sortKey === "breakthrough"
-        ? r.breakthrough.toLocaleString("ja-JP")
-        : r.antiContacts.toLocaleString("ja-JP");
+  // 詳細ビューを開く（絞り込みは初期化して先頭へ）。
+  const openDetail = useCallback((metric: SortKey) => {
+    setActiveMetric(metric);
+    setShowFilter(false);
+    setQuery("");
+    setBranch("");
+    setMinContacts(1);
+    if (typeof window !== "undefined") window.scrollTo(0, 0);
+  }, []);
+
+  // サマリーへ戻る。
+  const backToSummary = useCallback(() => {
+    setActiveMetric(null);
+    setShowFilter(false);
+    setQuery("");
+    setBranch("");
+    if (typeof window !== "undefined") window.scrollTo(0, 0);
+  }, []);
 
   // 検索ボックスとは別にトグルするドロップダウン系の絞り込み。
-  const hasDropdownFilter =
-    !!branch || sortKey !== "antiRate" || minContacts !== 1;
+  const hasDropdownFilter = !!branch || minContacts !== 1;
   const hasFilter = !!(query || branch);
   const clearFilters = () => {
     setQuery("");
@@ -199,89 +310,6 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
         </p>
       </details>
 
-      <div className="search-row">
-        <SearchBox
-          value={query}
-          onChange={setQuery}
-          placeholder="武将名で検索"
-        />
-        <button
-          type="button"
-          className={
-            "btn filter-toggle" +
-            (showFilter || hasDropdownFilter ? " active" : "")
-          }
-          onClick={() => setShowFilter((v) => !v)}
-          aria-expanded={showFilter}
-        >
-          <FilterIcon />
-          <span>フィルター</span>
-        </button>
-        {hasFilter && (
-          <button
-            type="button"
-            className="btn clear-filters"
-            onClick={clearFilters}
-            title="絞り込み条件をすべて解除"
-          >
-            <CloseIcon />
-            <span>解除</span>
-          </button>
-        )}
-      </div>
-
-      {showFilter && (
-        <div className="filter-grid">
-          <label className="filter">
-            <span>指標</span>
-            <select
-              className="select"
-              value={sortKey}
-              onChange={(e) => setSortKey(e.target.value as SortKey)}
-            >
-              {SORT_OPTIONS.map((s) => (
-                <option key={s.key} value={s.key}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="filter">
-            <span>最低戦闘数</span>
-            <select
-              className="select"
-              value={minContacts}
-              onChange={(e) => setMinContacts(Number(e.target.value))}
-            >
-              {MIN_CONTACT_OPTIONS.map((v) => (
-                <option key={v} value={v}>
-                  {v}回以上
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="filter">
-            <span>兵種</span>
-            <select
-              className="select"
-              value={branch}
-              onChange={(e) => setBranch(e.target.value)}
-            >
-              <option value="">すべて</option>
-              {branchOptions.map((v) => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      )}
-
-      <p className="sr-only" role="status" aria-live="polite">
-        該当 {view.length.toLocaleString("ja-JP")}件
-      </p>
-
       {loadError ? (
         <div className="empty" role="alert">
           <p className="empty-title">兵種一覧の取得に失敗しました</p>
@@ -296,64 +324,152 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
         <div className="empty">
           <p className="empty-title">読み込み中…</p>
         </div>
-      ) : view.length === 0 ? (
-        <div className="empty">
-          <p className="empty-title">条件を満たす武将がいません</p>
-          <p className="empty-hint">
-            管理人が戦績を登録するまでお待ちください。
-          </p>
-        </div>
-      ) : (
-        <ol className="swi-list">
-          {view.map((r, i) => {
-            const value = valueOf(r);
-            return (
-              <li key={r.name} className="swi-row">
-                <span className="swi-rank">{i + 1}</span>
-                <div className="swi-main">
-                  <div className="swi-head">
-                    <button
-                      type="button"
-                      className="swi-name link-like"
-                      onClick={() => onSelectWarlord(r.name)}
-                      title={`${r.name} の戦績を見る`}
-                    >
-                      {r.name}
-                    </button>
-                    <span className="swi-value">{formatValue(r)}</span>
-                  </div>
-                  <span
-                    className="swi-bar"
-                    role="progressbar"
-                    aria-valuenow={Math.round((value / maxValue) * 100)}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-label={`${r.name} ${formatValue(r)}`}
-                  >
-                    <span
-                      className="swi-bar-fill"
-                      style={{ width: `${(value / maxValue) * 100}%` }}
+      ) : activeMetric === null ? (
+        // サマリー：指標ごとの上位 TOP5 を並べ、詳細へ誘導する。
+        summaries.map(({ opt, rows }) => {
+          const max = rows.reduce(
+            (m, r) => Math.max(m, metricValue(r, opt.key)),
+            0
+          );
+          return (
+            <div className="metric-section" key={opt.key}>
+              <div className="metric-section-head">
+                <h3>{opt.label}</h3>
+                <button
+                  type="button"
+                  className="link-like"
+                  onClick={() => openDetail(opt.key)}
+                >
+                  詳細を見る →
+                </button>
+              </div>
+              {rows.length === 0 ? (
+                <p className="metric-section-empty muted">
+                  条件を満たす武将がいません。
+                </p>
+              ) : (
+                <ol className="swi-list">
+                  {rows.map((r, i) => (
+                    <MetricRowItem
+                      key={r.name}
+                      r={r}
+                      rank={i + 1}
+                      metric={opt.key}
+                      maxValue={max}
+                      onSelectWarlord={onSelectWarlord}
                     />
-                  </span>
-                  <div className="swi-meta muted">
-                    {sortKey === "breakthrough" ? (
-                      <span className="rank-side-active">
-                        枚数率 {r.breakthrough.toLocaleString("ja-JP")} ／ 出撃{" "}
-                        {r.sorties.toLocaleString("ja-JP")}
-                      </span>
-                    ) : (
-                      <span className="rank-side-active">
-                        アンチ {r.antiContacts.toLocaleString("ja-JP")} ／ 戦闘{" "}
-                        {r.contacts.toLocaleString("ja-JP")}（率{" "}
-                        {formatRate(r.antiRate, r.contacts)}）
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
+                  ))}
+                </ol>
+              )}
+            </div>
+          );
+        })
+      ) : (
+        // 詳細：パンくず＋絞り込み＋その指標の全ランキング。
+        <>
+          <nav className="metric-crumb" aria-label="パンくずリスト">
+            <button
+              type="button"
+              className="link-like"
+              onClick={backToSummary}
+            >
+              指標
+            </button>
+            <span className="metric-crumb-sep" aria-hidden="true">
+              ›
+            </span>
+            <span className="metric-crumb-current">{activeLabel}</span>
+          </nav>
+
+          <div className="search-row">
+            <SearchBox
+              value={query}
+              onChange={setQuery}
+              placeholder="武将名で検索"
+            />
+            <button
+              type="button"
+              className={
+                "btn filter-toggle" +
+                (showFilter || hasDropdownFilter ? " active" : "")
+              }
+              onClick={() => setShowFilter((v) => !v)}
+              aria-expanded={showFilter}
+            >
+              <FilterIcon />
+              <span>フィルター</span>
+            </button>
+            {hasFilter && (
+              <button
+                type="button"
+                className="btn clear-filters"
+                onClick={clearFilters}
+                title="絞り込み条件をすべて解除"
+              >
+                <CloseIcon />
+                <span>解除</span>
+              </button>
+            )}
+          </div>
+
+          {showFilter && (
+            <div className="filter-grid">
+              <label className="filter">
+                <span>最低戦闘数</span>
+                <select
+                  className="select"
+                  value={minContacts}
+                  onChange={(e) => setMinContacts(Number(e.target.value))}
+                >
+                  {MIN_CONTACT_OPTIONS.map((v) => (
+                    <option key={v} value={v}>
+                      {v}回以上
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="filter">
+                <span>兵種</span>
+                <select
+                  className="select"
+                  value={branch}
+                  onChange={(e) => setBranch(e.target.value)}
+                >
+                  <option value="">すべて</option>
+                  {branchOptions.map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
+
+          <p className="sr-only" role="status" aria-live="polite">
+            該当 {detailRows.length.toLocaleString("ja-JP")}件
+          </p>
+
+          {detailRows.length === 0 ? (
+            <div className="empty">
+              <p className="empty-title">条件を満たす武将がいません</p>
+              <p className="empty-hint">絞り込み条件を見直してください。</p>
+            </div>
+          ) : (
+            <ol className="swi-list">
+              {detailRows.map((r, i) => (
+                <MetricRowItem
+                  key={r.name}
+                  r={r}
+                  rank={i + 1}
+                  metric={activeMetric}
+                  maxValue={detailMax}
+                  onSelectWarlord={onSelectWarlord}
+                />
+              ))}
+            </ol>
+          )}
+        </>
       )}
     </section>
   );

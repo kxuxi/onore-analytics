@@ -3879,6 +3879,44 @@ button.tag.faction-link:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
+/* 指標タブ：指標別サマリーとパンくず */
+.metric-section {
+  margin-top: 24px;
+}
+.metric-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 6px;
+  border-bottom: 0.5px solid var(--border);
+}
+.metric-section-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.metric-section .swi-list {
+  margin-top: 12px;
+}
+.metric-section-empty {
+  margin: 12px 0 0;
+  font-size: 12px;
+}
+.metric-crumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 12px;
+  font-size: 13px;
+}
+.metric-crumb-sep {
+  color: var(--muted);
+  opacity: 0.7;
+}
+.metric-crumb-current {
+  font-weight: 700;
+}
+
 /* 武器・品物図鑑 */
 .equip-decided {
   font-size: 11px;
