@@ -3186,6 +3186,29 @@ button.tag.faction-link:focus-visible {
 .dl-unit:hover { border-color: var(--accent); color: var(--accent); }
 .dl-unit.active { border-color: var(--accent); color: var(--accent); }
 
+/* 兵種アンチの矢印（戦闘履歴カード／戦闘ログ共通）。兵種名の横に密着させる。 */
+.pill-anti-group,
+.dl-unit-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.anti-arrows {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  line-height: 1;
+}
+.anti-arrow {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+/* アンチを取っている（有利）＝赤い ↑ */
+.anti-arrow--up { color: #e5484d; }
+/* アンチを取られている（不利）＝青い ↓ */
+.anti-arrow--down { color: #3b82f6; }
+
 .dl-link {
   flex: 0 0 auto;
   display: inline-flex;

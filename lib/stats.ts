@@ -1928,7 +1928,7 @@ export function warlordRanking(
   return out;
 }
 
-/* ---------- 指標（アンチ接触） ---------- */
+/* ---------- 指標（アンチ戦闘） ---------- */
 
 /**
  * アンチ（兵科じゃんけん）の索引。兵種名 → その兵種が得意とする兵科の集合。
@@ -1945,30 +1945,46 @@ export function buildAntiIndex(unitTypes: UnitType[]): Map<string, Set<string>> 
   return map;
 }
 
-/** 武将 1 人のアンチ接触の集計。 */
+/**
+ * ある兵種が指定の兵科にアンチ（得意兵科に相手の兵科が含まれる）かどうか。
+ * 兵種名はオリジナル兵の括弧表記も normalizeDisplayToken で解決する。
+ * antiIndex は buildAntiIndex(兵種一覧) で作る。
+ */
+export function unitCountersBranch(
+  unit: string | undefined,
+  branch: string | undefined,
+  antiIndex: Map<string, Set<string>>
+): boolean {
+  if (!unit) return false;
+  const good = antiIndex.get(normalizeDisplayToken(unit));
+  const b = branch?.trim();
+  return !!(good && b && good.has(b));
+}
+
+/** 武将 1 人のアンチ戦闘の集計。 */
 export interface AntiContactStat {
   name: string;
   faction?: string;
   /** 武将の（最新の）兵科。フィルタ・表示用。 */
   branch?: string;
-  /** アンチ接触数：自分の兵種の得意兵科に相手の兵科が含まれた戦闘数。 */
+  /** アンチ戦闘数：自分の兵種の得意兵科に相手の兵科が含まれた戦闘数。 */
   antiContacts: number;
-  /** 接触数：集計対象になった戦闘総数（攻撃・守備の延べ）。 */
+  /** 戦闘数：集計対象になった戦闘総数（攻撃・守備の延べ）。 */
   contacts: number;
-  /** アンチ接触率 = antiContacts / contacts（contacts が 0 なら 0）。 */
+  /** アンチ戦闘率 = antiContacts / contacts（contacts が 0 なら 0）。 */
   antiRate: number;
 }
 
 /**
- * 武将ごとに「アンチ接触数・率」を集計する。
+ * 武将ごとに「アンチ戦闘数・率」を集計する。
  *
  * アンチ＝兵科のじゃんけん。自分の兵種（兵種一覧の得意兵種）に相手の兵科が
- * 含まれていれば、その戦闘は「自分が有利に接触した（アンチ）」とみなす。
+ * 含まれていれば、その戦闘は「自分が有利に戦闘した（アンチ）」とみなす。
  * ダブルアンチ（得意兵科を 2 つ持つ兵種）は得意兵科のいずれかに一致すれば成立。
  *
- * - 攻撃側・守備側の両方を集計対象にする（1 戦闘は各陣営の武将にそれぞれ 1 接触）。
+ * - 攻撃側・守備側の両方を集計対象にする（1 戦闘は各陣営の武将にそれぞれ 1 戦闘）。
  * - 家督名が同じ武将は最新の名前へ統合する（db を渡した場合）。
- * - 自分の兵種が兵種一覧に無い / 相手の兵科が不明な戦闘は「非アンチの接触」として数える
+ * - 自分の兵種が兵種一覧に無い / 相手の兵科が不明な戦闘は「非アンチの戦闘」として数える
  *   （率の分母には含める）。
  */
 export function antiContactRanking(
@@ -2004,11 +2020,10 @@ export function antiContactRanking(
       a.contacts++;
       if (self.faction) a.faction = self.faction;
       if (self.branch) a.branch = self.branch;
-      // 自分の兵種の得意兵科に相手の兵科が含まれればアンチ接触。
-      const selfUnit = self.unit ? normalizeDisplayToken(self.unit) : "";
-      const good = selfUnit ? antiIndex.get(selfUnit) : undefined;
-      const oppBranch = opponent.branch?.trim();
-      if (good && oppBranch && good.has(oppBranch)) a.antiContacts++;
+      // 自分の兵種の得意兵科に相手の兵科が含まれればアンチ戦闘。
+      if (unitCountersBranch(self.unit, opponent.branch, antiIndex)) {
+        a.antiContacts++;
+      }
     }
   }
   const out: AntiContactStat[] = [];

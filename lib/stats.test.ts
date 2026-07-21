@@ -42,6 +42,7 @@ import {
   YEAR_BUCKETS,
   antiContactRanking,
   buildAntiIndex,
+  unitCountersBranch,
 } from "./stats";
 import type { BattleRecord, UnitType, WarlordMap } from "./types";
 import { EMPTY_UNIT } from "./unitTypeForm";
@@ -1779,14 +1780,29 @@ describe("antiContactRanking / buildAntiIndex（指標: アンチ接触）", () 
     return `【1戦目】 1700年4月 ${time} 京都 己鯖 ${selfName} 某家 武特 ${selfUnit} 騎兵 槍 鞎 V.S. 敵国 ${oppName} 某家 統特 ミニエー銃兵 ${oppBranch} 馬 旗 撤退 12`;
   };
 
-  it("buildAntiIndex は兵種→得意兵科の集合を作る（ダブルアンチは複数要素）", () => {
+  it("buildAntiIndex は兵種→得意兵種の集合を作る（ダブルアンチは複数要素）", () => {
     const idx = buildAntiIndex(unitTypes);
     expect(idx.get("母衣衆")).toEqual(new Set(["弓兵"]));
     expect(idx.get("南蛮象騎兵")).toEqual(new Set(["弓兵", "壁"]));
     expect(idx.get("雑兵")).toEqual(new Set());
   });
 
-  it("自分の兵種の得意兵科に相手の兵科が含まれる戦闘をアンチ接触として数える", () => {
+  it("unitCountersBranch は兵種→相手兵科のアンチ成立を判定する", () => {
+    const idx = buildAntiIndex(unitTypes);
+    expect(unitCountersBranch("母衣衆", "弓兵", idx)).toBe(true);
+    expect(unitCountersBranch("母衣衆", "歩兵", idx)).toBe(false);
+    // ダブルアンチはいずれかに一致で成立。
+    expect(unitCountersBranch("南蛮象騎兵", "壁", idx)).toBe(true);
+    expect(unitCountersBranch("南蛮象騎兵", "弓兵", idx)).toBe(true);
+    // マスタに無い兵種・空の兵科は false。
+    expect(unitCountersBranch("架空兵", "弓兵", idx)).toBe(false);
+    expect(unitCountersBranch("母衣衆", undefined, idx)).toBe(false);
+    expect(unitCountersBranch(undefined, "弓兵", idx)).toBe(false);
+    // オリジナル兵の括弧表記も解決する（*名前(母衣衆) → 母衣衆）。
+    expect(unitCountersBranch("*俺の兵(母衣衆)", "弓兵", idx)).toBe(true);
+  });
+
+  it("自分の兵種の得意兵科に相手の兵科が含まれる戦闘をアンチとして数える", () => {
     const log = [
       rec(antiLine({ selfName: "信長", selfUnit: "母衣衆", oppBranch: "弓兵", oppName: "A", time: "06/01 10:00" })),
       rec(antiLine({ selfName: "信長", selfUnit: "母衣衆", oppBranch: "歩兵", oppName: "B", time: "06/01 10:01" })),
@@ -1801,7 +1817,7 @@ describe("antiContactRanking / buildAntiIndex（指標: アンチ接触）", () 
     expect(nobu.branch).toBe("騎兵");
   });
 
-  it("兵種一覧に無い兵種は非アンチ（接触には数える）", () => {
+  it("兵種一覧に無い兵種は非アンチ（戦闘には数える）", () => {
     const log = [
       rec(antiLine({ selfName: "架空将", selfUnit: "架空兵", oppBranch: "弓兵", oppName: "A", time: "06/02 10:00" })),
     ];
@@ -1810,7 +1826,7 @@ describe("antiContactRanking / buildAntiIndex（指標: アンチ接触）", () 
     expect(r.antiContacts).toBe(0);
   });
 
-  it("守備側（右）でもアンチ接触を数える", () => {
+  it("守備側（右）でもアンチ戦闘を数える", () => {
     // 右側の武将「守」が母衣衆で、左（相手）の兵科が弓兵ならアンチ。
     const line =
       "【1戦目】 1700年4月 06/03 10:00 京都 敵国 攻 某家 統特 ミニエー銃兵 弓兵 馬 旗 V.S. 己鯖 守 某家 武特 母衣衆 騎兵 槍 鞎 撤退 12";

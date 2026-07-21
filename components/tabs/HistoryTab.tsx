@@ -35,6 +35,8 @@ import {
 } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
 import { BATTLE_LOG_PAGE_SIZE as PAGE_SIZE } from "@/lib/stats";
+import { useAntiIndex } from "@/lib/useAntiIndex";
+import { AntiArrows } from "@/components/AntiArrows";
 
 interface Props {
   canRegister: boolean;
@@ -128,6 +130,8 @@ export function HistoryTab({
 }: Props) {
   const [text, setText] = useState("");
   const [keyword, setKeyword] = useState("");
+  // 兵種アンチの得意兵科索引（兵種名の横の矢印表示に使う）。
+  const antiIndex = useAntiIndex();
   const [factionFilter, setFactionFilter] = useState("");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   // ゲーム内年月の範囲（order = year*12+month）。null は未指定。
@@ -644,6 +648,7 @@ export function HistoryTab({
                   card={card}
                   factionColors={factionColors}
                   highlight={deferredKeyword}
+                  antiIndex={antiIndex}
                   onSelectWarlord={onSelectWarlord}
                   onSelectUnit={onSelectUnit}
                   onDelete={onDelete}
@@ -696,6 +701,7 @@ interface CardProps {
   card: BattleCard | null;
   factionColors: FactionColorMap;
   highlight: string;
+  antiIndex: Map<string, Set<string>>;
   onSelectWarlord: (name: string) => void;
   onSelectUnit: (name: string) => void;
   onDelete: (id: number) => Promise<void>;
@@ -733,6 +739,7 @@ function BattleHistoryCard({
   card,
   factionColors,
   highlight,
+  antiIndex,
   onSelectWarlord,
   onSelectUnit,
   onDelete,
@@ -834,6 +841,7 @@ function BattleHistoryCard({
 
   const renderTeam = (
     side: BattleSide,
+    opponent: BattleSide,
     align: "left" | "right",
     color: string
   ) => (
@@ -861,18 +869,20 @@ function BattleHistoryCard({
       <div className="bc-tags">
         {sideTags(side).map((t, i) =>
           t.unit ? (
-            <button
-              key={`${t.text}-${i}`}
-              type="button"
-              className={"pill pill-btn" + (t.highlight ? " highlight" : "")}
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectUnit(t.text);
-              }}
-              title={`${t.text} の戦績を見る`}
-            >
-              {highlightMatch(t.text, highlight)}
-            </button>
+            <span key={`${t.text}-${i}`} className="pill-anti-group">
+              <button
+                type="button"
+                className={"pill pill-btn" + (t.highlight ? " highlight" : "")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectUnit(t.text);
+                }}
+                title={`${t.text} の戦績を見る`}
+              >
+                {highlightMatch(t.text, highlight)}
+              </button>
+              <AntiArrows self={side} opponent={opponent} antiIndex={antiIndex} />
+            </span>
           ) : (
             <span
               key={`${t.text}-${i}`}
@@ -964,9 +974,9 @@ function BattleHistoryCard({
       </div>
 
       <div className="bc-vs">
-        {renderTeam(safeCard.left, "left", leftColor)}
+        {renderTeam(safeCard.left, safeCard.right, "left", leftColor)}
         <div className="bc-vs-label">VS</div>
-        {renderTeam(safeCard.right, "right", rightColor)}
+        {renderTeam(safeCard.right, safeCard.left, "right", rightColor)}
       </div>
 
       <div className="bc-result">

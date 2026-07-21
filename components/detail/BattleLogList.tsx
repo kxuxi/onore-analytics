@@ -5,6 +5,8 @@ import { normalizeDisplayToken } from "@/lib/parser";
 import { BATTLE_LOG_PAGE_SIZE as PAGE_SIZE } from "@/lib/stats";
 import type { BattleOutcome, OutcomeResult } from "@/lib/stats";
 import type { BattleSide } from "@/lib/parser";
+import { useAntiIndex } from "@/lib/useAntiIndex";
+import { AntiArrows } from "@/components/AntiArrows";
 import { copyText } from "@/lib/clipboard";
 import {
   useYearRangeFilter,
@@ -81,6 +83,8 @@ function LogRowActions({ url }: { url: string }) {
 
 interface ChipProps {
   side: BattleSide;
+  opponent: BattleSide;
+  antiIndex: Map<string, Set<string>>;
   currentName?: string;
   currentUnit?: string;
   onSelectWarlord: (name: string) => void;
@@ -89,6 +93,8 @@ interface ChipProps {
 
 function SideChip({
   side,
+  opponent,
+  antiIndex,
   currentName,
   currentUnit,
   onSelectWarlord,
@@ -108,14 +114,17 @@ function SideChip({
         {side.name}
       </button>
       {unit && (
-        <button
-          type="button"
-          className={"dl-unit" + (unitActive ? " active" : "")}
-          onClick={() => onSelectUnit(unit)}
-          title={`${unit} の戦績を見る`}
-        >
-          {unit}
-        </button>
+        <span className="dl-unit-wrap">
+          <button
+            type="button"
+            className={"dl-unit" + (unitActive ? " active" : "")}
+            onClick={() => onSelectUnit(unit)}
+            title={`${unit} の戦績を見る`}
+          >
+            {unit}
+          </button>
+          <AntiArrows self={side} opponent={opponent} antiIndex={antiIndex} />
+        </span>
       )}
     </span>
   );
@@ -134,6 +143,8 @@ export function BattleLogList({
   const yf = yearFilter ?? ownYearFilter;
   const showOwnFilterBar = !yearFilter;
   const filtered = yf.filtered;
+  // 兵科アンチ（じゃんけん）の得意兵科索引。兵種名の横の矢印に使う。
+  const antiIndex = useAntiIndex();
 
   const [page, setPage] = useState(1);
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -191,6 +202,8 @@ export function BattleLogList({
                   <div className="dl-match">
                     <SideChip
                       side={o.self}
+                      opponent={o.opponent}
+                      antiIndex={antiIndex}
                       currentName={currentName}
                       currentUnit={currentUnit}
                       onSelectWarlord={onSelectWarlord}
@@ -199,6 +212,8 @@ export function BattleLogList({
                     <span className="dl-vs">vs</span>
                     <SideChip
                       side={o.opponent}
+                      opponent={o.self}
+                      antiIndex={antiIndex}
                       currentName={currentName}
                       currentUnit={currentUnit}
                       onSelectWarlord={onSelectWarlord}
