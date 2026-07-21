@@ -53,6 +53,8 @@ interface Props {
   onSelectWarlord: (name: string) => void;
   onSelectUnit: (name: string) => void;
   onDelete: (id: number) => Promise<void>;
+  /** 表示中（絞り込み結果）の戦闘履歴をまとめて削除する。 */
+  onBulkDelete: (ids: number[]) => Promise<void>;
 }
 
 /** 片側の装備・兵種タグを組み立てる（兵種 → 兵科 → 装備）。
@@ -127,6 +129,7 @@ export function HistoryTab({
   onSelectWarlord,
   onSelectUnit,
   onDelete,
+  onBulkDelete,
 }: Props) {
   const [text, setText] = useState("");
   const [keyword, setKeyword] = useState("");
@@ -160,6 +163,8 @@ export function HistoryTab({
     | { kind: "error"; message: string }
   >(null);
   const [busy, setBusy] = useState(false);
+  // 表示中の一括削除の実行中フラグ（ボタンの二重押下防止）。
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   // 入力中の体感を保つため、プレビュー集計は遅延値で行う。
   const deferredText = useDeferredValue(text);
   // 登録前に「何件取り込めるか」を事前集計して表示する（貼り付けの取りこぼし検知用）。
@@ -358,6 +363,30 @@ export function HistoryTab({
     setToDate("");
   };
 
+  // 表示中（絞り込み結果）の戦闘履歴をまとめて削除する。
+  const handleBulkDelete = async () => {
+    if (bulkDeleting) return;
+    const ids = visibleLog
+      .map((r) => r.record.id)
+      .filter((id): id is number => typeof id === "number");
+    if (ids.length === 0) return;
+    const ok = window.confirm(
+      `表示中の${ids.length.toLocaleString(
+        "ja-JP"
+      )}件の戦闘履歴を削除します。\n集計・戦績にも反映され、この操作は取り消せません。よろしいですか？`
+    );
+    if (!ok) return;
+    setBulkDeleting(true);
+    try {
+      await onBulkDelete(ids);
+      setPage(1);
+    } catch {
+      // エラー通知は呼び出し側（page.tsx）のトーストで行う。
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   const totalPages = Math.max(1, Math.ceil(visibleLog.length / PAGE_SIZE));
 
   // 絞り込み・件数変化でページ範囲を補正
@@ -542,6 +571,24 @@ export function HistoryTab({
             >
               <CloseIcon />
               <span>解除</span>
+            </button>
+          )}
+          {canDelete && visibleLog.length > 0 && (
+            <button
+              type="button"
+              className="btn faction-delete"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              title="表示中の戦闘履歴をまとめて削除します（取り消せません）"
+            >
+              <TrashIcon />
+              <span>
+                {bulkDeleting
+                  ? "削除中…"
+                  : `表示中の${visibleLog.length.toLocaleString(
+                      "ja-JP"
+                    )}件を削除`}
+              </span>
             </button>
           )}
         </div>

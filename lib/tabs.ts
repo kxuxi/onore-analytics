@@ -77,12 +77,12 @@ export const ALL_TAB_KEYS: TabKey[] = TAB_GROUPS.flatMap((g) => g.tabs);
 /**
  * 未ログイン（管理者以外）でも閲覧できるグループ。
  * 戦闘履歴・ランキング・メタ分析・図鑑・国を公開し、残りは管理者専用にする。
+ * 指標（metrics）は管理者専用（非公開）。
  */
 export const PUBLIC_TAB_GROUPS: TabGroupKey[] = [
   "home",
   "history",
   "ranking",
-  "metrics",
   "meta",
   "encyclopedia",
   "nations",

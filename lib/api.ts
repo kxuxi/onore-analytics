@@ -89,6 +89,24 @@ export async function deleteBattleRecord(id: number): Promise<void> {
   }
 }
 
+/**
+ * 戦闘記録を ID の配列でまとめて削除する（管理者のみ）。
+ * 「戦闘履歴」タブの表示中（絞り込み結果）を一括削除する用途。
+ * @returns 削除できた件数
+ */
+export async function bulkDeleteBattleRecords(ids: number[]): Promise<number> {
+  const res = await fetch("/api/battle-records/bulk-delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ids }),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(data?.error ?? "一括削除に失敗しました");
+  }
+  return data?.deleted ?? 0;
+}
+
 /** 指定した国が関わる戦闘履歴をすべて削除（管理者のみ）。削除できた件数を返す。 */
 /**
  * 指定した国を削除する（管理者のみ）。

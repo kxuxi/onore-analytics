@@ -454,6 +454,29 @@ export default function HomePage() {
     [battleLog, setBattleLog, pushToast]
   );
 
+  // 「戦闘履歴」タブの表示中（絞り込み結果）をまとめて削除する。
+  const handleBulkDeleteBattles = useCallback(
+    async (ids: number[]) => {
+      try {
+        const { bulkDeleteBattleRecords } = await import("@/lib/api");
+        const deleted = await bulkDeleteBattleRecords(ids);
+        const idSet = new Set(ids);
+        const newLog = battleLog.filter(
+          (r) => r.id == null || !idSet.has(r.id)
+        );
+        setBattleLog(newLog);
+        pushToast(
+          "success",
+          `戦闘履歴を${deleted.toLocaleString("ja-JP")}件削除しました`
+        );
+      } catch {
+        pushToast("error", "一括削除に失敗しました。もう一度お試しください。");
+        throw new Error("一括削除失敗");
+      }
+    },
+    [battleLog, setBattleLog, pushToast]
+  );
+
   const handleDeleteFaction = useCallback(
     async (faction: string) => {
       try {
@@ -647,6 +670,7 @@ export default function HomePage() {
             onSelectWarlord={selectWarlordNormalized}
             onSelectUnit={selectUnit}
             onDelete={handleDeleteBattle}
+            onBulkDelete={handleBulkDeleteBattles}
           />
         );
       case "scout":
@@ -786,6 +810,7 @@ export default function HomePage() {
     handleChangeFactionColors,
     handleChangeTheme,
     handleDeleteBattle,
+    handleBulkDeleteBattles,
     handleDeleteFaction,
     handleCleanupSkewed,
     selectWarlord,
