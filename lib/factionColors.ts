@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 
 export type FactionColorMap = Record<string, string>;
 
-/** 左チーム（攻撃側）勝利時の既定色 */
+/** 左チーム（出兵側）勝利時の既定色 */
 export const DEFAULT_WIN_LEFT = "#1D9E75";
 /** 右チーム（防衛側）勝利時の既定色 */
 export const DEFAULT_WIN_RIGHT = "#D85A30";

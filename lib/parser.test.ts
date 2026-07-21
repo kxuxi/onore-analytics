@@ -77,7 +77,7 @@ describe("extractBattleUrl", () => {
 
 
 describe("parseBattleCard", () => {
-  it("基本フィールドと勝者（攻撃側）を解析する", () => {
+  it("基本フィールドと勝者（出兵側）を解析する", () => {
     const card = parseBattleCard(LINE_PLAIN);
     expect(card).not.toBeNull();
     expect(card!.battleNo).toBe("1戦目");
@@ -91,7 +91,7 @@ describe("parseBattleCard", () => {
     expect(card!.winner).toBe("left");
   });
 
-  it("防衛側の勝利を判定する", () => {
+  it("守備側の勝利を判定する", () => {
     const line = LINE_PLAIN.replace("信長の勝利", "勝頼の勝利");
     expect(parseBattleCard(line)!.winner).toBe("right");
   });
@@ -168,7 +168,7 @@ describe("parseBattleLine の兵種正規化", () => {
   });
 
   it("V.S. の前後に空白入りオリジナル兵があっても両側を取り違えない", () => {
-    // 攻撃側・防衛側の両方が命名に空白を含むオリジナル兵でも、
+    // 出兵側・守備側の両方が命名に空白を含むオリジナル兵でも、
     // V.S. を跨いで巻き込まず、それぞれ 1 トークンにまとまる。
     const line =
       "【1戦目】 1583年4月 04/10 10:23 京都 織田 信長 織田家 武特 " +
@@ -191,7 +191,7 @@ describe("スマホ貼り付け（リンク喪失で詰まった形式）", () =
   const mobileGlued =
     "【1戦目】1688年3月06/15 12:51植物公園サルの修行寺R 半端な鍛錬武特 純粋家 武特 鬼武者っぽい🙉 歩兵 示現流兵法巻 六字名号旗 V.S. けつなあな確定 佐山聡 佐山家 武特 剣豪 歩兵 龍の腕輪 五郎入道正宗半端な鍛錬武特の勝利12";
 
-  it("攻撃側・防衛側の武将を抽出できる", () => {
+  it("出兵側・守備側の武将を抽出できる", () => {
     const w = parseBattleLine(mobileGlued);
     expect(w).toHaveLength(2);
     expect(w[0].name).toBe("半端な鍛錬武特");
@@ -243,11 +243,11 @@ describe("装備枠（装備1 / 装備2 の位置保持）", () => {
       "【1戦目】 1583年4月 10:23 京都 織田 信長 織田家 武特 騎馬隊 騎兵 なし 鐦 V.S. 武田 勝頼 武田家 統特 騎馬隊 騎兵 馬 なし 信長の勝利 12";
     const card = parseBattleCard(line);
     expect(card).not.toBeNull();
-    // 攻撃側: 装備1=なし、装備2=鐦。
+    // 出兵側: 装備1=なし、装備2=鐦。
     expect(card!.left.equip1).toBeUndefined();
     expect(card!.left.equip2).toBe("鐦");
     expect(card!.left.equips).toEqual(["鐦"]);
-    // 防衛側: 装備1=馬、装備2=なし。
+    // 守備側: 装備1=馬、装備2=なし。
     expect(card!.right.equip1).toBe("馬");
     expect(card!.right.equip2).toBeUndefined();
     expect(card!.right.equips).toEqual(["馬"]);
@@ -334,20 +334,20 @@ describe("parseBattleEntriesChecked（項目の過不足の検出）", () => {
     expect(rejected[0].reason).toContain("V.S.");
   });
 
-  it("攻撃側の項目が不足している戦闘は拒否する", () => {
+  it("出兵側の項目が不足している戦闘は拒否する", () => {
     const line =
       "【3戦目】 1583年4月 04/10 10:23 京都 織田 信長 V.S. 武田 勝頼 武田家 統特 騎馬隊 騎兵 馬 旗 信長の勝利 12";
     const { rejected } = parseBattleEntriesChecked(line);
     expect(rejected).toHaveLength(1);
-    expect(rejected[0].reason).toContain("攻撃側");
+    expect(rejected[0].reason).toContain("出兵側");
   });
 
-  it("防衛側の項目が不足している戦闘は拒否する", () => {
+  it("守備側の項目が不足している戦闘は拒否する", () => {
     const line =
       "【4戦目】 1583年4月 04/10 10:23 京都 織田 信長 織田家 武特 騎馬隊 騎兵 槍 鎧 V.S. 武田 勝頼 武田家";
     const { rejected } = parseBattleEntriesChecked(line);
     expect(rejected).toHaveLength(1);
-    expect(rejected[0].reason).toContain("防衛側");
+    expect(rejected[0].reason).toContain("守備側");
   });
 
   it("正常な行と過不足の行が混在しても、正常分だけ取り込み過不足は拒否する", () => {

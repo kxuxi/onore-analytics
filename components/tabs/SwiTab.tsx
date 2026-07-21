@@ -26,7 +26,7 @@ const METRIC_OPTIONS: {
   label: string;
   kind: "count" | "ratio" | "percent";
 }[] = [
-  { key: "attackWinRate", label: "攻撃勝率", kind: "percent" },
+  { key: "attackWinRate", label: "出兵勝率", kind: "percent" },
   { key: "defenseWinRate", label: "守備勝率", kind: "percent" },
   { key: "avgBreakthrough", label: "撃破効率", kind: "ratio" },
   { key: "defenseEfficiency", label: "守備効率", kind: "ratio" },
@@ -121,7 +121,7 @@ export function SwiTab({ log, db, onSelectWarlord }: Props) {
       <h2>武将ランキング</h2>
       <p className="muted" style={{ margin: 0, fontSize: 13 }}>
         {metric === "attackWinRate"
-          ? "攻撃勝率は、攻撃側として参加した戦目のうち勝った割合です。"
+          ? "出兵勝率は、出兵側として参加した戦目のうち勝った割合です。"
           : metric === "defenseWinRate"
             ? "守備勝率は、守備側として参加した戦目のうち勝った割合です。"
             : metric === "avgBreakthrough"
@@ -135,11 +135,11 @@ export function SwiTab({ log, db, onSelectWarlord }: Props) {
         <summary>{metricLabel}の詳細</summary>
         <p className="muted">
           {metric === "attackWinRate"
-            ? "攻撃勝率 = 攻撃側として勝った戦目数 ÷ 攻撃側として参加した決着戦目数。撤退を除いた全攻撃戦目が母数です。"
+            ? "出兵勝率 = 出兵側として勝った戦目数 ÷ 出兵側として参加した決着戦目数。撤退を除いた全出兵戦目が母数です。"
             : metric === "defenseWinRate"
               ? "守備勝率 = 守備側として勝った戦目数 ÷ 守備側として参加した決着戦目数。撤退を除いた全守備戦目が母数です。"
               : metric === "avgBreakthrough"
-                ? "撃破効率 = 攻撃勝利数 ÷ 攻撃出撃数。値が 1.00 なら、1出兵で平均1枚撃破している状態です。"
+                ? "撃破効率 = 出兵勝利数 ÷ 出兵出撃数。値が 1.00 なら、1出兵で平均1枚撃破している状態です。"
                 : metric === "defenseEfficiency"
                   ? "守備効率 = 守備勝利数 ÷ 守備出撃数。値が 1.00 なら、1守備で平均1枚守り切っている状態です。"
                   : "A が B を削った時刻 T の後 40 分以内に、別イベントで B が倒されると A に 1 アシストが付きます。"}
@@ -297,7 +297,7 @@ export function SwiTab({ log, db, onSelectWarlord }: Props) {
                   <div className="swi-meta muted">
                     {metric === "attackWinRate" ? (
                       <span className="rank-side-active">
-                        攻撃 {r.attackWinRounds.toLocaleString("ja-JP")}勝 ／{" "}
+                        出兵 {r.attackWinRounds.toLocaleString("ja-JP")}勝 ／{" "}
                         {(r.attackRounds - r.attackWinRounds).toLocaleString("ja-JP")}敗
                       </span>
                     ) : metric === "defenseWinRate" ? (
@@ -307,7 +307,7 @@ export function SwiTab({ log, db, onSelectWarlord }: Props) {
                       </span>
                     ) : metric === "avgBreakthrough" ? (
                       <span className="rank-side-active">
-                        攻撃 {r.attackWinRounds.toLocaleString("ja-JP")}勝 ／{" "}
+                        出兵 {r.attackWinRounds.toLocaleString("ja-JP")}勝 ／{" "}
                         {r.attackRounds.toLocaleString("ja-JP")}戦目
                       </span>
                     ) : metric === "defenseEfficiency" ? (

@@ -2138,7 +2138,7 @@ button.tag.faction-link:focus-visible {
   letter-spacing: 0.02em;
 }
 
-/* 守備でのみ観測された武将に付くバッジ（攻撃履歴なし）。 */
+/* 守備でのみ観測された武将に付くバッジ（出兵履歴なし）。 */
 .status.defense-only {
   color: var(--label-branch-fg);
   background: var(--label-branch-bg);

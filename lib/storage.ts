@@ -19,9 +19,9 @@ export function mergeWarlords(
     if (prev) updated++;
     else added++;
 
-    // actions は攻撃時刻のみを保持（守備は lastActionAt に反映、固定バッジ対象外）。
+    // actions は出兵時刻のみを保持（守備は lastActionAt に反映、固定バッジ対象外）。
     const actions = mergeActions(prev?.actions, w.actions);
-    // lastActionAt は攻撃・守備どちらの時刻も取り込む。
+    // lastActionAt は出兵・守備どちらの時刻も取り込む。
     // actions の末尾と w.lastActionAt を独立して比較し、新しい方を採用する。
     const lastActionAt = pickLatestAction(
       actions.length > 0 ? actions[actions.length - 1] : prev?.lastActionAt,
@@ -30,7 +30,7 @@ export function mergeWarlords(
 
     // 属性（国・タイプ・兵科・兵種・装備）は「より新しい戦闘」の方を採用する。
     // 新旧は 期 → 在ゲーム年月 → 実時刻 の順で判定し（isNewerBattle 参照）、
-    // 攻撃・守備のどちらで観測したかは問わず、最新の戦闘で見えたプロフィールを反映する。
+    // 出兵・守備のどちらで観測したかは問わず、最新の戦闘で見えたプロフィールを反映する。
     const base = isNewerBattle(w, prev, now) ? w : prev ?? w;
 
     map[w.name] = {

@@ -53,8 +53,8 @@ describe("mergeWarlords", () => {
     expect(existing["B"]).toBeUndefined();
   });
 
-  it("守備の lastActionAt が攻撃 actions より新しければ lastActionAt を更新する", () => {
-    // 既存: 攻撃時刻 10:00 が actions に記録済み
+  it("守備の lastActionAt が出兵 actions より新しければ lastActionAt を更新する", () => {
+    // 既存: 出兵時刻 10:00 が actions に記録済み
     const existing: WarlordMap = {
       A: wl({
         name: "A",
@@ -68,7 +68,7 @@ describe("mergeWarlords", () => {
       wl({ name: "A", lastActionAt: "06/15 11:00", updatedAt: 200 }),
     ]);
     expect(map["A"].lastActionAt).toBe("06/15 11:00");
-    // actions（攻撃履歴）はそのまま保持される
+    // actions（出兵履歴）はそのまま保持される
     expect(map["A"].actions).toEqual(["06/15 10:00"]);
   });
 });

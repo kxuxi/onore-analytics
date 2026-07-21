@@ -32,7 +32,7 @@ export function normalizeWidth(s: string): string {
  * 戦闘履歴 1 行を解析しやすい形へ正規化し、含まれていれば URL を取り出す。
  *
  * ゲーム履歴をリンク付き（PC でコピー）で貼ると
- *   【N戦目】年月MM/DD HH:mm場所[攻撃側 V.S. 防衛側](URL)勝敗Nターンで終了
+ *   【N戦目】年月MM/DD HH:mm場所[出兵側 V.S. 守備側](URL)勝敗Nターンで終了
  * のように日時・場所・勝敗が詰まった形になる。`[本文](URL)` を検出した場合は
  * URL を取り出し、リンク本文を前後にスペースを足して展開する（場所と勢力名、
  * 装備と勝敗の境界がここで切れる）。
@@ -100,7 +100,7 @@ function tokenizeBattleLine(raw: string): string[] {
 }
 
 /**
- * 戦闘履歴 1 行を解析して攻撃側・防衛側の武将情報を取り出す。
+ * 戦闘履歴 1 行を解析して出兵側・守備側の武将情報を取り出す。
  *
  * 実データはタブと半角スペースが混在しており、戦闘部分は 1 つのフィールド内で
  * スペース区切りになっている:
@@ -109,7 +109,7 @@ function tokenizeBattleLine(raw: string): string[] {
  *   勝敗<TAB>ターン数
  *
  * そのため区切りの種類に依存せず、行全体を空白（タブ/半角/全角）でまとめて分割し、
- * V.S. の前後 8 トークンずつを攻撃側・防衛側として取り出す。
+ * V.S. の前後 8 トークンずつを出兵側・守備側として取り出す。
  */
 export function parseBattleLine(line: string): Warlord[] {
   const { line: raw } = extractBattleUrl(line.replace(/\r/g, "").trim());
@@ -128,16 +128,16 @@ export function parseBattleLine(line: string): Warlord[] {
   const vsIndex = tokens.findIndex((t) => /^v\.?s\.?$/i.test(t));
   if (vsIndex < 0) return [];
 
-  // 攻撃側: V.S. の直前 8 トークン
+  // 出兵側: V.S. の直前 8 トークン
   //   = 勢力名 武将名 家名 タイプ 兵種名 兵科 装備1 装備2
   if (vsIndex < 8) return [];
   const attacker = sliceWarlord(tokens.slice(vsIndex - 8, vsIndex));
 
-  // 防衛側: V.S. の直後 8 トークン（以降に 勝敗 / ターン数 が続く）
+  // 守備側: V.S. の直後 8 トークン（以降に 勝敗 / ターン数 が続く）
   if (tokens.length < vsIndex + 9) return [];
   const defender = sliceWarlord(tokens.slice(vsIndex + 1, vsIndex + 9));
 
-  // 戦闘日時: 先頭の【N戦目】と攻撃側ブロックの間にあるメタ情報のうち
+  // 戦闘日時: 先頭の【N戦目】と出兵側ブロックの間にあるメタ情報のうち
   // 末尾（場所）を除いたもの（年月 月日 時刻）を最終戦闘時刻として扱う。
   const meta = tokens.slice(1, vsIndex - 8);
   const { battleAt } = splitMeta(meta);
@@ -147,7 +147,7 @@ export function parseBattleLine(line: string): Warlord[] {
   const now = Date.now();
   const shared = { battleAt, lastActionAt: actionAt, updatedAt: now } as const;
   const result: Warlord[] = [];
-  // 攻撃側のみ actions を付ける。固定バッジは攻撃の連続行動パターンにのみ適用する。
+  // 出兵側のみ actions を付ける。固定バッジは出兵の連続行動パターンにのみ適用する。
   // 守備側は lastActionAt のみ記録し、被弾表には表示されるがバッジは付かない。
   if (attacker)
     result.push({ ...attacker, ...shared, actions: actionAt ? [actionAt] : undefined });
@@ -171,7 +171,7 @@ function looksLikeDateTime(token: string): boolean {
 }
 
 /**
- * 【N戦目】と攻撃側ブロックの間のメタ情報を「場所」と「戦闘日時」に分ける。
+ * 【N戦目】と出兵側ブロックの間のメタ情報を「場所」と「戦闘日時」に分ける。
  *
  * 通常は [年月, 月日, 時刻, 場所] の並びで末尾が場所だが、スマホ等で
  * リンクが失われると場所が勢力名に連結し、メタは [年月, 月日, 時刻] だけになる。
@@ -273,7 +273,7 @@ function battleNoOf(seg: string): string | undefined {
 
 /**
  * 戦闘エントリの体裁だが取り込めなかった理由を、項目（トークン）数から判定する。
- * 攻撃側・防衛側はそれぞれ 8 項目（勢力名 武将名 家名 タイプ 兵種名 兵科 装備1 装備2）
+ * 出兵側・守備側はそれぞれ 8 項目（勢力名 武将名 家名 タイプ 兵種名 兵科 装備1 装備2）
  * が必要で、これに過不足があると登録できない。
  */
 function battleRejectReason(seg: string): string {
@@ -281,8 +281,8 @@ function battleRejectReason(seg: string): string {
   const tokens = tokenizeBattleLine(raw);
   const vsIndex = tokens.findIndex((t) => /^v\.?s\.?$/i.test(t));
   if (vsIndex < 0) return "「V.S.」の区切りが見つかりません";
-  if (vsIndex < 8) return "攻撃側の項目数が不足しています";
-  if (tokens.length < vsIndex + 9) return "防衛側の項目数が不足しています";
+  if (vsIndex < 8) return "出兵側の項目数が不足しています";
+  if (tokens.length < vsIndex + 9) return "守備側の項目数が不足しています";
   return "必須項目（武将名・タイプ・兵科）が空です";
 }
 
@@ -298,7 +298,7 @@ export function parseBattleEntriesChecked(text: string): BattleParseResult {
     if (!looksLikeBattleSegment(seg)) continue;
     const warlords = parseBattleLine(seg);
     if (warlords.length === 0) {
-      // 戦闘の体裁だが攻撃側／防衛側の項目数が想定と合わない（過不足）。
+      // 戦闘の体裁だが出兵側／守備側の項目数が想定と合わない（過不足）。
       rejected.push({
         segment: seg,
         battleNo: battleNoOf(seg),
@@ -328,7 +328,7 @@ export function parseBattleEntries(text: string): BattleEntry[] {
 /** 勝者側 */
 export type BattleWinner = "left" | "right" | "draw" | "retreat" | "unknown";
 
-/** カード表示用の片側（攻撃側 / 防衛側）情報 */
+/** カード表示用の片側（出兵側 / 守備側）情報 */
 export interface BattleSide {
   faction?: string;
   name: string;
@@ -434,7 +434,7 @@ function sideFromBlock(block: string[]): BattleSide {
 }
 
 /**
- * 防衛側ブロックの装備2と勝敗が連結している場合（スマホ等でリンクが失われ
+ * 守備側ブロックの装備2と勝敗が連結している場合（スマホ等でリンクが失われ
  * 「…装備2◯◯の勝利」のように詰まったケース）に、既知の武将名を手掛かりに
  * 切り離す。連結が無ければ素直に従来通り（resultRaw=次トークン）を返す。
  */
@@ -513,7 +513,7 @@ function computeBattleCard(line: string): BattleCard | null {
   const rightBlockRaw = tokens.slice(vsIndex + 1, vsIndex + 9);
   const leftName = leftBlock[1]?.trim() ?? "";
   const rightName = rightBlockRaw[1]?.trim() ?? "";
-  // 防衛側の装備2に勝敗が連結している場合は切り離す（スマホ貼り付け対策）。
+  // 守備側の装備2に勝敗が連結している場合は切り離す（スマホ貼り付け対策）。
   const { rightBlock, resultRaw, turns } = splitGluedResult(
     tokens,
     vsIndex,
@@ -525,7 +525,7 @@ function computeBattleCard(line: string): BattleCard | null {
   const right = sideFromBlock(rightBlock);
   if (!left.name || !right.name) return null;
 
-  // 先頭【N戦目】〜攻撃側ブロックの間が [年月, 月日, 時刻, 場所]。
+  // 先頭【N戦目】〜出兵側ブロックの間が [年月, 月日, 時刻, 場所]。
   const meta = tokens.slice(1, vsIndex - 8);
   const { place, battleAt } = splitMeta(meta);
 

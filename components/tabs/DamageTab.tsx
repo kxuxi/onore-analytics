@@ -167,7 +167,7 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
     <section className="panel">
       <h2>被弾表（行動状況）</h2>
       <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-        攻撃・守備のどちらで登場した武将も行動時刻から行動状況を判定します。
+        出兵・守備のどちらで登場した武将も行動時刻から行動状況を判定します。
         40分以内={ACTION_LABEL.done} / 40分〜1時間20分={ACTION_LABEL.ready} /
         1時間20分以上={ACTION_LABEL.unknown}。
       </p>
@@ -196,7 +196,7 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
           <li>
             <span className="status defense-only">守備のみ</span>
             <span className="muted">
-              守備でのみ観測されている武将です（攻撃履歴がないため固定バッジは付きません）。
+              守備でのみ観測されている武将です（出兵履歴がないため固定バッジは付きません）。
             </span>
           </li>
           <li>
@@ -295,7 +295,7 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
               }
             >
               <option value="">すべて</option>
-              <option value="attack">攻撃あり</option>
+              <option value="attack">出兵あり</option>
               <option value="defense-only">守備のみ</option>
             </select>
           </label>

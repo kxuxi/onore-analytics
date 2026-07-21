@@ -43,7 +43,7 @@ export function hashPassword(password: string): string {
 
 /**
  * 平文パスワードが保存済みハッシュと一致するか検証する。
- * タイミング攻撃を避けるため固定時間比較（timingSafeEqual）を用いる。
+ * タイミング出兵を避けるため固定時間比較（timingSafeEqual）を用いる。
  */
 export function verifyPassword(password: string, stored: string): boolean {
   const parts = stored.split(":");

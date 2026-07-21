@@ -35,7 +35,7 @@ function winLevel(winRate: number): 1 | 2 | 3 | 4 | 5 {
 
 /**
  * 相性マトリックス。特性（タイプ）の組み合わせごとの勝率を 6×6 のヒートマップで表示する。
- * 行＝攻撃側の特性 / 列＝防衛側の特性。各マスは攻撃側視点の勝率で、クリックすると
+ * 行＝出兵側の特性 / 列＝防衛側の特性。各マスは出兵側視点の勝率で、クリックすると
  * その相性の対戦履歴を下に表示する。サンプルが MIN_SAMPLE 戦未満のマスは「–」とする。
  */
 export function TraitMatrixTab({ log, onSelectWarlord, onSelectUnit }: Props) {

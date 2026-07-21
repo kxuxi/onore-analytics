@@ -15,9 +15,9 @@ export interface Warlord {
   unit?: string;
   /** 戦闘履歴上の年月 + 時刻（生文字列） */
   battleAt?: string;
-  /** 攻撃側または守備側として登場した最新の行動時刻（例: 06/15 09:30） */
+  /** 出兵側または守備側として登場した最新の行動時刻（例: 06/15 09:30） */
   lastActionAt?: string;
-  /** 攻撃側として登場した行動時刻の履歴（昇順・重複なし）。守備時刻は含まない。 */
+  /** 出兵側として登場した行動時刻の履歴（昇順・重複なし）。守備時刻は含まない。 */
   actions?: string[];
   /** 最後に登録された期番号（登録時にセット。パース中間オブジェクトでは省略可） */
   term?: number;
@@ -63,7 +63,7 @@ export interface UnitType {
   category: string;
   /** 得意兵種 */
   goodAgainst: string;
-  /** 攻撃 */
+  /** 出兵 */
   attack: number;
   /** 防御 */
   defense: number;
@@ -77,7 +77,7 @@ export interface UnitType {
   reqStats: string;
   /** 施設/国宝 */
   facility: string;
-  /** 特殊攻撃 */
+  /** 特殊出兵 */
   special: string;
   /** ボーナス */
   bonus: string;
