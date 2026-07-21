@@ -1659,12 +1659,12 @@ export function swiRanking(
     .sort((a, b) => b.swi - a.swi || b.sorties - a.sorties);
 }
 
-/** 武将 1 人の枚数率（枚抜きの重み付き合計）。 */
+/** 武将 1 人の抜き数（枚抜きの重み付き合計）。 */
 export interface BreakthroughStat {
   name: string;
   faction?: string;
   branch?: string;
-  /** 枚数率 = Σ n×(n枚抜きの出撃数)。3枚抜きは 3 点で、内側の 1・2枚抜きには加算しない。 */
+  /** 抜き数 = Σ n×(n枚抜きの出撃数)。3枚抜きは 3 点で、内側の 1・2枚抜きには加算しない。 */
   score: number;
   /** 攻撃出撃数（枚抜きの母数・参考）。 */
   sorties: number;
@@ -1673,8 +1673,8 @@ export interface BreakthroughStat {
 }
 
 /**
- * 武将ごとの「枚数率」を集計する（攻撃側の枚抜き）。
- * 枚数率 = 1×(1枚抜き) + 2×(2枚抜き) + … + n×(n枚抜き)。
+ * 武将ごとの「抜き数」を集計する（攻撃側の枚抜き）。
+ * 抜き数 = 1×(1枚抜き) + 2×(2枚抜き) + … + n×(n枚抜き)。
  * 1 出撃は最大連勝数 n の「n枚抜き」として 1 回だけ数え、その内側の 1・2枚抜き…は
  * 二重計上しない（3枚抜きは 3 点で、1・2 枚抜きには加算しない）。n は「n戦目」の
  * 戦目番号（1戦目から連勝した数）から求める＝computeSideSwi の sweepCounts と同じ。

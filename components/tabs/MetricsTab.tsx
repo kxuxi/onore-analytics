@@ -14,7 +14,7 @@ interface Props {
 }
 
 /** 並べ替えの指標。 */
-type SortKey = "antiRate" | "antiContacts" | "breakthrough";
+type SortKey = "antiRate" | "antiContacts" | "breakthrough" | "breakthroughRate";
 
 /** ノイズ除去用の最低戦闘数の選択肢。 */
 const MIN_CONTACT_OPTIONS = [1, 5, 10, 20, 30];
@@ -25,10 +25,11 @@ const TOP_N = 5;
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "antiRate", label: "Anti-Contact率" },
   { key: "antiContacts", label: "Anti-Contact数" },
-  { key: "breakthrough", label: "枚数率" },
+  { key: "breakthrough", label: "抜き数" },
+  { key: "breakthroughRate", label: "抜き率" },
 ];
 
-/** 武将 1 行分の指標（アンチ接触＋枚数率をまとめたもの）。 */
+/** 武将 1 行分の指標（アンチ接触＋抜き数・抜き率をまとめたもの）。 */
 interface MetricRow {
   name: string;
   faction?: string;
@@ -36,9 +37,11 @@ interface MetricRow {
   antiContacts: number;
   contacts: number;
   antiRate: number;
-  /** 枚数率 = Σ n×(n枚抜き)。 */
+  /** 抜き数 = Σ n×(n枚抜き)。 */
   breakthrough: number;
-  /** 攻撃出撃数（枚数率の母数・参考）。 */
+  /** 抜き率 = 抜き数 ÷ 戦闘数（contacts）。 */
+  breakthroughRate: number;
+  /** 攻撃出撃数（参考）。 */
   sorties: number;
 }
 
@@ -54,7 +57,9 @@ function metricValue(r: MetricRow, metric: SortKey): number {
     ? r.antiRate
     : metric === "breakthrough"
       ? r.breakthrough
-      : r.antiContacts;
+      : metric === "breakthroughRate"
+        ? r.breakthroughRate
+        : r.antiContacts;
 }
 
 /** 指標 metric における行 r の表示用ラベル。 */
@@ -63,7 +68,11 @@ function metricLabel(r: MetricRow, metric: SortKey): string {
     ? formatRate(r.antiRate, r.contacts)
     : metric === "breakthrough"
       ? r.breakthrough.toLocaleString("ja-JP")
-      : r.antiContacts.toLocaleString("ja-JP");
+      : metric === "breakthroughRate"
+        ? r.contacts > 0
+          ? r.breakthroughRate.toFixed(3)
+          : "—"
+        : r.antiContacts.toLocaleString("ja-JP");
 }
 
 /** 指標 metric で降順に並べ替えた新しい配列を返す。 */
@@ -73,6 +82,11 @@ function sortByMetric(rows: MetricRow[], metric: SortKey): MetricRow[] {
       if (b.breakthrough !== a.breakthrough)
         return b.breakthrough - a.breakthrough;
       return b.sorties - a.sorties;
+    }
+    if (metric === "breakthroughRate") {
+      if (b.breakthroughRate !== a.breakthroughRate)
+        return b.breakthroughRate - a.breakthroughRate;
+      return b.breakthrough - a.breakthrough;
     }
     if (metric === "antiRate") {
       if (b.antiRate !== a.antiRate) return b.antiRate - a.antiRate;
@@ -128,8 +142,13 @@ function MetricRowItem({
         <div className="swi-meta muted">
           {metric === "breakthrough" ? (
             <span className="rank-side-active">
-              枚数率 {r.breakthrough.toLocaleString("ja-JP")} ／ 出撃{" "}
+              抜き数 {r.breakthrough.toLocaleString("ja-JP")} ／ 出撃{" "}
               {r.sorties.toLocaleString("ja-JP")}
+            </span>
+          ) : metric === "breakthroughRate" ? (
+            <span className="rank-side-active">
+              抜き数 {r.breakthrough.toLocaleString("ja-JP")} ／ 戦闘{" "}
+              {r.contacts.toLocaleString("ja-JP")}
             </span>
           ) : (
             <span className="rank-side-active">
@@ -177,7 +196,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
 
   useEffect(() => loadUnitTypes(), [loadUnitTypes]);
 
-  // アンチ接触（兵種一覧が必要）と枚数率（枚抜き）を武将ごとに統合する。
+  // アンチ接触（兵種一覧が必要）と枚抜き（抜き数・抜き率）を武将ごとに統合する。
   const ranking = useMemo<MetricRow[]>(() => {
     if (!unitTypes) return [];
     const byName = new Map<string, MetricRow>();
@@ -190,6 +209,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
         contacts: a.contacts,
         antiRate: a.antiRate,
         breakthrough: 0,
+        breakthroughRate: 0,
         sorties: 0,
       });
     }
@@ -209,11 +229,17 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
           contacts: 0,
           antiRate: 0,
           breakthrough: b.score,
+          breakthroughRate: 0,
           sorties: b.sorties,
         });
       }
     }
-    return Array.from(byName.values());
+    const rows = Array.from(byName.values());
+    // 抜き率 = 抜き数 ÷ 戦闘数（戦闘数 0 は 0）。
+    for (const r of rows) {
+      r.breakthroughRate = r.contacts > 0 ? r.breakthrough / r.contacts : 0;
+    }
+    return rows;
   }, [log, db, unitTypes]);
 
   // 兵科の選択肢（集計対象から収集）。
@@ -304,9 +330,12 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
           Anti-Contact率 = Anti-Contact数 ÷ 総戦闘数。
         </p>
         <p className="muted">
-          枚数率 = 1×(1枚抜き) + 2×(2枚抜き) + … + n×(n枚抜き)。n は「n戦目」の戦目番号
+          抜き数 = 1×(1枚抜き) + 2×(2枚抜き) + … + n×(n枚抜き)。n は「n戦目」の戦目番号
           （1戦目から連勝した数）です。1出撃は最大の n として1回だけ数え、3枚抜きは3点で、
           その内側の1・2枚抜きには加算しません。
+        </p>
+        <p className="muted">
+          抜き率 = 抜き数 ÷ 戦闘数（その武将の総戦闘数）。1戦闘あたり平均でどれだけ抜けたかの目安です。
         </p>
       </details>
 

@@ -1853,8 +1853,8 @@ describe("antiContactRanking / buildAntiIndex（指標: アンチ接触）", () 
   });
 });
 
-describe("breakthroughRanking（枚数率）", () => {
-  it("枚数率 = Σ n×(n枚抜き)。3枚抜きは3点で内側の1・2枚抜きを二重計上しない", () => {
+describe("breakthroughRanking（抜き数）", () => {
+  it("抜き数 = Σ n×(n枚抜き)。3枚抜きは3点で内側の1・2枚抜きを二重計上しない", () => {
     const log: BattleRecord[] = [
       // 出撃、1（10:00）: 1○2○3○ = 3枚抜き
       rec(swiLine({ attacker: "信長", battleNo: 1, time: "06/15 10:00", win: true, defender: "敵A" }), 1),
