@@ -55,10 +55,23 @@ export function outcomeForSide(
   return "other";
 }
 
-/** ログをカード化し、内容が重複する行を除外する。 */
+/**
+ * ログ配列（参照）ごとの dedupedCards 結果メモ。多くの集計関数が同じ log
+ * （filteredBattleLog 等の安定した useMemo 参照）に対して呼ぶため、参照が同じなら
+ * 1 回の重複排除・カード化を共有する。log 配列は不変（毎回新しい配列）前提。
+ * 返す配列は読み取り専用として共有する（呼び出し側で破壊的変更をしないこと）。
+ */
+const dedupedCache = new WeakMap<
+  BattleRecord[],
+  { record: BattleRecord; card: BattleCard }[]
+>();
+
+/** ログをカード化し、内容が重複する行を除外する（log 参照でメモ化）。 */
 function dedupedCards(
   log: BattleRecord[]
 ): { record: BattleRecord; card: BattleCard }[] {
+  const cached = dedupedCache.get(log);
+  if (cached) return cached;
   const seen = new Set<string>();
   const out: { record: BattleRecord; card: BattleCard }[] = [];
   for (const record of log) {
@@ -68,6 +81,7 @@ function dedupedCards(
     const card = parseBattleCard(record.line);
     if (card) out.push({ record, card });
   }
+  dedupedCache.set(log, out);
   return out;
 }
 
@@ -1794,15 +1808,23 @@ function computeAssists(
     }
   }
 
+  // 各敗者の被倒時刻を昇順ソートし、二分探索で「T の直後 40 分以内の被倒」を判定する
+  // （敗者ごとの線形走査 .some() は被倒回数が多い武将で O(n^2) 級に膨らむため）。
+  for (const arr of defeatTimes.values()) arr.sort((a, b) => a - b);
+
   const assists = new Map<string, number>();
   for (const { winner, loser, time: T } of damageEvents) {
     const defeats = defeatTimes.get(loser);
     if (!defeats) continue;
-    // T < T2 <= T+40min の別イベントで B が倒されたか。
-    const wasDefeated = defeats.some(
-      (t2) => t2 > T && t2 <= T + ASSIST_WINDOW_MS
-    );
-    if (wasDefeated) {
+    // T より大きい最小の被倒時刻を二分探索し、窓内なら別イベントでの被倒とみなす。
+    let lo = 0;
+    let hi = defeats.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (defeats[mid] > T) hi = mid;
+      else lo = mid + 1;
+    }
+    if (lo < defeats.length && defeats[lo] <= T + ASSIST_WINDOW_MS) {
       assists.set(winner, (assists.get(winner) ?? 0) + 1);
     }
   }

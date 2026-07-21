@@ -145,6 +145,9 @@ const TERM_OPTIONS_STORAGE_KEY = "onore-tool:term-options:v1";
 /** 直近に選択した「対象の期」の保存キー。 */
 const TERM_SELECTED_STORAGE_KEY = "onore-tool:selected-term:v1";
 
+/** 年代別ランキングの空値（未計算時に返す安定参照）。 */
+const EMPTY_YEAR_RANKINGS: ReturnType<typeof yearBucketWinRankings> = [];
+
 /** 過去ログ記録モード（ON のとき過去の期にも登録可。管理者のみ）の保存キー。 */
 const PAST_LOG_MODE_STORAGE_KEY = "onore-tool:past-log-mode:v1";
 
@@ -355,9 +358,13 @@ export default function HomePage() {
 
   // 年代別（在ゲーム年）の勝率ランキング。武将ページの入賞タグは「称号」的な
   // 性質のため、期フィルタを無視して全期間の戦闘・全DBで集計する。
+  // 武将詳細を開いたときだけ計算する（全ログの解析をマウント時に走らせない）。
   const yearRankings = useMemo(
-    () => yearBucketWinRankings(battleLog, db),
-    [battleLog, db]
+    () =>
+      detail?.kind === "warlord"
+        ? yearBucketWinRankings(battleLog, db)
+        : EMPTY_YEAR_RANKINGS,
+    [detail?.kind, battleLog, db]
   );
   // 全DBでの代表名解決（入賞タグの引き当てをランキングと同じ正規化で行う）。
   const fullNormMap = useMemo(() => normalizationMap(db), [db]);

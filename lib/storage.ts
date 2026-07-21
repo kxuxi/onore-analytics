@@ -161,7 +161,15 @@ export function lookup(map: WarlordMap, name: string): Warlord | undefined {
  * 各 household について、最新の updatedAt を持つ武将を代表として選ぶ。
  * household が空の武将は、名前をそのまま返す。
  */
+/**
+ * WarlordMap（参照）ごとの normalizationMap 結果メモ。同じ db を複数の集計関数が
+ * 使う（warlordRanking など）ため、参照が同じなら再計算を避ける。db は不変前提。
+ */
+const normalizationMapCache = new WeakMap<WarlordMap, Record<string, string>>();
+
 export function normalizationMap(map: WarlordMap): Record<string, string> {
+  const cached = normalizationMapCache.get(map);
+  if (cached) return cached;
   const byHousehold = new Map<string | undefined, { name: string; updatedAt: number }[]>();
 
   // household でグループ化
@@ -181,6 +189,7 @@ export function normalizationMap(map: WarlordMap): Record<string, string> {
       result[w.name] = latest.name;
     }
   }
+  normalizationMapCache.set(map, result);
   return result;
 }
 

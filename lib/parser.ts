@@ -476,7 +476,9 @@ function splitGluedResult(
  * 返すカードは読み取り専用前提で共有する（呼び出し側で変更しないこと）。
  */
 const battleCardCache = new Map<string, BattleCard | null>();
-const BATTLE_CARD_CACHE_MAX = 5000;
+// 実データ（数万件）を丸ごと保持できる上限。実際に使うメモリはキャッシュした
+// 行数（≒戦闘ログ総数）に比例し、上限に達するまでは余分に消費しない。
+const BATTLE_CARD_CACHE_MAX = 100000;
 
 /**
  * 1 戦闘行をカード表示用に解析する。解析できない行は null。
@@ -486,8 +488,11 @@ export function parseBattleCard(line: string): BattleCard | null {
   const cached = battleCardCache.get(line);
   if (cached !== undefined) return cached;
   const result = computeBattleCard(line);
-  // 上限を超えたら丸ごと破棄して無制限な肥大化を防ぐ（単純な世代式）。
-  if (battleCardCache.size >= BATTLE_CARD_CACHE_MAX) battleCardCache.clear();
+  // 上限に達したら最古のエントリを 1 件だけ削除する（全消しによる再解析の連鎖を防ぐ）。
+  if (battleCardCache.size >= BATTLE_CARD_CACHE_MAX) {
+    const oldest = battleCardCache.keys().next().value;
+    if (oldest !== undefined) battleCardCache.delete(oldest);
+  }
   battleCardCache.set(line, result);
   return result;
 }
