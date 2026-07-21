@@ -15,7 +15,7 @@ interface Props {
 /** 並べ替えの指標。 */
 type SortKey = "pontaPoint" | "breakthrough" | "breakthroughRate";
 
-/** ノイズ除去用の最低試合数の選択肢。 */
+/** ノイズ除去用の最低戦闘数の選択肢。 */
 const MIN_CONTACT_OPTIONS = [1, 5, 10, 20, 30];
 
 /** サマリーで各指標を上位何位まで出すか。 */
@@ -32,14 +32,14 @@ interface MetricRow {
   name: string;
   faction?: string;
   branch?: string;
-  /** PontaPoint = (出兵勝 + 1.4×守備勝) ÷ 決着数。 */
+  /** PontaPoint = (出兵勝 + 1.4×守備勝) ÷ 総戦闘数。 */
   pontaPoint: number;
-  /** 出兵側として勝った決着戦目数。 */
+  /** 出兵側として勝った戦闘数。 */
   attackWins: number;
-  /** 守備側として勝った決着戦目数。 */
+  /** 守備側として勝った戦闘数。 */
   defenseWins: number;
-  /** 決着戦目数（PontaPoint・最低試合数の母数）。 */
-  decided: number;
+  /** 総戦闘数（PontaPoint・最低戦闘数の母数）。 */
+  battles: number;
   /** 抜き数 = Σ n×(n枚抜き)。 */
   breakthrough: number;
   /** 抜き率 = 抜き数 ÷ 出兵数（sorties。出兵ごとに1、２戦目以降は数えない）。 */
@@ -60,7 +60,7 @@ function metricValue(r: MetricRow, metric: SortKey): number {
 /** 指標 metric における行 r の表示用ラベル。 */
 function metricLabel(r: MetricRow, metric: SortKey): string {
   return metric === "pontaPoint"
-    ? r.decided > 0
+    ? r.battles > 0
       ? r.pontaPoint.toFixed(3)
       : "—"
     : metric === "breakthrough"
@@ -85,7 +85,7 @@ function sortByMetric(rows: MetricRow[], metric: SortKey): MetricRow[] {
     }
     // pontaPoint
     if (b.pontaPoint !== a.pontaPoint) return b.pontaPoint - a.pontaPoint;
-    return b.decided - a.decided;
+    return b.battles - a.battles;
   });
 }
 
@@ -145,8 +145,8 @@ function MetricRowItem({
           ) : (
             <span className="rank-side-active">
               出兵 {r.attackWins.toLocaleString("ja-JP")}勝 ／ 守備{" "}
-              {r.defenseWins.toLocaleString("ja-JP")}勝 ／ 決着{" "}
-              {r.decided.toLocaleString("ja-JP")}
+              {r.defenseWins.toLocaleString("ja-JP")}勝 ／ 戦闘{" "}
+              {r.battles.toLocaleString("ja-JP")}
             </span>
           )}
         </div>
@@ -180,7 +180,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
         pontaPoint: p.pontaPoint,
         attackWins: p.attackWins,
         defenseWins: p.defenseWins,
-        decided: p.decided,
+        battles: p.battles,
         breakthrough: 0,
         breakthroughRate: 0,
         sorties: 0,
@@ -201,7 +201,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
           pontaPoint: 0,
           attackWins: 0,
           defenseWins: 0,
-          decided: 0,
+          battles: 0,
           breakthrough: b.score,
           breakthroughRate: 0,
           sorties: b.sorties,
@@ -245,7 +245,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
     const q = query.trim();
     const filtered = ranking.filter(
       (r) =>
-        r.decided >= minContacts &&
+        r.battles >= minContacts &&
         (branch ? r.branch === branch : true) &&
         (q ? r.name.includes(q) : true)
     );
@@ -297,7 +297,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
         <details className="swi-formula metric-detail">
           <summary>指標の詳細</summary>
           <p className="muted">
-            PontaPoint = (攻撃勝 + 1.4×守備勝) ÷ 決着数。勝率の分子で守備の1勝を1.4勝として評価した率です。
+            PontaPoint = (出兵勝 + 1.4×守備勝) ÷ 総戦闘数。勝率の分子で守備の1勝を1.4勝として評価した率です。
           </p>
           <p className="muted">
             抜き数 = 1×(1枚抜き) + 2×(2枚抜き) + … + n×(n枚抜き)。
@@ -399,7 +399,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
           {showFilter && (
             <div className="filter-grid">
               <label className="filter">
-                <span>最低試合数</span>
+                <span>最低戦闘数</span>
                 <select
                   className="select"
                   value={minContacts}

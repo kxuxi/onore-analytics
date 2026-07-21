@@ -1883,13 +1883,15 @@ describe("pontaPointRanking（PontaPoint）", () => {
       rec(swiLine({ attacker: "乙", battleNo: 1, time: "06/01 11:00", win: false, defender: "甲" })),
       // 甲: 出兵負け（左で負け）
       rec(swiLine({ attacker: "甲", battleNo: 1, time: "06/01 12:00", win: false, defender: "敵Z" })),
+      // 甲: 引分（撤退）→ 決着ではないが総戦闘数には含む
+      rec("【1戦目】 1600年4月 06/01 13:00 京都 自国 甲 某家 武特 騎馬隊 騎兵 槍 鑾 V.S. 敵国 敵W 敵家 統特 騎馬隊 騎兵 馬 旗 撤退 12"),
     ];
     const ponta = pontaPointRanking(log).find((r) => r.name === "甲")!;
     expect(ponta.attackWins).toBe(1);
     expect(ponta.defenseWins).toBe(1);
-    expect(ponta.decided).toBe(3);
-    // (出兵勝 1 + 1.4×守備勝 1) ÷ 決着 3 = 0.8
-    expect(ponta.pontaPoint).toBeCloseTo(0.8);
+    expect(ponta.battles).toBe(4);
+    // (出兵勝 1 + 1.4×守備勝 1) ÷ 総戦闘 4 = 0.6
+    expect(ponta.pontaPoint).toBeCloseTo(0.6);
   });
 });
 
