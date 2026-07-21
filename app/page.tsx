@@ -145,6 +145,9 @@ const TERM_OPTIONS_STORAGE_KEY = "onore-tool:term-options:v1";
 /** 直近に選択した「対象の期」の保存キー。 */
 const TERM_SELECTED_STORAGE_KEY = "onore-tool:selected-term:v1";
 
+/** 過去ログ記録モード（ON のとき過去の期にも登録可。管理者のみ）の保存キー。 */
+const PAST_LOG_MODE_STORAGE_KEY = "onore-tool:past-log-mode:v1";
+
 /** 共有DBを最後に取得した時刻を HH:MM 表記にする。 */
 function formatClock(ts: number): string {
   return new Date(ts).toLocaleTimeString("ja-JP", {
@@ -224,6 +227,8 @@ export default function HomePage() {
   const [manualTerms, setManualTerms] = useState<number[]>([]);
   const [showNewTermInput, setShowNewTermInput] = useState(false);
   const [newTermValue, setNewTermValue] = useState("");
+  // 過去ログ記録モード（ON のとき過去の期にも戦闘履歴を登録できる。管理者のみ）。
+  const [pastLogMode, setPastLogMode] = useState(false);
 
   // 「新期」で追加した期を復元する（データ未登録でも選択肢に残す）。
   useEffect(() => {
@@ -302,6 +307,27 @@ export default function HomePage() {
       // 保存に失敗しても選択は継続する。
     }
   }, [selectedTerm, didAutoSelectLatestTerm]);
+
+  // 過去ログ記録モードを localStorage から復元する（初回のみ）。
+  useEffect(() => {
+    try {
+      setPastLogMode(
+        window.localStorage.getItem(PAST_LOG_MODE_STORAGE_KEY) === "1"
+      );
+    } catch {
+      // 壊れた保存データは無視して OFF のまま続行する。
+    }
+  }, []);
+
+  // 過去ログ記録モードの切り替え（localStorage に保存）。
+  const handleChangePastLogMode = useCallback((next: boolean) => {
+    setPastLogMode(next);
+    try {
+      window.localStorage.setItem(PAST_LOG_MODE_STORAGE_KEY, next ? "1" : "0");
+    } catch {
+      // 保存に失敗しても継続する。
+    }
+  }, []);
 
   // ドロップダウンに表示する期の一覧。
   // 選択中の期がデータに存在しない場合（新期入力直後など）でも選択肢に残す。
@@ -662,7 +688,7 @@ export default function HomePage() {
       case "history":
         return (
           <HistoryTab
-            canRegister={(!authReady || isAdmin) && (selectedTerm === "all" || selectedTerm === latestTerm)}
+            canRegister={(!authReady || isAdmin) && (selectedTerm === "all" || selectedTerm === latestTerm || (isAdmin && pastLogMode))}
             canDelete={isAdmin}
             onRegister={handleRegister}
             log={filteredBattleLog}
@@ -791,6 +817,8 @@ export default function HomePage() {
             isAdmin={isAdmin}
             onDeleteFaction={handleDeleteFaction}
             onCleanupSkewed={handleCleanupSkewed}
+            pastLogMode={pastLogMode}
+            onChangePastLogMode={handleChangePastLogMode}
           />
         );
       default:
@@ -813,6 +841,8 @@ export default function HomePage() {
     handleBulkDeleteBattles,
     handleDeleteFaction,
     handleCleanupSkewed,
+    pastLogMode,
+    handleChangePastLogMode,
     selectWarlord,
     selectWarlordNormalized,
     selectUnit,

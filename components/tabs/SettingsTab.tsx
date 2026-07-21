@@ -17,6 +17,9 @@ interface Props {
   isAdmin?: boolean;
   onDeleteFaction?: (faction: string) => Promise<void> | void;
   onCleanupSkewed?: () => Promise<void> | void;
+  /** 過去ログ記録モード（ON のとき過去の期にも登録できる）。 */
+  pastLogMode?: boolean;
+  onChangePastLogMode?: (next: boolean) => void;
 }
 
 const THEME_CHOICES: { value: ThemePref; label: string }[] = [
@@ -38,6 +41,8 @@ export function SettingsTab({
   isAdmin = false,
   onDeleteFaction,
   onCleanupSkewed,
+  pastLogMode = false,
+  onChangePastLogMode,
 }: Props) {
   // 解決済みテーマ（時間帯依存）は描画後に算出し、SSR との不一致を避ける。
   const [resolved, setResolved] = useState<ResolvedTheme | null>(null);
@@ -114,6 +119,51 @@ export function SettingsTab({
         isAdmin={isAdmin}
         onDeleteFaction={onDeleteFaction}
       />
+
+      {isAdmin && onChangePastLogMode && (
+        <section className="panel">
+          <div className="history-head">
+            <h2>過去ログ記録モード</h2>
+          </div>
+          <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+            通常は最新の期にしか戦闘履歴を登録できません。このモードを ON にすると、
+            サイドバーで過去の期を選んだ状態でも戦闘履歴を登録できます（管理者のみ）。
+            過去のログを取り込むときだけ ON にし、終わったら OFF に戻すことをおすすめします。
+          </p>
+          <div className="theme-options">
+            <div
+              className="theme-seg"
+              role="group"
+              aria-label="過去ログ記録モードの切り替え"
+            >
+              <button
+                type="button"
+                className={"theme-seg-btn" + (!pastLogMode ? " active" : "")}
+                aria-pressed={!pastLogMode}
+                onClick={() => onChangePastLogMode(false)}
+              >
+                OFF
+              </button>
+              <button
+                type="button"
+                className={"theme-seg-btn" + (pastLogMode ? " active" : "")}
+                aria-pressed={pastLogMode}
+                onClick={() => onChangePastLogMode(true)}
+              >
+                ON
+              </button>
+            </div>
+            <span className="theme-current">
+              現在:{" "}
+              <strong>
+                {pastLogMode
+                  ? "ON（過去の期にも登録可）"
+                  : "OFF（最新の期のみ）"}
+              </strong>
+            </span>
+          </div>
+        </section>
+      )}
 
       {isAdmin && onCleanupSkewed && (
         <section className="panel">
