@@ -35,7 +35,7 @@ const METRIC_OPTIONS: {
 
 export function SwiTab({ log, db, onSelectWarlord }: Props) {
   const [metric, setMetric] = useState<RankMetric>("attackWinRate");
-  const [minSorties, setMinSorties] = useState(10);
+  const [minSorties, setMinSorties] = useState(1);
   const [query, setQuery] = useState("");
   const [branch, setBranch] = useState("");
   const [showFilter, setShowFilter] = useState(false);
@@ -211,9 +211,9 @@ export function SwiTab({ log, db, onSelectWarlord }: Props) {
           <label className="filter">
             <span>
               {metric === "attackWinRate"
-                ? "最低攻撃戦目数"
+                ? "最低出兵数"
                 : metric === "defenseWinRate"
-                  ? "最低守備戦目数"
+                  ? "最低守備数"
                   : isDefenseMetric
                     ? "最低守備数"
                     : "最低出兵数"}

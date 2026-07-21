@@ -99,7 +99,7 @@ export function RankingTab({
   const copy = VARIANT_COPY[variant];
   const [keyword, setKeyword] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("battles");
-  const [minUses, setMinUses] = useState(10);
+  const [minUses, setMinUses] = useState(1);
   const [showFilter, setShowFilter] = useState(false);
   const [periodKey, setPeriodKey] = useState<string>(RANKING_LAST10_KEY);
 
@@ -149,12 +149,12 @@ export function RankingTab({
     });
   }, [rows, keyword, sortKey, minUses]);
 
-  const hasDropdownFilter = sortKey !== "battles" || minUses !== 10;
+  const hasDropdownFilter = sortKey !== "battles" || minUses !== 1;
   const hasFilter = !!keyword || hasDropdownFilter;
   const clearFilters = () => {
     setKeyword("");
     setSortKey("battles");
-    setMinUses(10);
+    setMinUses(1);
   };
 
   const byWinRate = sortKey === "winRate";

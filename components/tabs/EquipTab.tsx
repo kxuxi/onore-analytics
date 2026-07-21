@@ -73,7 +73,7 @@ export function EquipTab({ log, onSelectWarlord, onSelectEquip, variant }: Props
   const copy = VARIANT_COPY[variant];
   const [keyword, setKeyword] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("battles");
-  const [minUses, setMinUses] = useState(10);
+  const [minUses, setMinUses] = useState(1);
   const [showFilter, setShowFilter] = useState(false);
 
   const stats = useMemo(() => copy.stats(log), [copy, log]);
@@ -95,12 +95,12 @@ export function EquipTab({ log, onSelectWarlord, onSelectEquip, variant }: Props
   }, [stats, keyword, sortKey, minUses]);
 
   // 検索ボックスとは別にトグルする並べ替え・絞り込み（既定値と異なると「適用中」扱い）。
-  const hasDropdownFilter = sortKey !== "battles" || minUses !== 10;
+  const hasDropdownFilter = sortKey !== "battles" || minUses !== 1;
   const hasFilter = !!keyword || hasDropdownFilter;
   const clearFilters = () => {
     setKeyword("");
     setSortKey("battles");
-    setMinUses(10);
+    setMinUses(1);
   };
 
   return (
