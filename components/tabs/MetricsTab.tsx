@@ -32,13 +32,13 @@ interface MetricRow {
   name: string;
   faction?: string;
   branch?: string;
-  /** PontaPoint = (出兵勝 + 1.4×守備勝) ÷ 総戦闘数。 */
+  /** PontaPoint = (出兵勝 + 1.4×守備勝) ÷ 戦闘数（撤退戦を除く）。 */
   pontaPoint: number;
   /** 出兵側として勝った戦闘数。 */
   attackWins: number;
   /** 守備側として勝った戦闘数。 */
   defenseWins: number;
-  /** 総戦闘数（PontaPoint・最低戦闘数の母数）。 */
+  /** 戦闘数（撤退戦を除く＝勝＋負。PontaPoint・最低戦闘数の母数）。 */
   battles: number;
   /** 抜き数 = Σ n×(n枚抜き)。 */
   breakthrough: number;
@@ -297,7 +297,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
         <details className="swi-formula metric-detail">
           <summary>指標の詳細</summary>
           <p className="muted">
-            PontaPoint = (出兵勝 + 1.4×守備勝) ÷ 総戦闘数。勝率の分子で守備の1勝を1.4勝として評価した率です。
+            PontaPoint = (出兵勝 + 1.4×守備勝) ÷ 戦闘数（撤退戦を除く）。普通の勝率の分子で守備の1勝を1.4勝として重み付けした率です。
           </p>
           <p className="muted">
             抜き数 = 1×(1枚抜き) + 2×(2枚抜き) + … + n×(n枚抜き)。

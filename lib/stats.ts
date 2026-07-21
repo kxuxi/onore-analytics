@@ -1713,17 +1713,17 @@ export interface PontaStat {
   attackWins: number;
   /** 守備側として勝った戦闘数。 */
   defenseWins: number;
-  /** 総戦闘数（引分・撤退・不明も含む）。 */
+  /** 戦闘数（撤退戦を除く＝勝＋負。引分・不明も除外）。普通の勝率の分母。 */
   battles: number;
-  /** PontaPoint = (出兵勝 + 1.4×守備勝) ÷ 総戦闘数。値域 0〜1.4。 */
+  /** PontaPoint = (出兵勝 + 1.4×守備勝) ÷ 戦闘数（撤退戦を除く）。値域 0〜1.4。 */
   pontaPoint: number;
 }
 
 /**
  * 武将ごとの PontaPoint を集計する。
- * PontaPoint = (出兵勝 + 1.4×守備勝) ÷ 総戦闘数。
- * 通常の勝率の分子で「守備の 1 勝」を 1.4 勝として扱う（守備勝ちを高く評価）。
- * 分母は総戦闘数（引分・撤退・不明も含む）。攻守どちらの側でも集計する。
+ * PontaPoint = (出兵勝 + 1.4×守備勝) ÷ 戦闘数（撤退戦を除く）。
+ * 普通の勝率（勝 ÷ (勝＋負)）の分子で「守備の 1 勝」を 1.4 勝として重み付けするだけ。
+ * 分母は撤退戦を除く戦闘数（＝勝＋負。引分・撤退・不明は除外）。攻守どちらの側でも集計する。
  */
 export function pontaPointRanking(
   log: BattleRecord[],
@@ -1742,7 +1742,7 @@ export function pontaPointRanking(
     branch?: string;
     attackWins: number;
     defenseWins: number;
-    battles: number;
+    losses: number;
   }
   const map = new Map<string, Acc>();
   const touch = (
@@ -1751,7 +1751,7 @@ export function pontaPointRanking(
   ): Acc => {
     let e = map.get(name);
     if (!e) {
-      e = { name, attackWins: 0, defenseWins: 0, battles: 0 };
+      e = { name, attackWins: 0, defenseWins: 0, losses: 0 };
       map.set(name, e);
     }
     if (side.faction) e.faction = side.faction;
@@ -1761,24 +1761,27 @@ export function pontaPointRanking(
   for (const { card } of dedupedCards(log)) {
     if (!withinYearRange(card, range)) continue;
     const w = card.winner;
+    if (w !== "left" && w !== "right") continue; // 撤退・引分・不明を除く（勝敗が付いた戦闘）のみ
     const ln = resolve(card.left?.name);
     if (ln) {
       const e = touch(ln, card.left);
-      e.battles++;
       if (w === "left") e.attackWins++;
+      else e.losses++;
     }
     const rn = resolve(card.right?.name);
     if (rn) {
       const e = touch(rn, card.right);
-      e.battles++;
       if (w === "right") e.defenseWins++;
+      else e.losses++;
     }
   }
   const out: PontaStat[] = [];
   for (const e of map.values()) {
+    // 撤退戦を除く戦闘数＝勝＋負（撤退・引分・不明は除外）。
+    const battles = e.attackWins + e.defenseWins + e.losses;
     const pontaPoint =
-      e.battles > 0
-        ? (e.attackWins + DEFENSE_WIN_BONUS * e.defenseWins) / e.battles
+      battles > 0
+        ? (e.attackWins + DEFENSE_WIN_BONUS * e.defenseWins) / battles
         : 0;
     out.push({
       name: e.name,
@@ -1786,7 +1789,7 @@ export function pontaPointRanking(
       branch: e.branch,
       attackWins: e.attackWins,
       defenseWins: e.defenseWins,
-      battles: e.battles,
+      battles,
       pontaPoint,
     });
   }

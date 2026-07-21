@@ -1875,7 +1875,7 @@ describe("breakthroughRanking（抜き数）", () => {
 });
 
 describe("pontaPointRanking（PontaPoint）", () => {
-  it("守備勝ちを1.4勝として勝率の分子に加える", () => {
+  it("守備勝ちを1.4勝として勝率の分子に加える（撤退戦は戦闘数に含めない）", () => {
     const log: BattleRecord[] = [
       // 甲: 出兵勝ち（左で勝ち）
       rec(swiLine({ attacker: "甲", battleNo: 1, time: "06/01 10:00", win: true, defender: "敵X" })),
@@ -1883,15 +1883,16 @@ describe("pontaPointRanking（PontaPoint）", () => {
       rec(swiLine({ attacker: "乙", battleNo: 1, time: "06/01 11:00", win: false, defender: "甲" })),
       // 甲: 出兵負け（左で負け）
       rec(swiLine({ attacker: "甲", battleNo: 1, time: "06/01 12:00", win: false, defender: "敵Z" })),
-      // 甲: 引分（撤退）→ 決着ではないが総戦闘数には含む
+      // 甲: 撤退（勝敗が付かない）→ 戦闘数（分母）から除外される
       rec("【1戦目】 1600年4月 06/01 13:00 京都 自国 甲 某家 武特 騎馬隊 騎兵 槍 鑾 V.S. 敵国 敵W 敵家 統特 騎馬隊 騎兵 馬 旗 撤退 12"),
     ];
     const ponta = pontaPointRanking(log).find((r) => r.name === "甲")!;
     expect(ponta.attackWins).toBe(1);
     expect(ponta.defenseWins).toBe(1);
-    expect(ponta.battles).toBe(4);
-    // (出兵勝 1 + 1.4×守備勝 1) ÷ 総戦闘 4 = 0.6
-    expect(ponta.pontaPoint).toBeCloseTo(0.6);
+    // 撤退戦は分母から除外＝勝＋負のみ（1+1+1=3）
+    expect(ponta.battles).toBe(3);
+    // (出兵勝 1 + 1.4×守備勝 1) ÷ 戦闘 3 = 0.8
+    expect(ponta.pontaPoint).toBeCloseTo(0.8);
   });
 });
 
