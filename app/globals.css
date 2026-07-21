@@ -3879,7 +3879,26 @@ button.tag.faction-link:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
-/* 指標タブ：指標別サマリーとパンくず */
+/* 指標タブ：タイトル行・指標別サマリー・パンくず */
+.metric-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.metric-head h2 {
+  margin: 0;
+}
+.metric-head .metric-detail {
+  margin: 0;
+}
+.metric-head .metric-detail > summary {
+  font-size: 12px;
+}
+.metric-head .metric-detail[open] {
+  flex-basis: 100%;
+  margin-top: 6px;
+}
 .metric-section {
   margin-top: 24px;
 }

@@ -20,7 +20,7 @@ type SortKey = "antiRate" | "antiContacts" | "breakthrough" | "breakthroughRate"
 const MIN_CONTACT_OPTIONS = [1, 5, 10, 20, 30];
 
 /** サマリーで各指標を上位何位まで出すか。 */
-const TOP_N = 5;
+const TOP_N = 3;
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "antiRate", label: "Anti-Contact率" },
@@ -318,26 +318,20 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
 
   return (
     <section className="panel">
-      <h2>指標</h2>
-      <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-        実験的なページ。
-      </p>
-
-      <details className="swi-formula">
-        <summary>指標の詳細</summary>
-        <p className="muted">
-          Anti-Contact数 = 自分の兵種の得意な兵種、アンチが効いている戦闘数。
-          Anti-Contact率 = Anti-Contact数 ÷ 総戦闘数。
-        </p>
-        <p className="muted">
-          抜き数 = 1×(1枚抜き) + 2×(2枚抜き) + … + n×(n枚抜き)。n は「n戦目」の戦目番号
-          （1戦目から連勝した数）です。1出撃は最大の n として1回だけ数え、3枚抜きは3点で、
-          その内側の1・2枚抜きには加算しません。
-        </p>
-        <p className="muted">
-          抜き率 = 抜き数 ÷ 戦闘数（その武将の総戦闘数）。1戦闘あたり平均でどれだけ抜けたかの目安です。
-        </p>
-      </details>
+      <div className="metric-head">
+        <h2>指標</h2>
+        <details className="swi-formula metric-detail">
+          <summary>指標の詳細</summary>
+          <p className="muted">
+            抜き数 = 1×(1枚抜き) + 2×(2枚抜き) + … + n×(n枚抜き)。n は「n戦目」の戦目番号
+            （1戦目から連勝した数）です。1出撃は最大の n として1回だけ数え、3枚抜きは3点で、
+            その内側の1・2枚抜きには加算しません。
+          </p>
+          <p className="muted">
+            抜き率 = 抜き数 ÷ 戦闘数（その武将の出兵数）。
+          </p>
+        </details>
+      </div>
 
       {loadError ? (
         <div className="empty" role="alert">
