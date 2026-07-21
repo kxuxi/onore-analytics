@@ -39,7 +39,7 @@ interface MetricRow {
   antiRate: number;
   /** 抜き数 = Σ n×(n枚抜き)。 */
   breakthrough: number;
-  /** 抜き率 = 抜き数 ÷ 戦闘数（contacts）。 */
+  /** 抜き率 = 抜き数 ÷ 出兵数（sorties。出兵ごとに1、２戦目以降は数えない）。 */
   breakthroughRate: number;
   /** 攻撃出撃数（参考）。 */
   sorties: number;
@@ -69,7 +69,7 @@ function metricLabel(r: MetricRow, metric: SortKey): string {
     : metric === "breakthrough"
       ? r.breakthrough.toLocaleString("ja-JP")
       : metric === "breakthroughRate"
-        ? r.contacts > 0
+        ? r.sorties > 0
           ? r.breakthroughRate.toFixed(3)
           : "—"
         : r.antiContacts.toLocaleString("ja-JP");
@@ -147,8 +147,8 @@ function MetricRowItem({
             </span>
           ) : metric === "breakthroughRate" ? (
             <span className="rank-side-active">
-              抜き数 {r.breakthrough.toLocaleString("ja-JP")} ／ 戦闘{" "}
-              {r.contacts.toLocaleString("ja-JP")}
+              抜き数 {r.breakthrough.toLocaleString("ja-JP")} ／ 出兵{" "}
+              {r.sorties.toLocaleString("ja-JP")}
             </span>
           ) : (
             <span className="rank-side-active">
@@ -235,9 +235,9 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
       }
     }
     const rows = Array.from(byName.values());
-    // 抜き率 = 抜き数 ÷ 戦闘数（戦闘数 0 は 0）。
+    // 抜き率 = 抜き数 ÷ 出兵数（出兵数 0 は 0）。
     for (const r of rows) {
-      r.breakthroughRate = r.contacts > 0 ? r.breakthrough / r.contacts : 0;
+      r.breakthroughRate = r.sorties > 0 ? r.breakthrough / r.sorties : 0;
     }
     return rows;
   }, [log, db, unitTypes]);
@@ -328,7 +328,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
             その内側の1・2枚抜きには加算しません。
           </p>
           <p className="muted">
-            抜き率 = 抜き数 ÷ 戦闘数（その武将の出兵数）。
+            抜き率 = 抜き数 ÷ 出兵数（各出兵を１回と数え、２戦目以降は数えません）。
           </p>
         </details>
       </div>
