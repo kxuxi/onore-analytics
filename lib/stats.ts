@@ -1659,6 +1659,50 @@ export function swiRanking(
     .sort((a, b) => b.swi - a.swi || b.sorties - a.sorties);
 }
 
+/** 武将 1 人の枚数率（枚抜きの重み付き合計）。 */
+export interface BreakthroughStat {
+  name: string;
+  faction?: string;
+  branch?: string;
+  /** 枚数率 = Σ n×(n枚抜きの出撃数)。3枚抜きは 3 点で、内側の 1・2枚抜きには加算しない。 */
+  score: number;
+  /** 攻撃出撃数（枚抜きの母数・参考）。 */
+  sorties: number;
+  /** 枚抜きの内訳（index=n 枚抜き, value=出撃回数）。 */
+  sweepCounts: number[];
+}
+
+/**
+ * 武将ごとの「枚数率」を集計する（攻撃側の枚抜き）。
+ * 枚数率 = 1×(1枚抜き) + 2×(2枚抜き) + … + n×(n枚抜き)。
+ * 1 出撃は最大連勝数 n の「n枚抜き」として 1 回だけ数え、その内側の 1・2枚抜き…は
+ * 二重計上しない（3枚抜きは 3 点で、1・2 枚抜きには加算しない）。n は「n戦目」の
+ * 戦目番号（1戦目から連勝した数）から求める＝computeSideSwi の sweepCounts と同じ。
+ */
+export function breakthroughRanking(
+  log: BattleRecord[],
+  db?: WarlordMap,
+  range?: YearRange
+): BreakthroughStat[] {
+  const atk = computeSideSwi(log, "left", db, range);
+  const out: BreakthroughStat[] = [];
+  for (const s of atk.values()) {
+    let score = 0;
+    for (let n = 1; n < s.sweepCounts.length; n++) {
+      score += n * (s.sweepCounts[n] ?? 0);
+    }
+    out.push({
+      name: s.name,
+      faction: s.faction,
+      branch: s.branch,
+      score,
+      sorties: s.sorties,
+      sweepCounts: s.sweepCounts,
+    });
+  }
+  return out;
+}
+
 /* ---------- 武将ランキング（攻撃 / 守備の総合） ---------- */
 
 /** ランキングで切り替えられる指標。 */

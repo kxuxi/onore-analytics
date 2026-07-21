@@ -20,6 +20,7 @@ import {
   unitUsageTrend,
   unitBranchLabel,
   swiRanking,
+  breakthroughRanking,
   warlordRanking,
   weaponStats,
   itemStats,
@@ -1849,6 +1850,26 @@ describe("antiContactRanking / buildAntiIndex（指標: アンチ接触）", () 
     expect(merged.contacts).toBe(2);
     expect(merged.antiContacts).toBe(2);
     expect(ranking.find((r) => r.name === "旧名")).toBeUndefined();
+  });
+});
+
+describe("breakthroughRanking（枚数率）", () => {
+  it("枚数率 = Σ n×(n枚抜き)。3枚抜きは3点で内側の1・2枚抜きを二重計上しない", () => {
+    const log: BattleRecord[] = [
+      // 出撃、1（10:00）: 1○2○3○ = 3枚抜き
+      rec(swiLine({ attacker: "信長", battleNo: 1, time: "06/15 10:00", win: true, defender: "敵A" }), 1),
+      rec(swiLine({ attacker: "信長", battleNo: 2, time: "06/15 10:00", win: true, defender: "敵B" }), 2),
+      rec(swiLine({ attacker: "信長", battleNo: 3, time: "06/15 10:00", win: true, defender: "敵C" }), 3),
+      // 出撃。2（11:00）: 1○2× = 1枚抜き
+      rec(swiLine({ attacker: "信長", battleNo: 1, time: "06/15 11:00", win: true, defender: "敵D" }), 4),
+      rec(swiLine({ attacker: "信長", battleNo: 2, time: "06/15 11:00", win: false, defender: "敵E" }), 5),
+    ];
+    const nobu = breakthroughRanking(log).find((r) => r.name === "信長")!;
+    expect(nobu.sorties).toBe(2);
+    // 3枚抜き=3点 ＋ 1枚抜き=1点 = 4（1・2枚抜きの二重計上なし）。
+    expect(nobu.score).toBe(4);
+    expect(nobu.sweepCounts[3]).toBe(1);
+    expect(nobu.sweepCounts[1]).toBe(1);
   });
 });
 

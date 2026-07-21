@@ -5,7 +5,7 @@ import type { BattleRecord, UnitType, WarlordMap } from "@/lib/types";
 import { FilterIcon, CloseIcon } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
 import { fetchUnitTypes } from "@/lib/api";
-import { antiContactRanking, type AntiContactStat } from "@/lib/stats";
+import { antiContactRanking, breakthroughRanking } from "@/lib/stats";
 
 interface Props {
   log: BattleRecord[];
@@ -14,17 +14,32 @@ interface Props {
 }
 
 /** 並べ替えの指標。 */
-type SortKey = "antiRate" | "antiContacts";
+type SortKey = "antiRate" | "antiContacts" | "breakthrough";
 
-/** ノイズ除去用の最低接触数の選択肢。 */
+/** ノイズ除去用の最低戦闘数の選択肢。 */
 const MIN_CONTACT_OPTIONS = [1, 5, 10, 20, 30];
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "antiRate", label: "Anti-Contact率" },
   { key: "antiContacts", label: "Anti-Contact数" },
+  { key: "breakthrough", label: "枚数率" },
 ];
 
-/** アンチ接触率（0..1）を表示用の整数パーセントにする。 */
+/** 武将 1 行分の指標（アンチ接触＋枚数率をまとめたもの）。 */
+interface MetricRow {
+  name: string;
+  faction?: string;
+  branch?: string;
+  antiContacts: number;
+  contacts: number;
+  antiRate: number;
+  /** 枚数率 = Σ n×(n枚抜き)。 */
+  breakthrough: number;
+  /** 攻撃出撃数（枚数率の母数・参考）。 */
+  sorties: number;
+}
+
+/** アンチ率（0..1）を表示用の整数パーセントにする。 */
 function formatRate(rate: number, contacts: number): string {
   if (contacts <= 0) return "—";
   return `${Math.round(rate * 100)}%`;
@@ -34,13 +49,13 @@ function formatRate(rate: number, contacts: number): string {
  * 指標タブ。武将ごとの Anti-Contact 数・率を表示する。
  *
  * アンチ＝兵科のじゃんけん。自分の兵種の得意兵科（兵種一覧のデータ）に相手の兵科が
- * 含まれる戦闘を「アンチ接触（有利に接触）」として数える。ダブルアンチにも対応。
+ * 含まれる戦闘を「アンチ（有利）」として数える。ダブルアンチにも対応。
  */
 export function MetricsTab({ log, db, onSelectWarlord }: Props) {
   const [unitTypes, setUnitTypes] = useState<UnitType[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("antiRate");
-  const [minContacts, setMinContacts] = useState(10);
+  const [minContacts, setMinContacts] = useState(1);
   const [query, setQuery] = useState("");
   const [branch, setBranch] = useState("");
   const [showFilter, setShowFilter] = useState(false);
@@ -62,10 +77,44 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
 
   useEffect(() => loadUnitTypes(), [loadUnitTypes]);
 
-  const ranking = useMemo(
-    () => (unitTypes ? antiContactRanking(log, unitTypes, db) : []),
-    [log, db, unitTypes]
-  );
+  // アンチ接触（兵種一覧が必要）と枚数率（枚抜き）を武将ごとに統合する。
+  const ranking = useMemo<MetricRow[]>(() => {
+    if (!unitTypes) return [];
+    const byName = new Map<string, MetricRow>();
+    for (const a of antiContactRanking(log, unitTypes, db)) {
+      byName.set(a.name, {
+        name: a.name,
+        faction: a.faction,
+        branch: a.branch,
+        antiContacts: a.antiContacts,
+        contacts: a.contacts,
+        antiRate: a.antiRate,
+        breakthrough: 0,
+        sorties: 0,
+      });
+    }
+    for (const b of breakthroughRanking(log, db)) {
+      const row = byName.get(b.name);
+      if (row) {
+        row.breakthrough = b.score;
+        row.sorties = b.sorties;
+        row.faction = row.faction ?? b.faction;
+        row.branch = row.branch ?? b.branch;
+      } else {
+        byName.set(b.name, {
+          name: b.name,
+          faction: b.faction,
+          branch: b.branch,
+          antiContacts: 0,
+          contacts: 0,
+          antiRate: 0,
+          breakthrough: b.score,
+          sorties: b.sorties,
+        });
+      }
+    }
+    return Array.from(byName.values());
+  }, [log, db, unitTypes]);
 
   // 兵科の選択肢（集計対象から収集）。
   const branchOptions = useMemo(
@@ -90,6 +139,11 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
         (q ? r.name.includes(q) : true)
     );
     return [...filtered].sort((a, b) => {
+      if (sortKey === "breakthrough") {
+        if (b.breakthrough !== a.breakthrough)
+          return b.breakthrough - a.breakthrough;
+        return b.sorties - a.sorties;
+      }
       if (sortKey === "antiRate") {
         if (b.antiRate !== a.antiRate) return b.antiRate - a.antiRate;
         return b.antiContacts - a.antiContacts;
@@ -99,20 +153,26 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
     });
   }, [ranking, query, branch, minContacts, sortKey]);
 
-  const valueOf = (r: AntiContactStat) =>
-    sortKey === "antiRate" ? r.antiRate : r.antiContacts;
+  const valueOf = (r: MetricRow) =>
+    sortKey === "antiRate"
+      ? r.antiRate
+      : sortKey === "breakthrough"
+        ? r.breakthrough
+        : r.antiContacts;
 
   // バー幅の基準となる最大値（表示対象の最大）。
   const maxValue = view.reduce((m, r) => Math.max(m, valueOf(r)), 0) || 1;
 
-  const formatValue = (r: AntiContactStat) =>
+  const formatValue = (r: MetricRow) =>
     sortKey === "antiRate"
       ? formatRate(r.antiRate, r.contacts)
-      : r.antiContacts.toLocaleString("ja-JP");
+      : sortKey === "breakthrough"
+        ? r.breakthrough.toLocaleString("ja-JP")
+        : r.antiContacts.toLocaleString("ja-JP");
 
   // 検索ボックスとは別にトグルするドロップダウン系の絞り込み。
   const hasDropdownFilter =
-    !!branch || sortKey !== "antiRate" || minContacts !== 10;
+    !!branch || sortKey !== "antiRate" || minContacts !== 1;
   const hasFilter = !!(query || branch);
   const clearFilters = () => {
     setQuery("");
@@ -123,17 +183,19 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
     <section className="panel">
       <h2>指標</h2>
       <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-        アンチは兵科のじゃんけんです（歩兵＞騎兵＞弓兵＞歩兵、万能は相互に強いなど）。
-        自分の兵種の得意兵科に相手の兵科が含まれる戦闘を「Anti-Contact（有利に接触）」として数えます。
+        実験的なページ。
       </p>
 
       <details className="swi-formula">
-        <summary>Anti-Contact の詳細</summary>
+        <summary>指標の詳細</summary>
         <p className="muted">
-          Anti-Contact数 = 自分の兵種の得意兵科（兵種一覧のデータ）に相手の兵科が含まれた戦闘数。
-          Anti-Contact率 = Anti-Contact数 ÷ 接触数（攻撃・守備を合わせた総戦闘数）。
-          得意兵科を2つ持つ兵種（ダブルアンチ）は、どちらかに一致すれば成立します。
-          自分の兵種が兵種一覧に無い・相手の兵科が不明な戦闘は非アンチとして接触数にのみ数えます。
+          Anti-Contact数 = 自分の兵種の得意な兵種、アンチが効いている戦闘数。
+          Anti-Contact率 = Anti-Contact数 ÷ 総戦闘数。
+        </p>
+        <p className="muted">
+          枚数率 = 1×(1枚抜き) + 2×(2枚抜き) + … + n×(n枚抜き)。n は「n戦目」の戦目番号
+          （1戦目から連勝した数）です。1出撃は最大の n として1回だけ数え、3枚抜きは3点で、
+          その内側の1・2枚抜きには加算しません。
         </p>
       </details>
 
@@ -185,7 +247,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
             </select>
           </label>
           <label className="filter">
-            <span>最低接触数</span>
+            <span>最低戦闘数</span>
             <select
               className="select"
               value={minContacts}
@@ -199,7 +261,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
             </select>
           </label>
           <label className="filter">
-            <span>兵科</span>
+            <span>兵種</span>
             <select
               className="select"
               value={branch}
@@ -238,8 +300,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
         <div className="empty">
           <p className="empty-title">条件を満たす武将がいません</p>
           <p className="empty-hint">
-            「戦闘履歴」タブで戦績を登録すると、兵科の相性から Anti-Contact を算出します。
-            すでに登録済みの場合は、指標・検索語・兵科・最低接触数の条件を見直してください。
+            管理人が戦績を登録するまでお待ちください。
           </p>
         </div>
       ) : (
@@ -267,7 +328,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
                     aria-valuenow={Math.round((value / maxValue) * 100)}
                     aria-valuemin={0}
                     aria-valuemax={100}
-                    aria-label={`${r.name} の Anti-Contact ${formatValue(r)}`}
+                    aria-label={`${r.name} ${formatValue(r)}`}
                   >
                     <span
                       className="swi-bar-fill"
@@ -275,11 +336,18 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
                     />
                   </span>
                   <div className="swi-meta muted">
-                    <span className="rank-side-active">
-                      アンチ {r.antiContacts.toLocaleString("ja-JP")} ／ 接触{" "}
-                      {r.contacts.toLocaleString("ja-JP")}（率{" "}
-                      {formatRate(r.antiRate, r.contacts)}）
-                    </span>
+                    {sortKey === "breakthrough" ? (
+                      <span className="rank-side-active">
+                        枚数率 {r.breakthrough.toLocaleString("ja-JP")} ／ 出撃{" "}
+                        {r.sorties.toLocaleString("ja-JP")}
+                      </span>
+                    ) : (
+                      <span className="rank-side-active">
+                        アンチ {r.antiContacts.toLocaleString("ja-JP")} ／ 戦闘{" "}
+                        {r.contacts.toLocaleString("ja-JP")}（率{" "}
+                        {formatRate(r.antiRate, r.contacts)}）
+                      </span>
+                    )}
                   </div>
                 </div>
               </li>
