@@ -61,6 +61,7 @@ export const TAB_PATH: Record<TabKey, string[]> = {
   synergy: ["meta", "synergy"],
   matrix: ["meta"],
   metaenv: ["meta", "env"],
+  metrics: ["metrics"],
   units: ["encyclopedia", "units"],
   weapons: ["encyclopedia", "weapons"],
   items: ["encyclopedia", "items"],

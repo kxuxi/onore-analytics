@@ -40,8 +40,11 @@ import {
   yearBucketWinRankings,
   warlordYearRankTags,
   YEAR_BUCKETS,
+  antiContactRanking,
+  buildAntiIndex,
 } from "./stats";
-import type { BattleRecord, WarlordMap } from "./types";
+import type { BattleRecord, UnitType, WarlordMap } from "./types";
+import { EMPTY_UNIT } from "./unitTypeForm";
 
 /**
  * テスト用の戦闘行を組み立てる。
@@ -1754,6 +1757,82 @@ describe("ランキングの年フィルタ（range）と rankingPeriods", () =>
       from: null,
       to: null,
     });
+  });
+});
+
+describe("antiContactRanking / buildAntiIndex（指標: アンチ接触）", () => {
+  const unitTypes: UnitType[] = [
+    { ...EMPTY_UNIT, name: "母衣衆", category: "騎兵", goodAgainst: "弓兵:" },
+    { ...EMPTY_UNIT, name: "南蛮象騎兵", category: "騎兵", goodAgainst: "弓兵:壁:" },
+    { ...EMPTY_UNIT, name: "雑兵", category: "万能", goodAgainst: "" },
+  ];
+
+  // 自分の兵種と相手の兵科を差し替えられる行ビルダー（左=自分、右=相手）。
+  const antiLine = (opts: {
+    selfName: string;
+    selfUnit: string;
+    oppBranch: string;
+    oppName?: string;
+    time: string; // "MM/DD HH:mm"
+  }): string => {
+    const { selfName, selfUnit, oppBranch, oppName = "相手", time } = opts;
+    return `【1戦目】 1700年4月 ${time} 京都 己鯖 ${selfName} 某家 武特 ${selfUnit} 騎兵 槍 鞎 V.S. 敵国 ${oppName} 某家 統特 ミニエー銃兵 ${oppBranch} 馬 旗 撤退 12`;
+  };
+
+  it("buildAntiIndex は兵種→得意兵科の集合を作る（ダブルアンチは複数要素）", () => {
+    const idx = buildAntiIndex(unitTypes);
+    expect(idx.get("母衣衆")).toEqual(new Set(["弓兵"]));
+    expect(idx.get("南蛮象騎兵")).toEqual(new Set(["弓兵", "壁"]));
+    expect(idx.get("雑兵")).toEqual(new Set());
+  });
+
+  it("自分の兵種の得意兵科に相手の兵科が含まれる戦闘をアンチ接触として数える", () => {
+    const log = [
+      rec(antiLine({ selfName: "信長", selfUnit: "母衣衆", oppBranch: "弓兵", oppName: "A", time: "06/01 10:00" })),
+      rec(antiLine({ selfName: "信長", selfUnit: "母衣衆", oppBranch: "歩兵", oppName: "B", time: "06/01 10:01" })),
+      rec(antiLine({ selfName: "信長", selfUnit: "南蛮象騎兵", oppBranch: "壁", oppName: "C", time: "06/01 10:02" })),
+      rec(antiLine({ selfName: "信長", selfUnit: "雑兵", oppBranch: "弓兵", oppName: "D", time: "06/01 10:03" })),
+    ];
+    const nobu = antiContactRanking(log, unitTypes).find((r) => r.name === "信長")!;
+    expect(nobu.contacts).toBe(4);
+    // 母衣衆 vs 弓兵 と 南蛮象騎兵 vs 壁（ダブルアンチ）の 2 件。
+    expect(nobu.antiContacts).toBe(2);
+    expect(nobu.antiRate).toBeCloseTo(0.5, 5);
+    expect(nobu.branch).toBe("騎兵");
+  });
+
+  it("兵種一覧に無い兵種は非アンチ（接触には数える）", () => {
+    const log = [
+      rec(antiLine({ selfName: "架空将", selfUnit: "架空兵", oppBranch: "弓兵", oppName: "A", time: "06/02 10:00" })),
+    ];
+    const r = antiContactRanking(log, unitTypes).find((x) => x.name === "架空将")!;
+    expect(r.contacts).toBe(1);
+    expect(r.antiContacts).toBe(0);
+  });
+
+  it("守備側（右）でもアンチ接触を数える", () => {
+    // 右側の武将「守」が母衣衆で、左（相手）の兵科が弓兵ならアンチ。
+    const line =
+      "【1戦目】 1700年4月 06/03 10:00 京都 敵国 攻 某家 統特 ミニエー銃兵 弓兵 馬 旗 V.S. 己鯖 守 某家 武特 母衣衆 騎兵 槍 鞎 撤退 12";
+    const r = antiContactRanking([rec(line)], unitTypes).find((x) => x.name === "守")!;
+    expect(r.contacts).toBe(1);
+    expect(r.antiContacts).toBe(1);
+  });
+
+  it("db を渡すと家督名が同じ武将を最新の名前へ統合する", () => {
+    const db: WarlordMap = {
+      旧名: { name: "旧名", household: "織田家", type: "武特", branch: "騎兵", updatedAt: 1 },
+      新名: { name: "新名", household: "織田家", type: "武特", branch: "騎兵", updatedAt: 2 },
+    };
+    const log = [
+      rec(antiLine({ selfName: "旧名", selfUnit: "母衣衆", oppBranch: "弓兵", oppName: "A", time: "06/04 10:00" })),
+      rec(antiLine({ selfName: "新名", selfUnit: "母衣衆", oppBranch: "弓兵", oppName: "B", time: "06/04 10:01" })),
+    ];
+    const ranking = antiContactRanking(log, unitTypes, db);
+    const merged = ranking.find((r) => r.name === "新名")!;
+    expect(merged.contacts).toBe(2);
+    expect(merged.antiContacts).toBe(2);
+    expect(ranking.find((r) => r.name === "旧名")).toBeUndefined();
   });
 });
 

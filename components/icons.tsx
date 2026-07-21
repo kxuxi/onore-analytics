@@ -338,3 +338,13 @@ export function AlertTriangleIcon({ className = "icon" }: IconProps) {
     </svg>
   );
 }
+
+export function TargetIcon({ className = "icon" }: IconProps) {
+  return (
+    <svg className={className} {...base}>
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" />
+    </svg>
+  );
+}

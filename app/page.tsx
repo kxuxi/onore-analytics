@@ -37,6 +37,7 @@ import {
   LinkIcon,
   GridIcon,
   ActivityIcon,
+  TargetIcon,
   LogInIcon,
   LogOutIcon,
 } from "@/components/icons";
@@ -84,6 +85,9 @@ const TraitMatrixTab = dynamic(
 const MetaTab = dynamic(
   () => import("@/components/tabs/MetaTab").then((m) => m.MetaTab)
 );
+const MetricsTab = dynamic(
+  () => import("@/components/tabs/MetricsTab").then((m) => m.MetricsTab)
+);
 const WarlordDetail = dynamic(
   () => import("@/components/detail/WarlordDetail").then((m) => m.WarlordDetail)
 );
@@ -110,6 +114,7 @@ const TAB_ICONS: Record<TabKey, ReactNode> = {
   synergy: <LinkIcon />,
   matrix: <GridIcon />,
   metaenv: <ActivityIcon />,
+  metrics: <TargetIcon />,
   db: <DatabaseIcon />,
   units: <UsersIcon />,
   weapons: <SwordIcon />,
@@ -125,6 +130,7 @@ const GROUP_ICONS: Record<TabGroupKey, ReactNode> = {
   warlords: <UsersIcon />,
   ranking: <TrophyIcon />,
   meta: <GridIcon />,
+  metrics: <TargetIcon />,
   encyclopedia: <BookIcon />,
   nations: <FlagIcon />,
   settings: <SlidersIcon />,
@@ -709,6 +715,14 @@ export default function HomePage() {
         );
       case "metaenv":
         return <MetaTab log={filteredBattleLog} onSelectUnit={selectUnit} />;
+      case "metrics":
+        return (
+          <MetricsTab
+            log={filteredBattleLog}
+            db={filteredDb}
+            onSelectWarlord={selectWarlordNormalized}
+          />
+        );
       case "db":
         return <DbTab db={filteredDb} colors={factionColors} onSelectWarlord={selectWarlord} onSelectFaction={selectFaction} onImportStats={handleImportStats} />;
       case "units":

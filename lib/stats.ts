@@ -8,7 +8,8 @@ import {
 } from "./parser";
 import { parseActionDate } from "./action";
 import { normalizationMap } from "./storage";
-import type { BattleRecord, WarlordMap } from "./types";
+import { splitGoodAgainst } from "./unitTypeForm";
+import type { BattleRecord, UnitType, WarlordMap } from "./types";
 
 export type SideKey = "left" | "right";
 export type OutcomeResult = "win" | "loss" | "other";
@@ -1922,6 +1923,103 @@ export function warlordRanking(
       defenseSwi: d?.swi ?? 0,
       defenseBestSweep: d?.bestSweep ?? 0,
       assists: assistsMap.get(name) ?? 0,
+    });
+  }
+  return out;
+}
+
+/* ---------- 指標（アンチ接触） ---------- */
+
+/**
+ * アンチ（兵科じゃんけん）の索引。兵種名 → その兵種が得意とする兵科の集合。
+ * 「兵種一覧」マスタの得意兵種をそのまま使うので、単純な 歩兵>騎兵>弓兵>歩兵 だけでなく、
+ * ダブルアンチ（得意兵科を 2 つ持つ兵種。例: 南蛮象騎兵＝弓兵:壁）にも対応する。
+ */
+export function buildAntiIndex(unitTypes: UnitType[]): Map<string, Set<string>> {
+  const map = new Map<string, Set<string>>();
+  for (const u of unitTypes) {
+    const name = u.name.trim();
+    if (!name) continue;
+    map.set(name, new Set(splitGoodAgainst(u.goodAgainst)));
+  }
+  return map;
+}
+
+/** 武将 1 人のアンチ接触の集計。 */
+export interface AntiContactStat {
+  name: string;
+  faction?: string;
+  /** 武将の（最新の）兵科。フィルタ・表示用。 */
+  branch?: string;
+  /** アンチ接触数：自分の兵種の得意兵科に相手の兵科が含まれた戦闘数。 */
+  antiContacts: number;
+  /** 接触数：集計対象になった戦闘総数（攻撃・守備の延べ）。 */
+  contacts: number;
+  /** アンチ接触率 = antiContacts / contacts（contacts が 0 なら 0）。 */
+  antiRate: number;
+}
+
+/**
+ * 武将ごとに「アンチ接触数・率」を集計する。
+ *
+ * アンチ＝兵科のじゃんけん。自分の兵種（兵種一覧の得意兵種）に相手の兵科が
+ * 含まれていれば、その戦闘は「自分が有利に接触した（アンチ）」とみなす。
+ * ダブルアンチ（得意兵科を 2 つ持つ兵種）は得意兵科のいずれかに一致すれば成立。
+ *
+ * - 攻撃側・守備側の両方を集計対象にする（1 戦闘は各陣営の武将にそれぞれ 1 接触）。
+ * - 家督名が同じ武将は最新の名前へ統合する（db を渡した場合）。
+ * - 自分の兵種が兵種一覧に無い / 相手の兵科が不明な戦闘は「非アンチの接触」として数える
+ *   （率の分母には含める）。
+ */
+export function antiContactRanking(
+  log: BattleRecord[],
+  unitTypes: UnitType[],
+  db?: WarlordMap,
+  range?: YearRange
+): AntiContactStat[] {
+  const antiIndex = buildAntiIndex(unitTypes);
+  const normMap = db ? normalizationMap(db) : null;
+  interface Acc {
+    name: string;
+    faction?: string;
+    branch?: string;
+    antiContacts: number;
+    contacts: number;
+  }
+  const acc = new Map<string, Acc>();
+  const sides: SideKey[] = ["left", "right"];
+  for (const { card } of dedupedCards(log)) {
+    if (!withinYearRange(card, range)) continue;
+    for (const side of sides) {
+      const self = side === "left" ? card.left : card.right;
+      const opponent = side === "left" ? card.right : card.left;
+      let name = self.name?.trim();
+      if (!name) continue;
+      if (normMap && normMap[name]) name = normMap[name];
+      let a = acc.get(name);
+      if (!a) {
+        a = { name, antiContacts: 0, contacts: 0 };
+        acc.set(name, a);
+      }
+      a.contacts++;
+      if (self.faction) a.faction = self.faction;
+      if (self.branch) a.branch = self.branch;
+      // 自分の兵種の得意兵科に相手の兵科が含まれればアンチ接触。
+      const selfUnit = self.unit ? normalizeDisplayToken(self.unit) : "";
+      const good = selfUnit ? antiIndex.get(selfUnit) : undefined;
+      const oppBranch = opponent.branch?.trim();
+      if (good && oppBranch && good.has(oppBranch)) a.antiContacts++;
+    }
+  }
+  const out: AntiContactStat[] = [];
+  for (const a of acc.values()) {
+    out.push({
+      name: a.name,
+      faction: a.faction,
+      branch: a.branch,
+      antiContacts: a.antiContacts,
+      contacts: a.contacts,
+      antiRate: a.contacts > 0 ? a.antiContacts / a.contacts : 0,
     });
   }
   return out;
