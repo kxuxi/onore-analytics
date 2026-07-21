@@ -552,7 +552,7 @@ export interface YearBucketRanking {
 }
 
 /**
- * 在ゲーム年の年代ごとに、武将を勝率（総合＝攻撃＋守備）で順位付けする。
+ * 在ゲーム年の年代ごとに、武将を勝率（総合＝出兵＋守備）で順位付けする。
  * 各バケットで決着戦数が minDecided 以上の武将のみを対象に上位 topN を返す。
  *
  * @param log 戦闘ログ（期で絞らず全期間を渡す想定）。
@@ -1470,15 +1470,15 @@ export function sweepEffectiveValue(n: number): number {
   return n * sweepMultiplier(n);
 }
 
-/** 1 出撃（同一攻撃側・同一戦闘時刻）の集約。 */
+/** 1 出撃（同一出兵側・同一戦闘時刻）の集約。 */
 interface SortieAgg {
-  /** 攻撃側として勝利した戦目番号の集合 */
+  /** 出兵側として勝利した戦目番号の集合 */
   wins: Set<number>;
 }
 
 /**
  * 1 出撃の「枚抜き枚数」= 1戦目から連続で勝った数。
- * 攻撃は 1戦目→2戦目→3戦目 と進むため、最初に勝てなかった時点で止まる。
+ * 出兵は 1戦目→2戦目→3戦目 と進むため、最初に勝てなかった時点で止まる。
  */
 function sortieSweepCount(s: SortieAgg): number {
   let n = 0;
@@ -1491,12 +1491,12 @@ function sortieSweepCount(s: SortieAgg): number {
 }
 
 export interface SwiStat {
-  /** 攻撃側武将名 */
+  /** 出兵側武将名 */
   name: string;
   faction?: string;
   /** 兵科（騎兵/歩兵など） */
   branch?: string;
-  /** 総出兵数（攻撃側として出撃した回数） */
+  /** 総出兵数（出兵側として出撃した回数） */
   sorties: number;
   /** 実効値の合計（Σ 枚数 × 重み） */
   weighted: number;
@@ -1516,13 +1516,13 @@ function battleNoNumber(no: string | undefined): number {
 
 /**
  * 撃破加重指数（SWI）ランキングを算出する。
- * 出撃 = (攻撃側武将, 戦闘時刻) でまとめた 1 回の攻撃。
+ * 出撃 = (出兵側武将, 戦闘時刻) でまとめた 1 回の出兵。
  * 各出撃の枚抜き枚数（1戦目からの連勝数）に重みを掛けた実効値を合算し、
  * 総出兵数で割って SWI とする。重複行は除外する。
  *
  * @param minSorties ランキングに載せる最小出撃数（既定 5）
  */
-/** ある側（攻撃=left / 守備=right）の視点で集計した武将ごとの SWI 指標。 */
+/** ある側（出兵=left / 守備=right）の視点で集計した武将ごとの SWI 指標。 */
 export interface SideSwiStat {
   name: string;
   faction?: string;
@@ -1533,7 +1533,7 @@ export interface SideSwiStat {
   weighted: number;
   /** SWI = weighted / sorties */
   swi: number;
-  /** その側で勝った戦目の総数（攻撃なら出兵勝利数 / 守備なら守備勝利数） */
+  /** その側で勝った戦目の総数（出兵なら出兵勝利数 / 守備なら守備勝利数） */
   wins: number;
   /** 枚抜き枚数ごとの出撃回数（index = 枚数, 0..） */
   sweepCounts: number[];
@@ -1542,13 +1542,13 @@ export interface SideSwiStat {
 }
 
 /**
- * 指定した側（攻撃 / 守備）の視点で、武将ごとの出撃・連勝（枚抜き）・SWI を集計する。
+ * 指定した側（出兵 / 守備）の視点で、武将ごとの出撃・連勝（枚抜き）・SWI を集計する。
  * 出撃 = (注目側武将, 戦闘時刻) でまとめた 1 回。枚抜き = 1戦目からの連勝数。
  * 守備側も同様に (防衛側武将, 戦闘時刻) でまとめ、1戦目から連続で守り切った数を
- * 「枚抜き（守備）」として攻撃と同じ重みで評価する。重複行は除外する。
+ * 「枚抜き（守備）」として出兵と同じ重みで評価する。重複行は除外する。
  * 
  * @param log 戦闘ログ
- * @param side 集計対象の側（left=攻撃 / right=守備）
+ * @param side 集計対象の側（left=出兵 / right=守備）
  * @param db 武将DB。渡された場合、同じ household の複数の名前を1つに正規化。
  */
 function computeSideSwi(
@@ -1664,20 +1664,18 @@ export interface BreakthroughStat {
   name: string;
   faction?: string;
   branch?: string;
-  /** 抜き数 = Σ n×(n枚抜きの出撃数)。3枚抜きは 3 点で、内側の 1・2枚抜きには加算しない。 */
+  /** 抜き数 = Σ n×(n枚抜きの出撃数)。 */
   score: number;
-  /** 攻撃出撃数（枚抜きの母数・参考）。 */
+  /** 出兵出撃数（枚抜きの母数・参考）。 */
   sorties: number;
   /** 枚抜きの内訳（index=n 枚抜き, value=出撃回数）。 */
   sweepCounts: number[];
 }
 
 /**
- * 武将ごとの「抜き数」を集計する（攻撃側の枚抜き）。
+ * 武将ごとの「抜き数」を集計する（出兵側の枚抜き）。
  * 抜き数 = 1×(1枚抜き) + 2×(2枚抜き) + … + n×(n枚抜き)。
- * 1 出撃は最大連勝数 n の「n枚抜き」として 1 回だけ数え、その内側の 1・2枚抜き…は
- * 二重計上しない（3枚抜きは 3 点で、1・2 枚抜きには加算しない）。n は「n戦目」の
- * 戦目番号（1戦目から連勝した数）から求める＝computeSideSwi の sweepCounts と同じ。
+ * 1 出兵から求める＝computeSideSwi の sweepCounts と同じ。
  */
 export function breakthroughRanking(
   log: BattleRecord[],
@@ -1703,7 +1701,101 @@ export function breakthroughRanking(
   return out;
 }
 
-/* ---------- 武将ランキング（攻撃 / 守備の総合） ---------- */
+/** 守備勝ちに掛けるボーナス係数（守備の 1 勝を 1.4 勝として評価）。 */
+const DEFENSE_WIN_BONUS = 1.4;
+
+/** 武将 1 人の PontaPoint（守備勝ちにボーナスを付けた勝率）。 */
+export interface PontaStat {
+  name: string;
+  faction?: string;
+  branch?: string;
+  /** 出兵側として勝った決着戦目数。 */
+  attackWins: number;
+  /** 守備側として勝った決着戦目数。 */
+  defenseWins: number;
+  /** 決着戦目数（攻守合計、引分・撤退・不明を除く）。 */
+  decided: number;
+  /** PontaPoint = (出兵勝 + 1.4×守備勝) ÷ 決着数。値域 0〜1.4。 */
+  pontaPoint: number;
+}
+
+/**
+ * 武将ごとの PontaPoint を集計する。
+ * PontaPoint = (出兵勝 + 1.4×守備勝) ÷ 決着数。
+ * 通常の勝率の分子で「守備の 1 勝」を 1.4 勝として扱う（守備勝ちを高く評価）。
+ * 分母は決着戦目数（引分・撤退・不明は除外）。攻守どちらの側でも集計する。
+ */
+export function pontaPointRanking(
+  log: BattleRecord[],
+  db?: WarlordMap,
+  range?: YearRange
+): PontaStat[] {
+  const normMap = db ? normalizationMap(db) : null;
+  const resolve = (n?: string): string | undefined => {
+    const name = n?.trim();
+    if (!name) return undefined;
+    return normMap?.[name] ?? name;
+  };
+  interface Acc {
+    name: string;
+    faction?: string;
+    branch?: string;
+    attackWins: number;
+    defenseWins: number;
+    losses: number;
+  }
+  const map = new Map<string, Acc>();
+  const touch = (
+    name: string,
+    side: { faction?: string; branch?: string }
+  ): Acc => {
+    let e = map.get(name);
+    if (!e) {
+      e = { name, attackWins: 0, defenseWins: 0, losses: 0 };
+      map.set(name, e);
+    }
+    if (side.faction) e.faction = side.faction;
+    if (side.branch) e.branch = side.branch;
+    return e;
+  };
+  for (const { card } of dedupedCards(log)) {
+    if (!withinYearRange(card, range)) continue;
+    const w = card.winner;
+    if (w !== "left" && w !== "right") continue; // 決着のみ
+    const ln = resolve(card.left?.name);
+    if (ln) {
+      const e = touch(ln, card.left);
+      if (w === "left") e.attackWins++;
+      else e.losses++;
+    }
+    const rn = resolve(card.right?.name);
+    if (rn) {
+      const e = touch(rn, card.right);
+      if (w === "right") e.defenseWins++;
+      else e.losses++;
+    }
+  }
+  const out: PontaStat[] = [];
+  for (const e of map.values()) {
+    const decided = e.attackWins + e.defenseWins + e.losses;
+    const pontaPoint =
+      decided > 0
+        ? (e.attackWins + DEFENSE_WIN_BONUS * e.defenseWins) / decided
+        : 0;
+    out.push({
+      name: e.name,
+      faction: e.faction,
+      branch: e.branch,
+      attackWins: e.attackWins,
+      defenseWins: e.defenseWins,
+      decided,
+      pontaPoint,
+    });
+  }
+  return out;
+}
+
+/* ---------- 武将ランキング（出兵 / 守備の総合） ---------- */
 
 /** ランキングで切り替えられる指標。 */
 export type RankMetric =
@@ -1713,30 +1805,30 @@ export type RankMetric =
   | "defenseWinRate"
   | "assists";
 
-/** 武将 1 人の攻撃・守備の総合戦績。 */
+/** 武将 1 人の出兵・守備の総合戦績。 */
 export interface WarlordRankStat {
   name: string;
   faction?: string;
   branch?: string;
-  /** 平均枚抜き（攻撃勝利数 / 攻撃出撃数） */
+  /** 平均枚抜き（出兵勝利数 / 出兵出撃数） */
   avgBreakthrough: number;
   /** 守備効率（守備勝利数 / 守備出撃数） */
   defenseEfficiency: number;
-  /** 攻撃勝率（攻撃側として勝った戦目 / 攻撃側として参加した決着戦目） */
+  /** 出兵勝率（出兵側として勝った戦目 / 出兵側として参加した決着戦目） */
   attackWinRate: number;
   /** 守備勝率（守備側として勝った戦目 / 守備側として参加した決着戦目） */
   defenseWinRate: number;
-  /** 攻撃側としての出撃回数（撤退除く） */
+  /** 出兵側としての出撃回数（撤退除く） */
   attackSorties: number;
-  /** 出兵勝利数（攻撃側として勝った戦目の総数） */
+  /** 出兵勝利数（出兵側として勝った戦目の総数） */
   attackWins: number;
-  /** 攻撃側として参加した決着戦目数 */
+  /** 出兵側として参加した決着戦目数 */
   attackRounds: number;
-  /** 攻撃側として勝った決着戦目数 */
+  /** 出兵側として勝った決着戦目数 */
   attackWinRounds: number;
-  /** SWI（攻撃） */
+  /** SWI（出兵） */
   attackSwi: number;
-  /** 攻撃側の最高枚抜き */
+  /** 出兵側の最高枚抜き */
   attackBestSweep: number;
   /** 守備側としての出撃回数（撤退除く） */
   defenseSorties: number;
@@ -1770,7 +1862,7 @@ export function rankMetricValue(s: WarlordRankStat, metric: RankMetric): number 
   }
 }
 
-/** 指標が攻撃側のものか。 */
+/** 指標が出兵側のものか。 */
 export function isAttackMetric(metric: RankMetric): boolean {
   return metric === "avgBreakthrough" || metric === "attackWinRate";
 }
@@ -1784,7 +1876,7 @@ const ASSIST_WINDOW_MS = 40 * 60 * 1000;
  * 「A が B を削った（攻守問わず B に勝った）時刻 T の後 40 分以内に
  *  B が誰かに倒された（別イベントで B が負けた）」場合、A に 1 アシストを付与する。
  *
- * - 攻撃側（left 勝利）でも守備側（right 勝利）でもアシストが発生する。
+ * - 出兵側（left 勝利）でも守備側（right 勝利）でもアシストが発生する。
  * - 同一 battleAt（同一タイムスタンプ）内の別ラウンドは 0 分差のため
  *   「別イベント」に含めない（T < T2 の厳格チェック）。
  */
@@ -1876,7 +1968,7 @@ function computeAssists(
   return assists;
 }
 
-/** 決着戦目ごとの攻撃/守備勝率集計（撤退を除く）。 */
+/** 決着戦目ごとの出兵/守備勝率集計（撤退を除く）。 */
 function computeRoundWinRates(
   log: BattleRecord[],
   db?: WarlordMap,
@@ -1957,9 +2049,9 @@ function computeEfficiency(
 }
 
 /**
- * 武将ごとに攻撃・守備の出撃数 / 勝利数 / SWI をまとめて集計する。
+ * 武将ごとに出兵・守備の出撃数 / 勝利数 / SWI をまとめて集計する。
  * 出兵勝利数・守備勝利数はその側で勝った戦目の総数、
- * SWI（攻撃 / 守備）はそれぞれの側を 1戦目からの連勝（枚抜き）で重み付け評価したもの。
+ * SWI（出兵 / 守備）はそれぞれの側を 1戦目からの連勝（枚抜き）で重み付け評価したもの。
  * 
  * @param log 戦闘ログ
  * @param db 武将DB。渡された場合、同じ household の複数の名前を1つに正規化。
@@ -2050,7 +2142,7 @@ export interface AntiContactStat {
   branch?: string;
   /** アンチ戦闘数：自分の兵種の得意兵科に相手の兵科が含まれた戦闘数。 */
   antiContacts: number;
-  /** 戦闘数：集計対象になった戦闘総数（攻撃・守備の延べ）。 */
+  /** 戦闘数：集計対象になった戦闘総数（出兵・守備の延べ）。 */
   contacts: number;
   /** アンチ戦闘率 = antiContacts / contacts（contacts が 0 なら 0）。 */
   antiRate: number;
@@ -2063,7 +2155,7 @@ export interface AntiContactStat {
  * 含まれていれば、その戦闘は「自分が有利に戦闘した（アンチ）」とみなす。
  * ダブルアンチ（得意兵科を 2 つ持つ兵種）は得意兵科のいずれかに一致すれば成立。
  *
- * - 攻撃側・守備側の両方を集計対象にする（1 戦闘は各陣営の武将にそれぞれ 1 戦闘）。
+ * - 出兵側・守備側の両方を集計対象にする（1 戦闘は各陣営の武将にそれぞれ 1 戦闘）。
  * - 家督名が同じ武将は最新の名前へ統合する（db を渡した場合）。
  * - 自分の兵種が兵種一覧に無い / 相手の兵科が不明な戦闘は「非アンチの戦闘」として数える
  *   （率の分母には含める）。
@@ -2133,7 +2225,7 @@ export interface EquipStat {
   others: number;
   decided: number;
   winRate: number;
-  /** 攻撃側で装備した回数 */
+  /** 出兵側で装備した回数 */
   attackUses: number;
   /** 守備側で装備した回数 */
   defenseUses: number;
@@ -2143,7 +2235,7 @@ export interface EquipStat {
 
 /**
  * 戦闘ログの装備枠（武器=装備1 / 品物=装備2）を集計し、装備ごとの使用回数・
- * 勝率・主な使用武将を求める。`pick` で集計対象の枠を選ぶ。攻撃側・守備側の
+ * 勝率・主な使用武将を求める。`pick` で集計対象の枠を選ぶ。出兵側・守備側の
  * 両方を対象とし、重複行は除外する。「なし」など装備なしは除外する。
  */
 function collectEquipStats(
@@ -2244,7 +2336,7 @@ export interface UnitStat {
   decided: number;
   /** 勝率 0..1（decided が 0 のときは 0） */
   winRate: number;
-  /** 攻撃側で出撃した回数 */
+  /** 出兵側で出撃した回数 */
   attackUses: number;
   /** 守備側で出撃した回数 */
   defenseUses: number;
@@ -2254,7 +2346,7 @@ export interface UnitStat {
 
 /**
  * 兵種ごとの出撃実績を集計し、使用回数・勝率・主な使用武将を求める。
- * 攻撃側・守備側の両方を対象とし、重複行は除外する。兵科は最頻のものを代表とする。
+ * 出兵側・守備側の両方を対象とし、重複行は除外する。兵科は最頻のものを代表とする。
  */
 export function unitStats(log: BattleRecord[], range?: YearRange): UnitStat[] {
   interface Acc {
@@ -2393,7 +2485,7 @@ export interface EquipSynergyStat {
 /**
  * 武器（装備2）と品物（装備1）の組み合わせごとに勝率を集計し、どの組み合わせが
  * 強いかを数値化する。両方の装備が揃っている側のみ対象（片方でも空・「なし」は除外）。
- * 攻撃側・守備側の両方を対象とし、重複行は除外する。
+ * 出兵側・守備側の両方を対象とし、重複行は除外する。
  */
 export function equipSynergy(log: BattleRecord[]): EquipSynergyStat[] {
   interface Acc {
@@ -2455,9 +2547,9 @@ export function equipSynergy(log: BattleRecord[]): EquipSynergyStat[] {
  */
 export const MATCHUP_TRAITS = ["武特", "知特", "統特", "武統", "知武", "統知"];
 
-/** 相性マトリックスの 1 セル（攻撃側の特性 × 防衛側の特性）。 */
+/** 相性マトリックスの 1 セル（出兵側の特性 × 防衛側の特性）。 */
 export interface TraitMatchupCell {
-  /** 対戦数（攻撃側＝左側の延べ） */
+  /** 対戦数（出兵側＝左側の延べ） */
   battles: number;
   wins: number;
   losses: number;
@@ -2469,9 +2561,9 @@ export interface TraitMatchupCell {
 
 /** 特性ごとの相性マトリックス。 */
 export interface TraitMatchupMatrix {
-  /** 行（攻撃側）・列（防衛側）に並ぶ特性。 */
+  /** 行（出兵側）・列（防衛側）に並ぶ特性。 */
   traits: string[];
-  /** matrix[i][j] = traits[i]（攻撃側）が traits[j]（防衛側）と戦った成績。 */
+  /** matrix[i][j] = traits[i]（出兵側）が traits[j]（防衛側）と戦った成績。 */
   matrix: TraitMatchupCell[][];
 }
 
@@ -2547,8 +2639,8 @@ function withinYearRange(
 }
 
 /**
- * 特性（タイプ）の組み合わせごとの勝率を、攻撃側（左）視点で集計する。
- * 行＝攻撃側の特性 / 列＝防衛側の特性。各セルは「行の特性で攻めて列の特性に勝った率」。
+ * 特性（タイプ）の組み合わせごとの勝率を、出兵側（左）視点で集計する。
+ * 行＝出兵側の特性 / 列＝防衛側の特性。各セルは「行の特性で攻めて列の特性に勝った率」。
  * range を渡すと、その年範囲（ゲーム内の年が判明している分）に絞る。重複行は除外する。
  */
 export function traitMatchupMatrix(
@@ -2588,7 +2680,7 @@ export function traitMatchupMatrix(
 }
 
 /**
- * 特定の相性（攻撃側＝rowTrait × 防衛側＝colTrait）の戦闘を新しい順で集める。
+ * 特定の相性（出兵側＝rowTrait × 防衛側＝colTrait）の戦闘を新しい順で集める。
  * マトリックスのセルをクリックしたときの対戦履歴表示に使う。
  */
 export function collectTraitMatchupBattles(

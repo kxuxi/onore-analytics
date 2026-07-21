@@ -21,6 +21,7 @@ import {
   unitBranchLabel,
   swiRanking,
   breakthroughRanking,
+  pontaPointRanking,
   warlordRanking,
   weaponStats,
   itemStats,
@@ -691,14 +692,14 @@ describe("unitUsageTrend", () => {
 });
 
 /**
- * SWI テスト用の戦闘行。攻撃側武将名・戦目番号・戦闘時刻・勝者を指定する。
+ * SWI テスト用の戦闘行。出兵側武将名・戦目番号・戦闘時刻・勝者を指定する。
  * 同じ time を共有する行は「同一出撃」として扱われる。
  */
 function swiLine(opts: {
   attacker: string;
   battleNo: number;
   time: string; // "MM/DD HH:mm"（出撃の識別子になる）
-  win: boolean; // 攻撃側が勝ったか
+  win: boolean; // 出兵側が勝ったか
   defender?: string;
 }): string {
   const { attacker, battleNo, time, win, defender = "敵将" } = opts;
@@ -823,7 +824,7 @@ function efficiencyLine(opts: {
 }
 
 describe("アシスト（warlordRanking）", () => {
-  it("撃破効率（平均枚抜き）は 攻撃勝利数 ÷ 攻撃出撃数 で計算される", () => {
+  it("撃破効率（平均枚抜き）は 出兵勝利数 ÷ 出兵数 で計算される", () => {
     const log: BattleRecord[] = [
       // 出撃1（10:00）で2勝
       rec(
@@ -969,7 +970,7 @@ describe("アシスト（warlordRanking）", () => {
 
   it("削った 40 分以内に相手が別イベントで倒されたらアシスト獲得", () => {
     const log: BattleRecord[] = [
-      // 守備側 A が 10:00 に B の攻撃を撃退（削る）
+      // 守備側 A が 10:00 に B の出兵を撃退（削る）
       rec(assistLine({ leftName: "B", rightName: "A", time: "06/15 10:00", winner: "right" }), 1),
       // 30 分後に C が B を倒す
       rec(assistLine({ leftName: "B", rightName: "C", time: "06/15 10:30", winner: "right" }), 2),
@@ -992,11 +993,11 @@ describe("アシスト（warlordRanking）", () => {
     expect(a?.assists).toBe(0);
   });
 
-  it("攻撃側が勝った場合もアシストが発生する", () => {
+  it("出兵側が勝った場合もアシストが発生する", () => {
     const log: BattleRecord[] = [
-      // A が攻撃側として 12:00 に B の守備を破る
+      // A が出兵側として 12:00 に B の守備を破る
       rec(assistLine({ leftName: "A", rightName: "B", time: "06/15 12:00", winner: "left" }), 1),
-      // 15 分後に別の攻撃者 C が B を倒す
+      // 15 分後に別の出兵者 C が B を倒す
       rec(assistLine({ leftName: "C", rightName: "B", time: "06/15 12:15", winner: "left" }), 2),
     ];
     const ranking = warlordRanking(log);
@@ -1079,7 +1080,7 @@ describe("weaponStats / itemStats", () => {
 });
 
 describe("unitStats", () => {
-  // 攻撃側 信長: 左側、防衛側 勝頼: 右側。末尾 12 はターン数。
+  // 出兵側 信長: 左側、防衛側 勝頼: 右側。末尾 12 はターン数。
   function line(o: {
     leftUnit?: string;
     leftBranch?: string;
@@ -1205,7 +1206,7 @@ describe("equipSynergy", () => {
 });
 
 describe("traitMatchupMatrix / collectTraitMatchupBattles", () => {
-  // 攻撃側（左）の特性 leftType・防衛側（右）の特性 rightType を差し替える。
+  // 出兵側（左）の特性 leftType・防衛側（右）の特性 rightType を差し替える。
   // dedup（battleAt の年月+時刻＋名前＋勝者でキー化）を避けるため時刻と名前は毎回変える。
   function matrixLine(o: {
     leftType: string;
@@ -1221,7 +1222,7 @@ describe("traitMatchupMatrix / collectTraitMatchupBattles", () => {
   }
 
   const log: BattleRecord[] = [
-    // 統特 が 知特 に 2勝1敗（攻撃側＝左）
+    // 統特 が 知特 に 2勝1敗（出兵側＝左）
     rec(matrixLine({ leftType: "統特", rightType: "知特", leftName: "統A", rightName: "知A", winner: "left", time: "04/10 10:00" }), 1),
     rec(matrixLine({ leftType: "統特", rightType: "知特", leftName: "統B", rightName: "知B", winner: "left", time: "04/10 11:00" }), 2),
     rec(matrixLine({ leftType: "統特", rightType: "知特", leftName: "統C", rightName: "知C", winner: "right", time: "04/10 12:00" }), 3),
@@ -1233,7 +1234,7 @@ describe("traitMatchupMatrix / collectTraitMatchupBattles", () => {
 
   const idx = (t: string) => MATCHUP_TRAITS.indexOf(t);
 
-  it("攻撃側視点で 行＝攻撃特性 × 列＝防衛特性 の勝敗を集計する", () => {
+  it("出兵側視点で 行＝出兵特性 × 列＝防衛特性 の勝敗を集計する", () => {
     const { traits, matrix } = traitMatchupMatrix(log);
     expect(traits).toEqual(MATCHUP_TRAITS);
     const cell = matrix[idx("統特")][idx("知特")];
@@ -1278,7 +1279,7 @@ describe("traitMatchupMatrix / collectTraitMatchupBattles", () => {
   it("collectTraitMatchupBattles はそのマスの戦闘を新しい順で返す", () => {
     const battles = collectTraitMatchupBattles(log, "統特", "知特");
     expect(battles).toHaveLength(3);
-    // 全て攻撃側視点
+    // 全て出兵側視点
     expect(battles.every((b) => b.side === "left")).toBe(true);
     // 新しい順（12:00 が先頭・敗北）
     expect(battles[0].result).toBe("loss");
@@ -1387,7 +1388,7 @@ describe("metaOverview", () => {
     const buToku = traits.find((t) => t.trait === "武特");
     const touToku = traits.find((t) => t.trait === "統特");
     expect(buToku?.appearances).toBe(12);
-    expect(buToku?.winRate).toBeCloseTo(8 / 12); // 左＝攻撃側
+    expect(buToku?.winRate).toBeCloseTo(8 / 12); // 左＝出兵側
     expect(touToku?.appearances).toBe(12);
     expect(touToku?.winRate).toBeCloseTo(4 / 12); // 右＝防衛側（鏡）
   });
@@ -1726,7 +1727,7 @@ describe("ランキングの年フィルタ（range）と rankingPeriods", () =>
     ).toBe(2);
   });
 
-  it("warlordRanking は年範囲で攻撃戦目を絞り込める", () => {
+  it("warlordRanking は年範囲で出兵戦目を絞り込める", () => {
     const all = warlordRanking(log).find((r) => r.name === "信長")!;
     expect(all.attackRounds).toBe(4);
     const recent = warlordRanking(log, undefined, {
@@ -1870,6 +1871,25 @@ describe("breakthroughRanking（抜き数）", () => {
     expect(nobu.score).toBe(4);
     expect(nobu.sweepCounts[3]).toBe(1);
     expect(nobu.sweepCounts[1]).toBe(1);
+  });
+});
+
+describe("pontaPointRanking（PontaPoint）", () => {
+  it("守備勝ちを1.4勝として勝率の分子に加える", () => {
+    const log: BattleRecord[] = [
+      // 甲: 出兵勝ち（左で勝ち）
+      rec(swiLine({ attacker: "甲", battleNo: 1, time: "06/01 10:00", win: true, defender: "敵X" })),
+      // 甲: 守備勝ち（右で勝ち＝左の乙が負け）
+      rec(swiLine({ attacker: "乙", battleNo: 1, time: "06/01 11:00", win: false, defender: "甲" })),
+      // 甲: 出兵負け（左で負け）
+      rec(swiLine({ attacker: "甲", battleNo: 1, time: "06/01 12:00", win: false, defender: "敵Z" })),
+    ];
+    const ponta = pontaPointRanking(log).find((r) => r.name === "甲")!;
+    expect(ponta.attackWins).toBe(1);
+    expect(ponta.defenseWins).toBe(1);
+    expect(ponta.decided).toBe(3);
+    // (出兵勝 1 + 1.4×守備勝 1) ÷ 決着 3 = 0.8
+    expect(ponta.pontaPoint).toBeCloseTo(0.8);
   });
 });
 
