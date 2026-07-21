@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { UnitType } from "@/lib/types";
+import type { BattleRecord, UnitType } from "@/lib/types";
 import { fetchUnitTypes, bulkUpsertUnitTypes } from "@/lib/api";
+import { unitNamesInLog } from "@/lib/stats";
 import { UnitEditModal } from "@/components/tabs/UnitEditModal";
 import {
   EMPTY_UNIT,
@@ -45,9 +46,15 @@ const COLUMNS: {
 export function UnitTab({
   onSelectUnit,
   isAdmin,
+  log = [],
+  termScoped = false,
 }: {
   onSelectUnit: (name: string) => void;
   isAdmin: boolean;
+  /** 選択中の期の戦闘履歴（期で絞り込むときに使う）。 */
+  log?: BattleRecord[];
+  /** 特定の期を選択中か（true のとき、その期の戦闘に登場した兵種のみ表示）。 */
+  termScoped?: boolean;
 }) {
   const [units, setUnits] = useState<UnitType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,6 +88,20 @@ export function UnitTab({
     reload();
   }, []);
 
+  // 選択中の期の戦闘に登場した兵種名（term-scoped 時のみ算出）。
+  const appearedUnits = useMemo(
+    () => (termScoped ? unitNamesInLog(log) : null),
+    [termScoped, log]
+  );
+  // 期で絞る場合は、その期の戦闘に登場した兵種だけを対象にする。
+  const baseUnits = useMemo(
+    () =>
+      appearedUnits
+        ? units.filter((u) => appearedUnits.has(u.name.trim()))
+        : units,
+    [units, appearedUnits]
+  );
+
   const categories = useMemo(
     () =>
       Array.from(
@@ -107,7 +128,7 @@ export function UnitTab({
   }, [units]);
 
   const filtered = useMemo(() => {
-    const result = units.filter((u) =>
+    const result = baseUnits.filter((u) =>
       COLUMNS.every((col) => {
         const f = filters[col.key]?.trim();
         if (!f) return true;
@@ -132,7 +153,7 @@ export function UnitTab({
         ) * dir
       );
     });
-  }, [units, filters, sortKey, sortDir]);
+  }, [baseUnits, filters, sortKey, sortDir]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -205,8 +226,8 @@ export function UnitTab({
         {!loading && (
           <span className="count-badge">
             {hasFilter
-              ? `全${units.length.toLocaleString("ja-JP")}件中 ${filtered.length.toLocaleString("ja-JP")}件`
-              : `全${units.length.toLocaleString("ja-JP")}件`}
+              ? `全${baseUnits.length.toLocaleString("ja-JP")}件中 ${filtered.length.toLocaleString("ja-JP")}件`
+              : `全${baseUnits.length.toLocaleString("ja-JP")}件`}
           </span>
         )}
       </div>

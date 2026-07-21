@@ -776,7 +776,14 @@ export default function HomePage() {
       case "db":
         return <DbTab db={filteredDb} colors={factionColors} onSelectWarlord={selectWarlord} onSelectFaction={selectFaction} onImportStats={handleImportStats} />;
       case "units":
-        return <UnitTab onSelectUnit={selectUnit} isAdmin={isAdmin} />;
+        return (
+          <UnitTab
+            onSelectUnit={selectUnit}
+            isAdmin={isAdmin}
+            log={filteredBattleLog}
+            termScoped={selectedTerm !== "all"}
+          />
+        );
       case "weapons":
         return (
           <EquipTab

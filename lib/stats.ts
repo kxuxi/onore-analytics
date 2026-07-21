@@ -144,6 +144,21 @@ export function collectUnitBattles(
   return sortByTimeDesc(out);
 }
 
+/**
+ * ログ中の戦闘に登場した兵種名（表示名に正規化・攻守両側）の集合を返す。
+ * 兵種図鑑を「選択中の期に登場した兵種のみ」に絞り込む用途などに使う。
+ */
+export function unitNamesInLog(log: BattleRecord[]): Set<string> {
+  const names = new Set<string>();
+  for (const record of log) {
+    const card = parseBattleCard(record.line);
+    if (!card) continue;
+    if (card.left.unit) names.add(normalizeDisplayToken(card.left.unit));
+    if (card.right.unit) names.add(normalizeDisplayToken(card.right.unit));
+  }
+  return names;
+}
+
 /** 勝利数・敗北数・勝率などを集計する。 */
 export function summarize(outcomes: BattleOutcome[]): StatSummary {
   let wins = 0;
