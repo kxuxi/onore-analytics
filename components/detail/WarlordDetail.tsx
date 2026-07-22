@@ -1,10 +1,15 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { WarlordMap } from "@/lib/types";
 import type { BattleRecord } from "@/lib/types";
 import { lookup, householdAliases } from "@/lib/storage";
 import { displayWarlordType } from "@/lib/warlordType";
+import {
+  renderWarlordCardBlob,
+  downloadBlob,
+  copyImageBlob,
+} from "@/lib/warlordCard";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
 import {
   collectWarlordBattles,
@@ -19,7 +24,7 @@ import {
   type YearRankTag,
 } from "@/lib/stats";
 import { PieChart, chartColor } from "@/components/PieChart";
-import { StarIcon } from "@/components/icons";
+import { DownloadIcon, StarIcon } from "@/components/icons";
 import { BattleLogList } from "@/components/detail/BattleLogList";
 import { useYearRangeFilter, YearRangeFilterBar } from "@/components/detail/YearRangeFilter";
 import { Section } from "@/components/detail/Section";
@@ -105,6 +110,38 @@ export function WarlordDetail({
       })
     : type;
 
+  const [cardState, setCardState] = useState<
+    "idle" | "saving" | "done" | "error"
+  >("idle");
+
+  // 戦績カード画像を生成してダウンロード＋クリップボードへコピーする。
+  const handleSaveCard = useCallback(async () => {
+    setCardState("saving");
+    try {
+      const blob = await renderWarlordCardBlob({
+        name,
+        faction,
+        type: displayType,
+        branch,
+        battles: summary.battles,
+        wins: summary.wins,
+        losses: summary.losses,
+        winRate: summary.winRate,
+        decided: summary.decided,
+      });
+      if (!blob) {
+        setCardState("error");
+        return;
+      }
+      downloadBlob(blob, `${name}_戦績カード.png`);
+      await copyImageBlob(blob);
+      setCardState("done");
+      window.setTimeout(() => setCardState("idle"), 2000);
+    } catch {
+      setCardState("error");
+    }
+  }, [name, faction, displayType, branch, summary]);
+
   const pieData = useMemo(
     () =>
       usage.map((u, i) => ({
@@ -152,19 +189,43 @@ export function WarlordDetail({
         title={name}
         tags={tags}
         actions={
-          isAdmin && onToggleWatch ? (
-            <button
-              type="button"
-              className={"btn detail-watch" + (isWatched ? " active" : "")}
-              onClick={() => onToggleWatch(name)}
-              aria-pressed={isWatched}
-              title={
-                isWatched ? "ウォッチリストから外す" : "ウォッチリストに追加"
-              }
-            >
-              <StarIcon filled={isWatched} />
-              <span>{isWatched ? "ウォッチ中" : "ウォッチ"}</span>
-            </button>
+          isAdmin ? (
+            <>
+              <button
+                type="button"
+                className="btn detail-card-btn"
+                onClick={handleSaveCard}
+                disabled={cardState === "saving" || summary.battles === 0}
+                title="戦績カードを画像として保存（クリップボードにもコピー）"
+              >
+                <DownloadIcon />
+                <span>
+                  {cardState === "saving"
+                    ? "生成中…"
+                    : cardState === "done"
+                      ? "保存しました"
+                      : cardState === "error"
+                        ? "失敗しました"
+                        : "カード保存"}
+                </span>
+              </button>
+              {onToggleWatch && (
+                <button
+                  type="button"
+                  className={"btn detail-watch" + (isWatched ? " active" : "")}
+                  onClick={() => onToggleWatch(name)}
+                  aria-pressed={isWatched}
+                  title={
+                    isWatched
+                      ? "ウォッチリストから外す"
+                      : "ウォッチリストに追加"
+                  }
+                >
+                  <StarIcon filled={isWatched} />
+                  <span>{isWatched ? "ウォッチ中" : "ウォッチ"}</span>
+                </button>
+              )}
+            </>
           ) : undefined
         }
         onBack={onBack}
