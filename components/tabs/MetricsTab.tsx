@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import type { BattleRecord, WarlordMap } from "@/lib/types";
 import { FilterIcon, CloseIcon } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
-import { breakthroughRanking, pontaPointRanking } from "@/lib/stats";
+import { breakthroughRanking, pontaPointRanking, formatWinRate } from "@/lib/stats";
 
 interface Props {
   log: BattleRecord[];
@@ -13,7 +13,7 @@ interface Props {
 }
 
 /** 並べ替えの指標。 */
-type SortKey = "ppn" | "pontaPoint" | "breakthrough" | "breakthroughRate";
+type SortKey = "ppn" | "pontaPoint" | "winRate" | "breakthrough" | "breakthroughRate";
 
 /** ノイズ除去用の最低戦闘数の選択肢。 */
 const MIN_CONTACT_OPTIONS = [1, 5, 10, 20, 30];
@@ -34,6 +34,11 @@ const SORT_OPTIONS: { key: SortKey; label: string; desc: string }[] = [
     key: "pontaPoint",
     label: "PontaPoint",
     desc: "ジョンさん印の指標。(出兵勝 + 1.4×守備勝) ÷ 戦闘数（撤退戦を除く）。普通の勝率の分子で守備の1勝を1.4勝としてボーナスしたもの。",
+  },
+  {
+    key: "winRate",
+    label: "勝率",
+    desc: "(出兵勝 + 守備勝) ÷ 戦闘数（撤退戦を除く）。撤退を除いた普通の勝率。野球で言えば打率。",
   },
   {
     key: "breakthrough",
@@ -62,6 +67,8 @@ interface MetricRow {
   defenseWins: number;
   /** 戦闘数（撤退戦を除く＝勝＋負。PontaPoint・最低戦闘数の母数）。 */
   battles: number;
+  /** 勝率 = (出兵勝 + 守備勝) ÷ 戦闘数（撤退戦を除く）。0〜1。 */
+  winRate: number;
   /** 抜き数 = Σ n×(n枚抜き)。 */
   breakthrough: number;
   /** 抜き率 = 抜き数 ÷ 出兵数（sorties。出兵ごとに1、２戦目以降は数えない）。 */
@@ -76,9 +83,11 @@ function metricValue(r: MetricRow, metric: SortKey): number {
     ? r.ppn
     : metric === "pontaPoint"
       ? r.pontaPoint
-      : metric === "breakthrough"
-        ? r.breakthrough
-        : r.breakthroughRate;
+      : metric === "winRate"
+        ? r.winRate
+        : metric === "breakthrough"
+          ? r.breakthrough
+          : r.breakthroughRate;
 }
 
 /** 指標 metric における行 r の表示用ラベル。 */
@@ -91,11 +100,13 @@ function metricLabel(r: MetricRow, metric: SortKey): string {
       ? r.battles > 0
         ? r.pontaPoint.toFixed(3)
         : "—"
-      : metric === "breakthrough"
-        ? r.breakthrough.toLocaleString("ja-JP")
-        : r.sorties > 0
-          ? r.breakthroughRate.toFixed(3)
-          : "—";
+      : metric === "winRate"
+        ? formatWinRate(r.winRate, r.battles)
+        : metric === "breakthrough"
+          ? r.breakthrough.toLocaleString("ja-JP")
+          : r.sorties > 0
+            ? r.breakthroughRate.toFixed(3)
+            : "—";
 }
 
 /** 指標 metric で降順に並べ替えた新しい配列を返す。 */
@@ -114,6 +125,10 @@ function sortByMetric(rows: MetricRow[], metric: SortKey): MetricRow[] {
       if (b.breakthroughRate !== a.breakthroughRate)
         return b.breakthroughRate - a.breakthroughRate;
       return b.breakthrough - a.breakthrough;
+    }
+    if (metric === "winRate") {
+      if (b.winRate !== a.winRate) return b.winRate - a.winRate;
+      return b.battles - a.battles;
     }
     // pontaPoint
     if (b.pontaPoint !== a.pontaPoint) return b.pontaPoint - a.pontaPoint;
@@ -220,6 +235,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
         attackWins: p.attackWins,
         defenseWins: p.defenseWins,
         battles: p.battles,
+        winRate: 0,
         breakthrough: 0,
         breakthroughRate: 0,
         sorties: 0,
@@ -242,6 +258,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
           attackWins: 0,
           defenseWins: 0,
           battles: 0,
+          winRate: 0,
           breakthrough: b.score,
           breakthroughRate: 0,
           sorties: b.sorties,
@@ -253,6 +270,8 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
     for (const r of rows) {
       r.breakthroughRate = r.sorties > 0 ? r.breakthrough / r.sorties : 0;
       r.ppn = r.pontaPoint + r.breakthroughRate;
+      r.winRate =
+        r.battles > 0 ? (r.attackWins + r.defenseWins) / r.battles : 0;
     }
     // 10戦未満（戦闘数が MIN_BATTLES 未満）の武将は指標の対象外。
     return rows.filter((r) => r.battles >= MIN_BATTLES);
