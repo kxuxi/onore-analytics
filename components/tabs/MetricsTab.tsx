@@ -84,10 +84,11 @@ function formatPontaPoint(v: number): string {
   return `${(v * 100).toFixed(2)}%`;
 }
 
-/** 枚抜きの内訳を「1枚抜き 5 ／ 2枚抜き 3」の形に整形する（回数0の枚数は省略）。 */
+/** 枚抜きの内訳を「0枚抜き 13 ／ 1枚抜き 5 ／ 2枚抜き 3」の形に整形する（回数0の枚数は省略）。
+ *  0枚抜き＝出兵したが1戦目で負けて1枚も抜けなかった回。全枚数の合計＝出兵数になる。 */
 function formatSweepCounts(sweepCounts: number[]): string {
   const parts: string[] = [];
-  for (let n = 1; n < sweepCounts.length; n++) {
+  for (let n = 0; n < sweepCounts.length; n++) {
     const c = sweepCounts[n] ?? 0;
     if (c > 0) parts.push(`${n}枚抜き ${c.toLocaleString("ja-JP")}`);
   }
