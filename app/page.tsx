@@ -1271,8 +1271,7 @@ export default function HomePage() {
           tabIndex={-1}
         >
           {!hydrated ||
-          (!loadError &&
-            (selectedTerm == null || (logLoading && battleLog.length === 0))) ? (
+          (!loadError && (selectedTerm == null || logLoading)) ? (
             <div className="panel" aria-busy="true" aria-live="polite">
               <span className="sr-only">読み込み中…</span>
               <div className="skeleton skeleton-title" />
