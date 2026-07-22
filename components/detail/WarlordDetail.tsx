@@ -18,6 +18,7 @@ import {
   type YearRankTag,
 } from "@/lib/stats";
 import { PieChart, chartColor } from "@/components/PieChart";
+import { StarIcon } from "@/components/icons";
 import { BattleLogList } from "@/components/detail/BattleLogList";
 import { useYearRangeFilter, YearRangeFilterBar } from "@/components/detail/YearRangeFilter";
 import { Section } from "@/components/detail/Section";
@@ -42,6 +43,12 @@ interface Props {
   colors: FactionColorMap;
   /** コメント欄（一言コメント）を表示するか。未ログインでは非表示。 */
   canComment: boolean;
+  /** 管理者か（ウォッチリスト・戦績カード等の管理者機能の表示可否）。 */
+  isAdmin?: boolean;
+  /** この武将がウォッチリストに入っているか。 */
+  isWatched?: boolean;
+  /** ウォッチリストの追加／削除。 */
+  onToggleWatch?: (name: string) => void;
   /** 年代別勝率ランキングでの入賞タグ（全期間集計）。 */
   yearRankTags?: YearRankTag[];
   onSelectWarlord: (name: string) => void;
@@ -56,6 +63,9 @@ export function WarlordDetail({
   log,
   colors,
   canComment,
+  isAdmin = false,
+  isWatched = false,
+  onToggleWatch,
   yearRankTags,
   onSelectWarlord,
   onSelectUnit,
@@ -134,7 +144,28 @@ export function WarlordDetail({
 
   return (
     <section className="panel detail-panel">
-      <DetailHeader kind="武将" title={name} tags={tags} onBack={onBack} />
+      <DetailHeader
+        kind="武将"
+        title={name}
+        tags={tags}
+        actions={
+          isAdmin && onToggleWatch ? (
+            <button
+              type="button"
+              className={"btn detail-watch" + (isWatched ? " active" : "")}
+              onClick={() => onToggleWatch(name)}
+              aria-pressed={isWatched}
+              title={
+                isWatched ? "ウォッチリストから外す" : "ウォッチリストに追加"
+              }
+            >
+              <StarIcon filled={isWatched} />
+              <span>{isWatched ? "ウォッチ中" : "ウォッチ"}</span>
+            </button>
+          ) : undefined
+        }
+        onBack={onBack}
+      />
 
       <AbilityStats warlord={dbInfo} />
 

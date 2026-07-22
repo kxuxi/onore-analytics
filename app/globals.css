@@ -2803,6 +2803,23 @@ button.tag.faction-link:focus-visible {
   border-color: var(--success, #4caf50);
 }
 
+/* 武将詳細のウォッチリスト・トグル（管理者のみ）。 */
+.detail-watch {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+}
+.detail-watch.active {
+  color: var(--medal-gold-fg, #f0b429);
+  border-color: color-mix(
+    in srgb,
+    var(--medal-gold-fg, #f0b429) 60%,
+    var(--border)
+  );
+}
+
 /* 戻るボタンと見出しの右側に、操作ボタン群（編集など）と共有ボタンをまとめる。
    margin-left:auto はラッパーへ移し、内側の共有ボタンの auto は打ち消す。 */
 .detail-head-actions {
@@ -5303,6 +5320,61 @@ button.tag.faction-link:focus-visible {
   font-size: 13px;
   font-weight: 600;
   align-self: flex-start;
+}
+
+/* --- ウォッチリスト（お気に入り武将・管理者のみ） --- */
+.home-watchlist-count {
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+.home-watchlist-empty {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.home-watchlist-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.home-watchlist-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.home-watchlist-name {
+  font-size: 15px;
+  font-weight: 700;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-watchlist-remove {
+  appearance: none;
+  border: 0;
+  background: none;
+  color: var(--medal-gold-fg, #f0b429);
+  cursor: pointer;
+  padding: 2px;
+  margin-left: auto;
+  display: inline-flex;
+  border-radius: 6px;
+}
+.home-watchlist-remove:hover {
+  color: color-mix(in srgb, var(--medal-gold-fg, #f0b429) 70%, var(--text));
+}
+.home-watchlist-remove:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 @media (max-width: 720px) {

@@ -44,6 +44,12 @@ import {
 import type { BattleRecord, TabKey, WarlordMap } from "@/lib/types";
 import { normalizationMap } from "@/lib/storage";
 import { yearBucketWinRankings, warlordYearRankTags } from "@/lib/stats";
+import {
+  getWatchlist,
+  saveWatchlist,
+  toggleWatched,
+  isWatched,
+} from "@/lib/watchlist";
 
 const HomeTab = dynamic(
   () => import("@/components/tabs/HomeTab").then((m) => m.HomeTab)
@@ -232,6 +238,8 @@ export default function HomePage() {
   const [newTermValue, setNewTermValue] = useState("");
   // 過去ログ記録モード（ON のとき過去の期にも戦闘履歴を登録できる。管理者のみ）。
   const [pastLogMode, setPastLogMode] = useState(false);
+  // ウォッチリスト（お気に入り武将）。localStorage に永続化する。
+  const [watchlist, setWatchlist] = useState<string[]>([]);
 
   // 「新期」で追加した期を復元する（データ未登録でも選択肢に残す）。
   useEffect(() => {
@@ -330,6 +338,20 @@ export default function HomePage() {
     } catch {
       // 保存に失敗しても継続する。
     }
+  }, []);
+
+  // ウォッチリストを localStorage から復元する（初回のみ）。
+  useEffect(() => {
+    setWatchlist(getWatchlist());
+  }, []);
+
+  // ウォッチリストの追加／削除（localStorage に保存）。
+  const handleToggleWatch = useCallback((name: string) => {
+    setWatchlist((prev) => {
+      const next = toggleWatched(prev, name);
+      saveWatchlist(next);
+      return next;
+    });
   }, []);
 
   // ドロップダウンに表示する期の一覧。
@@ -687,6 +709,9 @@ export default function HomePage() {
             log={filteredBattleLog}
             db={db}
             colors={factionColors}
+            isAdmin={isAdmin}
+            watchlist={watchlist}
+            onToggleWatch={handleToggleWatch}
             onSelectWarlord={selectWarlordNormalized}
             onSelectUnit={selectUnit}
             onSelectFaction={selectFaction}
@@ -857,6 +882,8 @@ export default function HomePage() {
     handleCleanupSkewed,
     pastLogMode,
     handleChangePastLogMode,
+    watchlist,
+    handleToggleWatch,
     selectWarlord,
     selectWarlordNormalized,
     selectUnit,
@@ -876,6 +903,9 @@ export default function HomePage() {
           log={filteredBattleLog}
           colors={factionColors}
           canComment={isAdmin}
+          isAdmin={isAdmin}
+          isWatched={isWatched(watchlist, detail.name)}
+          onToggleWatch={handleToggleWatch}
           yearRankTags={warlordYearRankTags(yearRankings, repName)}
           onSelectWarlord={selectWarlordNormalized}
           onSelectUnit={selectUnit}

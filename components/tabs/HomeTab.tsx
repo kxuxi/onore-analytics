@@ -7,6 +7,7 @@ import { householdAliases, lookup } from "@/lib/storage";
 import { normalizeDisplayToken } from "@/lib/parser";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
 import { getMyWarlord, setMyWarlord } from "@/lib/myWarlord";
+import { StarIcon } from "@/components/icons";
 import {
   collectWarlordBattles,
   summarize,
@@ -24,6 +25,12 @@ interface Props {
   log: BattleRecord[];
   db: WarlordMap;
   colors: FactionColorMap;
+  /** 管理者のみウォッチリストを表示する。 */
+  isAdmin?: boolean;
+  /** ウォッチ中の武将名（新しい順）。 */
+  watchlist?: string[];
+  /** ウォッチリストの追加／削除。 */
+  onToggleWatch?: (name: string) => void;
   onSelectWarlord: (name: string) => void;
   onSelectUnit: (name: string) => void;
   onSelectFaction: (name: string) => void;
@@ -219,6 +226,72 @@ function resultBadge(o: BattleOutcome): { text: string; cls: string } {
   return { text: "引分・撤退", cls: "home-res-other" };
 }
 
+/** ウォッチリスト（お気に入り武将）のカード。管理者のみ表示。 */
+function WatchlistSection({
+  watchlist,
+  db,
+  colors,
+  onSelectWarlord,
+  onToggleWatch,
+}: {
+  watchlist: string[];
+  db: WarlordMap;
+  colors: FactionColorMap;
+  onSelectWarlord: (name: string) => void;
+  onToggleWatch: (name: string) => void;
+}) {
+  return (
+    <div className="home-card home-watchlist">
+      <h3 className="home-card-title">
+        ⭐ ウォッチリスト
+        {watchlist.length > 0 && (
+          <span className="home-watchlist-count">{watchlist.length}</span>
+        )}
+      </h3>
+      {watchlist.length === 0 ? (
+        <p className="muted home-watchlist-empty">
+          武将の詳細ページで星アイコンを押すと、ここにブックマークされます。
+        </p>
+      ) : (
+        <ul className="home-watchlist-list">
+          {watchlist.map((n) => {
+            const info = lookup(db, n);
+            return (
+              <li key={n} className="home-watchlist-row">
+                <button
+                  type="button"
+                  className="home-watchlist-name link-btn"
+                  onClick={() => onSelectWarlord(n)}
+                  title={`${n} の戦績を見る`}
+                >
+                  {n}
+                </button>
+                {info?.faction && (
+                  <span
+                    className="tag faction"
+                    style={factionBadgeStyle(info.faction, colors)}
+                  >
+                    {info.faction}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className="home-watchlist-remove"
+                  onClick={() => onToggleWatch(n)}
+                  aria-label={`${n} をウォッチリストから外す`}
+                  title="ウォッチリストから外す"
+                >
+                  <StarIcon filled />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 /**
  * ホーム画面のダッシュボード。
  * 「自分の武将」をクッキーで管理し、その武将に関する各種サマリを表示する。
@@ -227,6 +300,9 @@ export function HomeTab({
   log,
   db,
   colors,
+  isAdmin = false,
+  watchlist,
+  onToggleWatch,
   onSelectWarlord,
   onSelectUnit,
   onSelectFaction,
@@ -467,6 +543,16 @@ export function HomeTab({
             </>
           )}
         </div>
+
+        {isAdmin && onToggleWatch && (
+          <WatchlistSection
+            watchlist={watchlist ?? []}
+            db={db}
+            colors={colors}
+            onSelectWarlord={onSelectWarlord}
+            onToggleWatch={onToggleWatch}
+          />
+        )}
 
         {outcomes.length > 0 && (
           <div className="home-grid">
