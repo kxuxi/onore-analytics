@@ -1469,30 +1469,7 @@ export function unitBranchLabel(
   return best;
 }
 
-/* ---------- 撃破加重指数（Sweep Weight Index / SWI） ---------- */
-
-/**
- * 枚抜き枚数 n に対する重み（乗数）。実効値 = n × 乗数。
- *   2枚 ×1.0 / 3枚 ×1.2 / 4枚 ×1.5 / 5枚 ×2.0 / 6枚 ×2.5
- * 1枚は単純な1勝として ×1.0。6枚超は +0.5 刻みで外挿する。
- */
-export function sweepMultiplier(n: number): number {
-  if (n <= 0) return 0;
-  const table: Record<number, number> = {
-    1: 1.0,
-    2: 1.0,
-    3: 1.2,
-    4: 1.5,
-    5: 2.0,
-    6: 2.5,
-  };
-  return table[n] ?? 2.5 + 0.5 * (n - 6);
-}
-
-/** 枚抜き枚数 n の実効値（= n × 乗数）。 */
-export function sweepEffectiveValue(n: number): number {
-  return n * sweepMultiplier(n);
-}
+/* ---------- 枚抜き集計（出兵/守備の連勝） ---------- */
 
 /** 1 出撃（同一出兵側・同一戦闘時刻）の集約。 */
 interface SortieAgg {
@@ -1514,62 +1491,29 @@ function sortieSweepCount(s: SortieAgg): number {
   return n;
 }
 
-export interface SwiStat {
-  /** 出兵側武将名 */
-  name: string;
-  faction?: string;
-  /** 兵科（騎兵/歩兵など） */
-  branch?: string;
-  /** 総出兵数（出兵側として出撃した回数） */
-  sorties: number;
-  /** 実効値の合計（Σ 枚数 × 重み） */
-  weighted: number;
-  /** SWI = weighted / sorties */
-  swi: number;
-  /** 枚抜き枚数ごとの出撃回数（index = 枚数, 0..） */
-  sweepCounts: number[];
-  /** 最大枚抜き枚数 */
-  bestSweep: number;
-}
-
 /** 戦目番号（"3戦目" → 3）を数値で返す。取れなければ 0。 */
 function battleNoNumber(no: string | undefined): number {
   const m = no?.match(/(\d+)/);
   return m ? Number(m[1]) : 0;
 }
 
-/**
- * 撃破加重指数（SWI）ランキングを算出する。
- * 出撃 = (出兵側武将, 戦闘時刻) でまとめた 1 回の出兵。
- * 各出撃の枚抜き枚数（1戦目からの連勝数）に重みを掛けた実効値を合算し、
- * 総出兵数で割って SWI とする。重複行は除外する。
- *
- * @param minSorties ランキングに載せる最小出撃数（既定 5）
- */
-/** ある側（出兵=left / 守備=right）の視点で集計した武将ごとの SWI 指標。 */
+/** ある側（出兵=left / 守備=right）の視点で集計した武将ごとの枚抜き集計。 */
 export interface SideSwiStat {
   name: string;
   faction?: string;
   branch?: string;
   /** その側として出撃（同一戦闘時刻でまとめた回数） */
   sorties: number;
-  /** 実効値の合計（Σ 枚抜き × 重み） */
-  weighted: number;
-  /** SWI = weighted / sorties */
-  swi: number;
   /** その側で勝った戦目の総数（出兵なら出兵勝利数 / 守備なら守備勝利数） */
   wins: number;
   /** 枚抜き枚数ごとの出撃回数（index = 枚数, 0..） */
   sweepCounts: number[];
-  /** 最大枚抜き枚数 */
-  bestSweep: number;
 }
 
 /**
- * 指定した側（出兵 / 守備）の視点で、武将ごとの出撃・連勝（枚抜き）・SWI を集計する。
+ * 指定した側（出兵 / 守備）の視点で、武将ごとの出撃・連勝（枚抜き）を集計する。
  * 出撃 = (注目側武将, 戦闘時刻) でまとめた 1 回。枚抜き = 1戦目からの連勝数。
- * 守備側も同様に (防衛側武将, 戦闘時刻) でまとめ、1戦目から連続で守り切った数を
- * 「枚抜き（守備）」として出兵と同じ重みで評価する。重複行は除外する。
+ * 守備側も同様に (防衛側武将, 戦闘時刻) でまとめる。重複行は除外する。
  * 
  * @param log 戦闘ログ
  * @param side 集計対象の側（left=出兵 / right=守備）
@@ -1614,10 +1558,8 @@ function computeSideSwi(
   interface Acc {
     name: string;
     sorties: number;
-    weighted: number;
     wins: number;
     sweepCounts: number[];
-    bestSweep: number;
   }
   const acc = new Map<string, Acc>();
   for (const [key, s] of sorties) {
@@ -1627,19 +1569,15 @@ function computeSideSwi(
       a = {
         name,
         sorties: 0,
-        weighted: 0,
         wins: 0,
         sweepCounts: [],
-        bestSweep: 0,
       };
       acc.set(name, a);
     }
     const n = sortieSweepCount(s);
     a.sorties++;
     a.wins += s.wins.size;
-    a.weighted += sweepEffectiveValue(n);
     a.sweepCounts[n] = (a.sweepCounts[n] ?? 0) + 1;
-    if (n > a.bestSweep) a.bestSweep = n;
   }
 
   const out = new Map<string, SideSwiStat>();
@@ -1653,34 +1591,11 @@ function computeSideSwi(
       faction: factionOf.get(a.name),
       branch: branchOf.get(a.name),
       sorties: a.sorties,
-      weighted: a.weighted,
-      swi: a.sorties > 0 ? a.weighted / a.sorties : 0,
       wins: a.wins,
       sweepCounts,
-      bestSweep: a.bestSweep,
     });
   }
   return out;
-}
-
-export function swiRanking(
-  log: BattleRecord[],
-  minSorties = 5,
-  range?: YearRange
-): SwiStat[] {
-  return Array.from(computeSideSwi(log, "left", undefined, range).values())
-    .filter((a) => a.sorties >= minSorties)
-    .map((a) => ({
-      name: a.name,
-      faction: a.faction,
-      branch: a.branch,
-      sorties: a.sorties,
-      weighted: a.weighted,
-      swi: a.swi,
-      sweepCounts: a.sweepCounts,
-      bestSweep: a.bestSweep,
-    }))
-    .sort((a, b) => b.swi - a.swi || b.sorties - a.sorties);
 }
 
 /** 武将 1 人の抜き数（枚抜きの重み付き合計）。 */
@@ -1851,10 +1766,6 @@ export interface WarlordRankStat {
   attackRounds: number;
   /** 出兵側として勝った決着戦目数 */
   attackWinRounds: number;
-  /** SWI（出兵） */
-  attackSwi: number;
-  /** 出兵側の最高枚抜き */
-  attackBestSweep: number;
   /** 守備側としての出撃回数（撤退除く） */
   defenseSorties: number;
   /** 守備勝利数（守備側として勝った戦目の総数） */
@@ -1863,10 +1774,6 @@ export interface WarlordRankStat {
   defenseRounds: number;
   /** 守備側として勝った決着戦目数 */
   defenseWinRounds: number;
-  /** SWI（守備） */
-  defenseSwi: number;
-  /** 守備側の最高枚抜き */
-  defenseBestSweep: number;
   /** アシスト数（削った相手が 40 分以内に倒された回数）。 */
   assists: number;
 }
@@ -2112,14 +2019,10 @@ export function warlordRanking(
       attackWins: ae.wins,
       attackRounds: rr.attackRounds,
       attackWinRounds: rr.attackWins,
-      attackSwi: a?.swi ?? 0,
-      attackBestSweep: a?.bestSweep ?? 0,
       defenseSorties: de.sorties,
       defenseWins: de.wins,
       defenseRounds: rr.defenseRounds,
       defenseWinRounds: rr.defenseWins,
-      defenseSwi: d?.swi ?? 0,
-      defenseBestSweep: d?.bestSweep ?? 0,
       assists: assistsMap.get(name) ?? 0,
     });
   }

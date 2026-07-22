@@ -19,7 +19,6 @@ import {
   userWinRates,
   unitUsageTrend,
   unitBranchLabel,
-  swiRanking,
   breakthroughRanking,
   pontaPointRanking,
   warlordRanking,
@@ -706,95 +705,6 @@ function swiLine(opts: {
   const result = win ? `${attacker}の勝利` : `${defender}の勝利`;
   return `【${battleNo}戦目】 1600年4月 ${time} 京都 自国 ${attacker} 某家 武特 騎馬隊 騎兵 槍 鎧 V.S. 敵国 ${defender} 敵家 統特 騎馬隊 騎兵 馬 旗 ${result} 12`;
 }
-
-describe("swiRanking", () => {
-  it("枚抜き枚数は1戦目からの連勝数で数える", () => {
-    // 信長: 1出撃で 1戦目○ 2戦目○ 3戦目○ = 3枚抜き（防衛側は戦目ごとに異なる）
-    const log: BattleRecord[] = [
-      rec(swiLine({ attacker: "信長", battleNo: 1, time: "06/15 10:00", win: true, defender: "敵A" }), 1),
-      rec(swiLine({ attacker: "信長", battleNo: 2, time: "06/15 10:00", win: true, defender: "敵B" }), 2),
-      rec(swiLine({ attacker: "信長", battleNo: 3, time: "06/15 10:00", win: true, defender: "敵C" }), 3),
-    ];
-    const ranking = swiRanking(log, 1);
-    expect(ranking).toHaveLength(1);
-    const nobu = ranking[0];
-    expect(nobu.name).toBe("信長");
-    expect(nobu.sorties).toBe(1);
-    expect(nobu.bestSweep).toBe(3);
-    // 3枚抜き = 3 × 1.2 = 3.6、出撃1回 → SWI 3.6
-    expect(nobu.swi).toBeCloseTo(3.6);
-  });
-
-  it("途中で負けるとそこで連勝が止まる（2枚抜き）", () => {
-    // 1戦目○ 2戦目○ 3戦目× → 2枚抜き = 2 × 1.0 = 2.0
-    const log: BattleRecord[] = [
-      rec(swiLine({ attacker: "秀吉", battleNo: 1, time: "06/15 11:00", win: true, defender: "敵A" }), 1),
-      rec(swiLine({ attacker: "秀吉", battleNo: 2, time: "06/15 11:00", win: true, defender: "敵B" }), 2),
-      rec(swiLine({ attacker: "秀吉", battleNo: 3, time: "06/15 11:00", win: false, defender: "敵C" }), 3),
-    ];
-    const ranking = swiRanking(log, 1);
-    expect(ranking[0].bestSweep).toBe(2);
-    expect(ranking[0].swi).toBeCloseTo(2.0);
-  });
-
-  it("1戦目で負けると0枚抜き（実効値0）", () => {
-    const log: BattleRecord[] = [
-      rec(swiLine({ attacker: "光秀", battleNo: 1, time: "06/15 12:00", win: false }), 1),
-    ];
-    const ranking = swiRanking(log, 1);
-    expect(ranking[0].bestSweep).toBe(0);
-    expect(ranking[0].swi).toBeCloseTo(0);
-  });
-
-  it("複数出撃の実効値合計を総出兵数で割る", () => {
-    // 出撃A(10:00): 3枚抜き=3.6, 出撃B(11:00): 1戦目のみ勝ち=1枚=1.0
-    const log: BattleRecord[] = [
-      rec(swiLine({ attacker: "家康", battleNo: 1, time: "06/15 10:00", win: true, defender: "敵A" }), 1),
-      rec(swiLine({ attacker: "家康", battleNo: 2, time: "06/15 10:00", win: true, defender: "敵B" }), 2),
-      rec(swiLine({ attacker: "家康", battleNo: 3, time: "06/15 10:00", win: true, defender: "敵C" }), 3),
-      rec(swiLine({ attacker: "家康", battleNo: 1, time: "06/15 11:00", win: true, defender: "敵D" }), 4),
-    ];
-    const ranking = swiRanking(log, 1);
-    // (3.6 + 1.0) / 2 = 2.3
-    expect(ranking[0].sorties).toBe(2);
-    expect(ranking[0].swi).toBeCloseTo(2.3);
-  });
-
-  it("重複行（同一出撃の再登録）は二重計上しない", () => {
-    const a = swiLine({ attacker: "謙信", battleNo: 1, time: "06/15 13:00", win: true, defender: "敵A" });
-    const b = swiLine({ attacker: "謙信", battleNo: 2, time: "06/15 13:00", win: true, defender: "敵B" });
-    const log: BattleRecord[] = [
-      rec(a, 1),
-      rec(b, 2),
-      rec(a, 3), // 重複
-      rec(b, 4), // 重複
-    ];
-    const ranking = swiRanking(log, 1);
-    expect(ranking[0].sorties).toBe(1);
-    expect(ranking[0].bestSweep).toBe(2);
-  });
-
-  it("minSorties 未満の武将は除外される", () => {
-    const log: BattleRecord[] = [
-      rec(swiLine({ attacker: "三成", battleNo: 1, time: "06/15 14:00", win: true }), 1),
-    ];
-    expect(swiRanking(log, 5)).toHaveLength(0);
-    expect(swiRanking(log, 1)).toHaveLength(1);
-  });
-
-  it("SWI 降順に並ぶ", () => {
-    const log: BattleRecord[] = [
-      // 強: 3枚抜き
-      rec(swiLine({ attacker: "強将", battleNo: 1, time: "06/15 09:00", win: true, defender: "敵A" }), 1),
-      rec(swiLine({ attacker: "強将", battleNo: 2, time: "06/15 09:00", win: true, defender: "敵B" }), 2),
-      rec(swiLine({ attacker: "強将", battleNo: 3, time: "06/15 09:00", win: true, defender: "敵C" }), 3),
-      // 弱: 1枚抜き
-      rec(swiLine({ attacker: "弱将", battleNo: 1, time: "06/15 09:30", win: true, defender: "敵D" }), 4),
-    ];
-    const ranking = swiRanking(log, 1);
-    expect(ranking.map((r) => r.name)).toEqual(["強将", "弱将"]);
-  });
-});
 
 /**
  * アシストテスト用の戦闘行。左右の武将名・時刻・勝者を指定できる。
