@@ -39,6 +39,18 @@ export const STATUS_ORDER: Record<ActionStatus, number> = {
 };
 
 /**
+ * 全角の数字・記号（例: "０６／１０ ０９：３０"）を半角へ正規化する。
+ * 行動時刻に全角が混じって登録されても同じ Date にパースできるようにする。
+ */
+function toHalfWidth(s: string): string {
+  return s
+    .replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+    .replace(/／/g, "/")
+    .replace(/：/g, ":")
+    .replace(/　/g, " ");
+}
+
+/**
  * "MM/DD HH:mm" 形式の行動時刻を Date に変換する。
  * 年は履歴に含まれないため、基準時刻(now)の年を採用する。
  * ただし算出結果が now より大きく未来になる場合は前年とみなす（年またぎ対策）。
@@ -48,7 +60,9 @@ export function parseActionDate(
   now: Date
 ): Date | null {
   if (!lastActionAt) return null;
-  const m = lastActionAt.match(/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})/);
+  const m = toHalfWidth(lastActionAt).match(
+    /(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})/
+  );
   if (!m) return null;
   const [, mm, dd, hh, min] = m;
   let year = now.getFullYear();
