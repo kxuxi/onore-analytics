@@ -13,6 +13,7 @@ import {
   latestSelfProfile,
   yearlyWinRates,
   formatWinRate,
+  warlordNamesInLog,
   type BattleOutcome,
   type YearlyWinRate,
 } from "@/lib/stats";
@@ -241,25 +242,11 @@ export function HomeTab({
     "losses",
   ]);
 
-  // 武将選択の候補は最新の期に登録された武将のみに絞る。
-  const latestTerm = useMemo(() => {
-    let max: number | null = null;
-    for (const w of Object.values(db)) {
-      if (typeof w.term === "number" && (max == null || w.term > max)) {
-        max = w.term;
-      }
-    }
-    return max;
-  }, [db]);
+  // 武将選択の候補は「対象の期に登場した武将」に絞る（log は対象の期でフィルタ済み）。
   const allNames = useMemo(() => {
-    const set = new Set<string>();
-    for (const w of Object.values(db)) {
-      if (!w.name) continue;
-      if (latestTerm != null && w.term !== latestTerm) continue;
-      set.add(w.name);
-    }
+    const set = warlordNamesInLog(log, db);
     return Array.from(set).sort((a, b) => a.localeCompare(b, "ja"));
-  }, [db, latestTerm]);
+  }, [log, db]);
 
   const suggestions = useMemo(() => {
     const q = query.trim().toLowerCase();

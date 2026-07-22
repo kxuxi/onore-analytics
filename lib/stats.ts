@@ -173,6 +173,30 @@ export function unitNamesInLog(log: BattleRecord[]): Set<string> {
   return names;
 }
 
+/**
+ * ログ中の戦闘に登場した武将名（攻守両側）の集合を返す。
+ * db を渡すと household 統合で最新の代表名へ寄せる。
+ * ホームの武将選択を「対象の期に登場した武将」に絞る用途などに使う。
+ */
+export function warlordNamesInLog(
+  log: BattleRecord[],
+  db?: WarlordMap
+): Set<string> {
+  const normMap = db ? normalizationMap(db) : null;
+  const names = new Set<string>();
+  for (const record of log) {
+    const card = parseBattleCard(record.line);
+    if (!card) continue;
+    for (const side of [card.left, card.right]) {
+      let n = side.name?.trim();
+      if (!n) continue;
+      if (normMap && normMap[n]) n = normMap[n];
+      names.add(n);
+    }
+  }
+  return names;
+}
+
 /** 勝利数・敗北数・勝率などを集計する。 */
 export function summarize(outcomes: BattleOutcome[]): StatSummary {
   let wins = 0;
