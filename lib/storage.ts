@@ -170,7 +170,8 @@ const normalizationMapCache = new WeakMap<WarlordMap, Record<string, string>>();
 export function normalizationMap(map: WarlordMap): Record<string, string> {
   const cached = normalizationMapCache.get(map);
   if (cached) return cached;
-  const byHousehold = new Map<string | undefined, { name: string; updatedAt: number }[]>();
+  const now = new Date();
+  const byHousehold = new Map<string | undefined, Warlord[]>();
 
   // household でグループ化
   for (const w of Object.values(map)) {
@@ -178,13 +179,25 @@ export function normalizationMap(map: WarlordMap): Record<string, string> {
     if (!byHousehold.has(key)) {
       byHousehold.set(key, []);
     }
-    byHousehold.get(key)!.push({ name: w.name, updatedAt: w.updatedAt });
+    byHousehold.get(key)!.push(w);
   }
 
-  // 各グループで最新の代表を決定
+  // 各グループの代表名を決定する。改名した武将は「最新の戦闘を持つ名前」を代表に採用する。
+  // 判定は 期 → 在ゲーム年月 → 実時刻 の順（isNewerBattle）。
+  // updatedAt（DB 更新の実時刻）だと登録順に依存し、旧名を後から登録・再登録すると
+  // 旧名が新しく見えてしまうため、battleAt（在ゲーム年月）を優先する。
   const result: Record<string, string> = {};
   for (const [household, warlords] of byHousehold) {
-    const latest = warlords.reduce((a, b) => (a.updatedAt >= b.updatedAt ? a : b));
+    if (household === undefined) {
+      // household（家名）が無い武将は名寄せの対象外＝各自の名前をそのまま使う。
+      // 空 household を1グループにまとめて代表を1人選ぶと、家名の無い武将が全員
+      // その1人へ誤って統合されてしまうため、ここで分けて素通しする。
+      for (const w of warlords) {
+        result[w.name] = w.name;
+      }
+      continue;
+    }
+    const latest = warlords.reduce((a, b) => (isNewerBattle(b, a, now) ? b : a));
     for (const w of warlords) {
       result[w.name] = latest.name;
     }

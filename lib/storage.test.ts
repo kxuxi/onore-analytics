@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeWarlords } from "./storage";
+import { mergeWarlords, normalizationMap } from "./storage";
 import type { Warlord, WarlordMap } from "./types";
 
 /** 必須項目のみ埋めた Warlord を作る簡易ファクトリ。 */
@@ -272,5 +272,75 @@ describe("mergeWarlords のプロフィール採用（期 term での新旧判�
     ]);
     // 在ゲーム年月で 1705 > 1700 のため既存の騎馬隊を維持。
     expect(map["A"].unit).toBe("騎馬隊");
+  });
+});
+
+describe("normalizationMap（改名した同一武将の代表名）", () => {
+  it("同じ household では在ゲーム年月が新しい戦闘の名前を代表にする", () => {
+    // 旧名は updatedAt が新しい（後から登録）が、在ゲーム年月は古い。
+    // 実際のケロロ軍曹のケース（146期の改名）。
+    const map: WarlordMap = {
+      ケロロ軍曹: wl({
+        name: "ケロロ軍曹",
+        household: "ケロロ家",
+        term: 146,
+        battleAt: "1642年11月 07/03 23:39",
+        updatedAt: 200,
+      }),
+      ケロロ軍曹であります: wl({
+        name: "ケロロ軍曹であります",
+        household: "ケロロ家",
+        term: 146,
+        battleAt: "1720年1月 07/16 20:07",
+        updatedAt: 100,
+      }),
+    };
+    const norm = normalizationMap(map);
+    expect(norm["ケロロ軍曹"]).toBe("ケロロ軍曹であります");
+    expect(norm["ケロロ軍曹であります"]).toBe("ケロロ軍曹であります");
+  });
+
+  it("新しい期（term）の名前を優先する（在ゲーム年月より優先）", () => {
+    const map: WarlordMap = {
+      旧名: wl({
+        name: "旧名",
+        household: "家",
+        term: 145,
+        battleAt: "1800年1月 01/01 00:00",
+        updatedAt: 100,
+      }),
+      新名: wl({
+        name: "新名",
+        household: "家",
+        term: 146,
+        battleAt: "1600年1月 01/01 00:00",
+        updatedAt: 100,
+      }),
+    };
+    const norm = normalizationMap(map);
+    expect(norm["旧名"]).toBe("新名");
+    expect(norm["新名"]).toBe("新名");
+  });
+
+  it("household が異なれば別人としてそれぞれの名前を返す", () => {
+    const map: WarlordMap = {
+      A: wl({ name: "A", household: "甲家", updatedAt: 100 }),
+      B: wl({ name: "B", household: "乙家", updatedAt: 200 }),
+    };
+    const norm = normalizationMap(map);
+    expect(norm["A"]).toBe("A");
+    expect(norm["B"]).toBe("B");
+  });
+
+  it("household が空の武将は名寄せせず各自の名前を返す（誤統合しない）", () => {
+    const map: WarlordMap = {
+      甲: wl({ name: "甲", household: undefined, updatedAt: 100 }),
+      乙: wl({ name: "乙", household: undefined, updatedAt: 300 }),
+      丙: wl({ name: "丙", household: "", updatedAt: 200 }),
+    };
+    const norm = normalizationMap(map);
+    expect(norm["甲"]).toBe("甲");
+    expect(norm["乙"]).toBe("乙");
+    expect(norm["丙"]).toBe("丙");
   });
 });
