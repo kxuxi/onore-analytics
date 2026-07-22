@@ -77,6 +77,11 @@ interface MetricRow {
   sorties: number;
 }
 
+/** PontaPoint（(出兵勝+1.4×守備勝)÷戦闘数）をパーセント表示（小数点第2位）に整形する。 */
+function formatPontaPoint(v: number): string {
+  return `${(v * 100).toFixed(2)}%`;
+}
+
 /** 指標 metric における行 r のバー用の数値。 */
 function metricValue(r: MetricRow, metric: SortKey): number {
   return metric === "ppn"
@@ -98,7 +103,7 @@ function metricLabel(r: MetricRow, metric: SortKey): string {
       : "—"
     : metric === "pontaPoint"
       ? r.battles > 0
-        ? r.pontaPoint.toFixed(3)
+        ? formatPontaPoint(r.pontaPoint)
         : "—"
       : metric === "winRate"
         ? formatWinRate(r.winRate, r.battles)
@@ -181,7 +186,7 @@ function MetricRowItem({
         <div className="swi-meta muted">
           {metric === "ppn" ? (
             <span className="rank-side-active">
-              PontaPoint {r.pontaPoint.toFixed(3)} ＋ 抜き率{" "}
+              PontaPoint {formatPontaPoint(r.pontaPoint)} ＋ 抜き率{" "}
               {r.breakthroughRate.toFixed(3)}
             </span>
           ) : metric === "breakthrough" ? (

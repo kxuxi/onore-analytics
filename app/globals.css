@@ -531,6 +531,52 @@ input:focus {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
+.sidebar-term-terms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+
+.term-chip {
+  flex: 0 0 auto;
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.term-chip:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.term-chip.active {
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+  color: #fff;
+  font-weight: 600;
+}
+
+.term-chip-sm {
+  padding: 5px 9px;
+}
+
+.term-chip-latest {
+  margin-left: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
 .sidebar-new-term {
   display: flex;
   flex-direction: column;

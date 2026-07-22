@@ -19,10 +19,19 @@ export type RegisterResponse = StateResponse & {
   skipped: number;
 };
 
-/** 武将DB + 戦闘履歴を取得 */
-export async function fetchState(): Promise<StateResponse> {
-  const res = await fetch("/api/state", { cache: "no-store" });
+/** 武将DB + 戦闘履歴を取得。term を数値で渡すとその期の log のみ、
+ *  省略または "all" で全期間の log を返す（db は常に全件）。 */
+export async function fetchState(term?: number | "all"): Promise<StateResponse> {
+  const q = typeof term === "number" ? `?term=${term}` : "";
+  const res = await fetch(`/api/state${q}`, { cache: "no-store" });
   if (!res.ok) throw new Error("状態の取得に失敗しました");
+  return res.json();
+}
+
+/** 戦闘履歴に存在する期番号の一覧（新しい順）。期セレクタ用の軽量エンドポイント。 */
+export async function fetchTerms(): Promise<number[]> {
+  const res = await fetch("/api/terms", { cache: "no-store" });
+  if (!res.ok) throw new Error("期一覧の取得に失敗しました");
   return res.json();
 }
 

@@ -145,6 +145,9 @@ const GROUP_ICONS: Record<TabGroupKey, ReactNode> = {
 /** 期データがまだ無いときのフォールバック期。 */
 const FALLBACK_TERM = 145;
 
+/** 期番号が属する「10 期台」の下限（例: 146 → 140、133 → 130）。 */
+const decadeOf = (term: number) => Math.floor(term / 10) * 10;
+
 /** サイドバーの「新期」で追加した期番号の保存キー。 */
 const TERM_OPTIONS_STORAGE_KEY = "onore-tool:term-options:v1";
 
@@ -177,21 +180,26 @@ export default function HomePage() {
   } = useTheme();
   // 認証状態（管理者ログイン）
   const { user, ready: authReady, isAdmin, logout } = useAuth();
-  // 共有DB・戦闘履歴・国の色設定の取得・更新
+  // 「対象の期」。null = 未確定（期一覧の取得を待って復元 or 最新期に決める）。
+  const [selectedTerm, setSelectedTerm] = useState<number | "all" | null>(null);
+  // 共有DB・戦闘履歴・国の色設定の取得・更新（戦闘履歴は selectedTerm の期だけ取得）
   const {
     db,
     setDb,
     battleLog,
     setBattleLog,
+    terms,
     factionColors,
     setFactionColors,
     hydrated,
+    logLoading,
     loadError,
     refreshing,
     lastFetchedAt,
     reload,
     refresh,
-  } = useDataSync(pushToast);
+    loadFullLog,
+  } = useDataSync(selectedTerm, pushToast);
   // サイドバーの開閉とモバイル判定
   const { sidebarOpen, setSidebarOpen, isMobile, toggleSidebar } =
     useSidebarLayout();
@@ -231,7 +239,6 @@ export default function HomePage() {
 
   const [linkCopied, setLinkCopied] = useState(false);
   const [showTop, setShowTop] = useState(false);
-  const [selectedTerm, setSelectedTerm] = useState<number | "all">(FALLBACK_TERM);
   const [didAutoSelectLatestTerm, setDidAutoSelectLatestTerm] = useState(false);
   const [manualTerms, setManualTerms] = useState<number[]>([]);
   const [showNewTermInput, setShowNewTermInput] = useState(false);
@@ -270,45 +277,48 @@ export default function HomePage() {
     }
   }, [manualTerms]);
 
-  // 戦闘履歴に含まれる期の一覧（新しい順）。term フィールドが付与された記録から収集。
+  // 期セレクタに出す期の一覧（新しい順）。サーバーの期一覧 API（terms）＋手動追加分から作る。
   const termOptions = useMemo(() => {
     const set = new Set<number>();
-    for (const t of manualTerms) {
-      set.add(t);
-    }
-    for (const r of battleLog) {
-      set.add(r.term);
-    }
+    for (const t of manualTerms) set.add(t);
+    for (const t of terms) set.add(t);
     return Array.from(set).sort((a, b) => b - a);
-  }, [battleLog, manualTerms]);
+  }, [terms, manualTerms]);
 
-  // 起動時は「直近に選択した期」を復元し、無ければ最新の期を既定選択にする（初回のみ）。
+  // 起動時は「直近に選択した期」を復元し、無ければ期一覧の取得後に最新の期を選ぶ（初回のみ）。
   const latestTerm = termOptions[0] ?? FALLBACK_TERM;
   useEffect(() => {
     if (didAutoSelectLatestTerm) return;
-    let restored = false;
+    // localStorage の復元はデータ取得を待たずに行える。
     try {
       const raw = window.localStorage.getItem(TERM_SELECTED_STORAGE_KEY);
       if (raw === "all") {
         setSelectedTerm("all");
-        restored = true;
-      } else if (raw !== null) {
+        setDidAutoSelectLatestTerm(true);
+        return;
+      }
+      if (raw !== null) {
         const n = Number(raw);
         if (Number.isInteger(n) && n > 0) {
           setSelectedTerm(n);
-          restored = true;
+          setDidAutoSelectLatestTerm(true);
+          return;
         }
       }
     } catch {
-      // 壊れた保存データは無視して既定（最新の期）で続行する。
+      // 壊れた保存データは無視して最新の期で続行する。
     }
-    if (!restored) setSelectedTerm(latestTerm);
-    setDidAutoSelectLatestTerm(true);
-  }, [didAutoSelectLatestTerm, latestTerm]);
+    // 復元がなければ、期一覧が取れてから最新の期を選ぶ。
+    if (termOptions.length > 0) {
+      setSelectedTerm(latestTerm);
+      setDidAutoSelectLatestTerm(true);
+    }
+  }, [didAutoSelectLatestTerm, termOptions.length, latestTerm]);
 
   // 選択した期を保存し、次回起動時に復元できるようにする。
   useEffect(() => {
     if (!didAutoSelectLatestTerm) return;
+    if (selectedTerm == null) return;
     try {
       window.localStorage.setItem(
         TERM_SELECTED_STORAGE_KEY,
@@ -357,19 +367,35 @@ export default function HomePage() {
   // ドロップダウンに表示する期の一覧。
   // 選択中の期がデータに存在しない場合（新期入力直後など）でも選択肢に残す。
   const termOptionsWithSelected = useMemo(() => {
-    if (selectedTerm === "all" || termOptions.includes(selectedTerm)) return termOptions;
+    if (selectedTerm === "all" || selectedTerm == null || termOptions.includes(selectedTerm))
+      return termOptions;
     return [selectedTerm, ...termOptions].sort((a, b) => b - a);
   }, [termOptions, selectedTerm]);
 
-  // 選択中の期の戦闘履歴のみ絞り込む（ランキング・履歴・詳細の集計に反映）。
-  const filteredBattleLog = useMemo(() => {
-    if (selectedTerm === "all") return battleLog;
-    return battleLog.filter((r) => r.term === selectedTerm);
-  }, [battleLog, selectedTerm]);
+  // 期を「10 期台」（130 期台・140 期台…）でまとめた一覧（新しい順）。
+  const termDecades = useMemo(() => {
+    const set = new Set<number>();
+    for (const t of termOptionsWithSelected) set.add(decadeOf(t));
+    return Array.from(set).sort((a, b) => b - a);
+  }, [termOptionsWithSelected]);
 
-  // 選択中の期に登録された武将のみの武将DBを構築する。
+  // 選択中の期が属する 10 期台（全期間選択時・未確定時は null）。
+  const selectedDecade =
+    selectedTerm === "all" || selectedTerm == null ? null : decadeOf(selectedTerm);
+
+  // 選択中の 10 期台に含まれる期（新しい順）。
+  const termsInSelectedDecade = useMemo(() => {
+    if (selectedDecade == null) return [];
+    return termOptionsWithSelected.filter((t) => decadeOf(t) === selectedDecade);
+  }, [termOptionsWithSelected, selectedDecade]);
+
+  // 戦闘履歴はサーバー側で選択期に絞り込み済み（selectedTerm の期のみ / all は全期間）。
+  const filteredBattleLog = battleLog;
+
+  // 選択中の期に登録された武将のみの武将DBを構築する（db は全件取得so client 側で絞る）。
   const filteredDb = useMemo(() => {
     if (selectedTerm === "all") return db;
+    if (selectedTerm == null) return {} as WarlordMap;
     return Object.fromEntries(
       Object.entries(db).filter(([, w]) => w.term === selectedTerm)
     );
@@ -378,15 +404,30 @@ export default function HomePage() {
   // filteredDb 内の household 正規化マップ（同じ household → 最新の代表名）。
   const householdNormMap = useMemo(() => normalizationMap(filteredDb), [filteredDb]);
 
-  // 年代別（在ゲーム年）の勝率ランキング。武将ページの入賞タグは「称号」的な
-  // 性質のため、期フィルタを無視して全期間の戦闘・全DBで集計する。
-  // 武将詳細を開いたときだけ計算する（全ログの解析をマウント時に走らせない）。
+  // 年代別（在ゲーム年）の勝率ランキング。武将ページの入賞タグは「称号」的な性質のため
+  // 全期間の戦闘で集計する。battleLog は選択期のみなので、武将詳細を開いたときだけ
+  // 全期間 log を取得（loadFullLog がキャッシュ）して集計する。
+  const [fullLog, setFullLog] = useState<BattleRecord[]>([]);
+  useEffect(() => {
+    if (detail?.kind !== "warlord") return;
+    let active = true;
+    loadFullLog()
+      .then((log) => {
+        if (active) setFullLog(log);
+      })
+      .catch(() => {
+        /* 入賞タグは補助情報なので取得失敗は無視 */
+      });
+    return () => {
+      active = false;
+    };
+  }, [detail?.kind, loadFullLog]);
   const yearRankings = useMemo(
     () =>
-      detail?.kind === "warlord"
-        ? yearBucketWinRankings(battleLog, db)
+      detail?.kind === "warlord" && fullLog.length > 0
+        ? yearBucketWinRankings(fullLog, db)
         : EMPTY_YEAR_RANKINGS,
-    [detail?.kind, battleLog, db]
+    [detail?.kind, fullLog, db]
   );
   // 全DBでの代表名解決（入賞タグの引き当てをランキングと同じ正規化で行う）。
   const fullNormMap = useMemo(() => normalizationMap(db), [db]);
@@ -474,6 +515,17 @@ export default function HomePage() {
     setShowNewTermInput(false);
     setNewTermValue("");
   }, [isAdmin, newTermValue, pushToast]);
+
+  // 「10 期台」チップを選んだら、その台の最新の期を選択する。
+  const handleSelectDecade = useCallback(
+    (decade: number) => {
+      const inDecade = termOptionsWithSelected.filter(
+        (t) => decadeOf(t) === decade
+      );
+      if (inDecade.length > 0) setSelectedTerm(inDecade[0]);
+    },
+    [termOptionsWithSelected]
+  );
 
   const handleShareLink = useCallback(async () => {
     const ok = await copyText(window.location.href);
@@ -639,7 +691,7 @@ export default function HomePage() {
         };
       }
       const now = Date.now();
-      const term = selectedTerm === "all" ? latestTerm : selectedTerm;
+      const term = selectedTerm === "all" || selectedTerm == null ? latestTerm : selectedTerm;
       const warlordsWithTerm = warlords.map((w) => ({ ...w, term }));
       const records: BattleRecord[] = entries.map((e) => ({
         line: e.line,
@@ -650,7 +702,12 @@ export default function HomePage() {
       try {
         const res = await registerState(warlordsWithTerm, records);
         setDb(res.db);
-        setBattleLog(res.log);
+        // battleLog は選択期のみ保持する。登録レスポンス（全期間）から選択期分だけ反映する。
+        setBattleLog(
+          selectedTerm === "all"
+            ? res.log
+            : res.log.filter((r) => r.term === (selectedTerm ?? term))
+        );
         if (rejectedCount > 0) {
           pushToast(
             "error",
@@ -1049,25 +1106,27 @@ export default function HomePage() {
           aria-label="メインメニュー"
           aria-hidden={!sidebarOpen}
         >
-          {/* 対象の期セレクター */}
+          {/* 対象の期セレクター（10 期台 → 期 の 2 段切り替え） */}
           <div className="sidebar-term">
-            <label className="sidebar-term-label" htmlFor="sidebar-term-select">
+            <label className="sidebar-term-label" htmlFor="sidebar-decade-select">
               対象の期
             </label>
+            {/* 上段: 期台を選ぶドロップダウン（期台が何百に増えても幅一定・破綻しない）＋新期 */}
             <div className="sidebar-term-row">
               <select
-                id="sidebar-term-select"
+                id="sidebar-decade-select"
                 className="select sidebar-term-select"
-                value={selectedTerm === "all" ? "all" : String(selectedTerm)}
+                value={selectedTerm === "all" ? "all" : String(selectedDecade)}
                 onChange={(e) => {
                   const v = e.target.value;
-                  setSelectedTerm(v === "all" ? "all" : Number(v));
+                  if (v === "all") setSelectedTerm("all");
+                  else handleSelectDecade(Number(v));
                 }}
               >
                 <option value="all">すべての期</option>
-                {termOptionsWithSelected.map((term) => (
-                  <option key={term} value={String(term)}>
-                    {term}期{term === latestTerm ? "（今期）" : ""}
+                {termDecades.map((d) => (
+                  <option key={d} value={String(d)}>
+                    {d}期台
                   </option>
                 ))}
               </select>
@@ -1076,12 +1135,41 @@ export default function HomePage() {
                   type="button"
                   className={"btn sidebar-term-new-btn" + (showNewTermInput ? " active" : "")}
                   title="リストにない期番号を入力して切り替える"
-                  onClick={() => { setShowNewTermInput((v) => !v); setNewTermValue(""); }}
+                  onClick={() => {
+                    setShowNewTermInput((v) => !v);
+                    setNewTermValue("");
+                  }}
                 >
                   新期
                 </button>
               )}
             </div>
+            {/* 下段: 選択中の 10 期台に含まれる期 */}
+            {selectedDecade != null && (
+              <div
+                className="sidebar-term-terms"
+                role="group"
+                aria-label={`${selectedDecade}期台の期`}
+              >
+                {termsInSelectedDecade.map((term) => (
+                  <button
+                    key={term}
+                    type="button"
+                    className={
+                      "term-chip term-chip-sm" +
+                      (selectedTerm === term ? " active" : "")
+                    }
+                    aria-pressed={selectedTerm === term}
+                    onClick={() => setSelectedTerm(term)}
+                  >
+                    {term}期
+                    {term === latestTerm && (
+                      <span className="term-chip-latest">今</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
             {showNewTermInput && (
               <div className="sidebar-new-term" role="group" aria-label="新しい期の追加">
                 <div className="sidebar-new-term-field">
@@ -1182,7 +1270,9 @@ export default function HomePage() {
           aria-labelledby={hasSubtabs ? `subtab-${tab}` : `group-${activeGroup}`}
           tabIndex={-1}
         >
-          {!hydrated ? (
+          {!hydrated ||
+          (!loadError &&
+            (selectedTerm == null || (logLoading && battleLog.length === 0))) ? (
             <div className="panel" aria-busy="true" aria-live="polite">
               <span className="sr-only">読み込み中…</span>
               <div className="skeleton skeleton-title" />

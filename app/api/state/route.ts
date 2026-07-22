@@ -83,8 +83,9 @@ async function loadMap(): Promise<WarlordMap> {
   return map;
 }
 
-async function loadLog(): Promise<BattleRecord[]> {
+async function loadLog(term?: number): Promise<BattleRecord[]> {
   const rows = await prisma.battleRecord.findMany({
+    where: term != null ? { term } : undefined,
     orderBy: { id: "asc" },
   });
   return rows.map((r) => ({
@@ -139,9 +140,21 @@ function parseStateBody(
   return { warlords: warlords as Warlord[], records: records as BattleRecord[] };
 }
 
-export async function GET() {
+/**
+ * ?term=N クエリを検証して返す。正の整数のときのみその期で絞り込み、
+ * 未指定・"all"・不正値は undefined（全期間）を返す（既存 client との後方互換）。
+ */
+function parseTermParam(req: Request): number | undefined {
+  const raw = new URL(req.url).searchParams.get("term");
+  if (!raw || raw === "all") return undefined;
+  const n = Number(raw);
+  return Number.isInteger(n) && n > 0 ? n : undefined;
+}
+
+export async function GET(req: Request) {
   try {
-    const [db, log] = await Promise.all([loadMap(), loadLog()]);
+    const term = parseTermParam(req);
+    const [db, log] = await Promise.all([loadMap(), loadLog(term)]);
     return NextResponse.json({ db, log });
   } catch (err) {
     return errorResponse("GET", err);
