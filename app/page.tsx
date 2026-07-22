@@ -863,6 +863,9 @@ export default function HomePage() {
       default:
         return null;
     }
+    // selectedTerm / latestTerm は filteredBattleLog・filteredDb 経由で反映されるため、
+    // 依存配列には含めない（含めると同じ内容で不要な再計算になる）。意図的な除外。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     tab,
     db,
