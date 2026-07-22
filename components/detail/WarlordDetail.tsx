@@ -15,6 +15,7 @@ import {
   branchStats,
   winHeatmap,
   factionTimeline,
+  yearlyWinRates,
   type YearRankTag,
 } from "@/lib/stats";
 import { PieChart, chartColor } from "@/components/PieChart";
@@ -34,6 +35,7 @@ import {
   FactionHistory,
   WarlordComment,
   AbilityStats,
+  WinRateTrend,
 } from "@/components/detail/WarlordInsights";
 
 interface Props {
@@ -85,6 +87,7 @@ export function WarlordDetail({
   const branches = useMemo(() => branchStats(outcomes), [outcomes]);
   const heatmap = useMemo(() => winHeatmap(outcomes), [outcomes]);
   const timeline = useMemo(() => factionTimeline(outcomes), [outcomes]);
+  const yearly = useMemo(() => yearlyWinRates(outcomes), [outcomes]);
 
   // プロフィールは DB を優先し、無ければ直近の戦闘から補完する。
   const dbInfo = lookup(db, name);
@@ -202,6 +205,8 @@ export function WarlordDetail({
           <BranchWinRates branches={branches} />
 
           <WinHeatmapSection heatmap={heatmap} />
+
+          {isAdmin && <WinRateTrend data={yearly} />}
 
           {canComment && <WarlordComment name={name} />}
 

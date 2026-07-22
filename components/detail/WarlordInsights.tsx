@@ -10,6 +10,7 @@ import {
   type MatchupRanking as MatchupRankingData,
   type OpponentStat,
   type WinHeatmap,
+  type YearlyWinRate,
 } from "@/lib/stats";
 import { getWarlordNote, setWarlordNote } from "@/lib/warlordNotes";
 import { factionNameStyle, type FactionColorMap } from "@/lib/factionColors";
@@ -366,5 +367,176 @@ export function AbilityStats({ warlord }: { warlord: Warlord | undefined }) {
         </div>
       )}
     </div>
+  );
+}
+
+/* ---------- 勝率の推移（年別・管理者向け） ---------- */
+
+/** 非戦期間（戦闘0が続く区間）をマスクする閾値（年）。 */
+const WR_NON_BATTLE_MIN_YEARS = 4;
+
+/** 折れ線の色（勝率＝青系）。 */
+const WR_LINE_COLOR = "#3b82f6";
+
+/**
+ * 年別の勝率(%)推移を折れ線で描く（Y 軸 0〜100%、・50% 基準線つき）。
+ * 勝敗が確定した年のみ点を打ち、4 年以上の非戦期間はマスクで分断する。
+ */
+export function WinRateTrend({ data }: { data: YearlyWinRate[] }) {
+  const withData = data.filter((y) => y.battles > 0);
+  if (withData.length === 0) return null;
+  const minYear = withData[0].year;
+  const maxYear = withData[withData.length - 1].year;
+  const points = data.filter((y) => y.year >= minYear && y.year <= maxYear);
+  const years = points.map((p) => p.year);
+  const n = years.length;
+
+  const W = 640;
+  const H = 220;
+  const padL = 34;
+  const padR = 10;
+  const padT = 10;
+  const padB = 22;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  const xAt = (i: number) => padL + (n <= 1 ? plotW / 2 : (i / (n - 1)) * plotW);
+  const yAt = (pct: number) => padT + (1 - pct / 100) * plotH;
+
+  // 4 年以上戦闘のない区間を検出（マスク表示用）。
+  const maskRanges: { fromIdx: number; toIdx: number }[] = [];
+  let start = -1;
+  for (let i = 0; i < n; i++) {
+    if (points[i].battles === 0) {
+      if (start < 0) start = i;
+    } else {
+      if (start >= 0 && i - start >= WR_NON_BATTLE_MIN_YEARS) {
+        maskRanges.push({ fromIdx: start, toIdx: i - 1 });
+      }
+      start = -1;
+    }
+  }
+
+  // 勝敗が確定した年のみ点を打ち、マスク区間で線を分断する。
+  const dataPts = points
+    .map((p, i) => ({
+      i,
+      pct: p.winRate * 100,
+      decided: p.decided,
+      year: p.year,
+      wins: p.wins,
+      losses: p.losses,
+    }))
+    .filter((p) => p.decided > 0);
+  const segs: (typeof dataPts)[] = [];
+  let cur: typeof dataPts = [];
+  for (const pt of dataPts) {
+    if (cur.length > 0) {
+      const prev = cur[cur.length - 1];
+      if (maskRanges.some((m) => m.fromIdx > prev.i && m.toIdx < pt.i)) {
+        segs.push(cur);
+        cur = [];
+      }
+    }
+    cur.push(pt);
+  }
+  if (cur.length) segs.push(cur);
+
+  return (
+    <Section title="勝率の推移" mobileCollapsed>
+      <p className="muted home-series-hint">
+        年別の勝率（%）です。勝敗が確定した年のみ点で表し、点にカーソルを合わせると戦績が出ます。
+      </p>
+      <div className="home-line-wrap">
+        <svg
+          className="home-linechart"
+          viewBox={`0 0 ${W} ${H}`}
+          role="img"
+          aria-label="年別の勝率推移グラフ"
+        >
+          {[0, 25, 50, 75, 100].map((pct) => (
+            <g key={pct}>
+              <line
+                className={
+                  pct === 50 ? "home-line-grid home-line-mid" : "home-line-grid"
+                }
+                x1={padL}
+                y1={yAt(pct)}
+                x2={W - padR}
+                y2={yAt(pct)}
+              />
+              <text className="home-line-ytick" x={padL - 4} y={yAt(pct) + 3}>
+                {pct}
+              </text>
+            </g>
+          ))}
+          {maskRanges.map((m, mi) => {
+            const step = n <= 1 ? plotW : plotW / (n - 1);
+            const x1 = Math.max(padL, xAt(m.fromIdx) - step / 2);
+            const x2 = Math.min(W - padR, xAt(m.toIdx) + step / 2);
+            const maskW = Math.max(0, x2 - x1);
+            return (
+              <g key={`mask-${mi}`}>
+                <rect
+                  className="home-line-mask"
+                  x={x1}
+                  y={padT}
+                  width={maskW}
+                  height={plotH}
+                />
+                <text
+                  className="home-line-masklabel"
+                  x={x1 + maskW / 2}
+                  y={padT + plotH / 2}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                >
+                  非戦中
+                </text>
+              </g>
+            );
+          })}
+          {years.map((yr, i) =>
+            yr % 10 === 0 ? (
+              <text
+                key={yr}
+                className="home-line-xtick"
+                x={xAt(i)}
+                y={H - 6}
+                textAnchor="middle"
+              >
+                {yr}
+              </text>
+            ) : null
+          )}
+          {segs.map((seg, si) => (
+            <g key={`seg-${si}`}>
+              {seg.length > 1 && (
+                <polyline
+                  className="home-line-path"
+                  points={seg
+                    .map((pt) => `${xAt(pt.i)},${yAt(pt.pct)}`)
+                    .join(" ")}
+                  style={{ stroke: WR_LINE_COLOR }}
+                />
+              )}
+              {seg.map((pt) => (
+                <circle
+                  key={pt.i}
+                  className="home-line-dot"
+                  cx={xAt(pt.i)}
+                  cy={yAt(pt.pct)}
+                  r={2.5}
+                  style={{ fill: WR_LINE_COLOR }}
+                >
+                  <title>
+                    {`${pt.year}年 勝率${Math.round(pt.pct)}%（${pt.wins}勝${pt.losses}敗）`}
+                  </title>
+                </circle>
+              ))}
+            </g>
+          ))}
+        </svg>
+      </div>
+    </Section>
   );
 }

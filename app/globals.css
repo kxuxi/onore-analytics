@@ -5180,6 +5180,9 @@ button.tag.faction-link:focus-visible {
 .home-line-dot {
   stroke: none;
 }
+.home-line-mid {
+  stroke: color-mix(in srgb, var(--text) 30%, transparent);
+}
 /* 4年以上の非戦期間を覆う灰色マスクと「非戦中」ラベル。 */
 .home-line-mask {
   fill: color-mix(in srgb, var(--text) 14%, transparent);
