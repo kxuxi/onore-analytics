@@ -38,7 +38,7 @@ export function SwiTab({ log, db, onSelectWarlord }: Props) {
   const [minSorties, setMinSorties] = useState(1);
   const [query, setQuery] = useState("");
   const [branch, setBranch] = useState("");
-  const [showFilter, setShowFilter] = useState(false);
+  const [showFilter, setShowFilter] = useState(true);
   const [periodKey, setPeriodKey] = useState<string>(RANKING_LAST10_KEY);
 
   // 集計期間のプリセット（先頭＝過去10年間、以降はメタ分析と同じ絶対年バケット）。
