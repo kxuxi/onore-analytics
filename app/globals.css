@@ -3921,6 +3921,11 @@ button.tag.faction-link:focus-visible {
   margin: 12px 0 0;
   font-size: 12px;
 }
+.metric-section-desc {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
 .metric-crumb {
   display: flex;
   align-items: center;

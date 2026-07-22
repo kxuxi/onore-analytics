@@ -21,11 +21,27 @@ const MIN_CONTACT_OPTIONS = [1, 5, 10, 20, 30];
 /** サマリーで各指標を上位何位まで出すか。 */
 const TOP_N = 3;
 
-const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "wpn", label: "WPN" },
-  { key: "pontaPoint", label: "PontaPoint" },
-  { key: "breakthrough", label: "抜き数" },
-  { key: "breakthroughRate", label: "抜き率" },
+const SORT_OPTIONS: { key: SortKey; label: string; desc: string }[] = [
+  {
+    key: "wpn",
+    label: "WPN",
+    desc: "勝率 ＋ 抜き率。勝率＝(出兵勝＋守備勝)÷戦闘数（撤退戦を除く）。野球で言えばOPS（出塁率＋長打率）のような総合力の指標。",
+  },
+  {
+    key: "pontaPoint",
+    label: "PontaPoint",
+    desc: "ジョンさん印の指標。(出兵勝 + 1.4×守備勝) ÷ 戦闘数（撤退戦を除く）。普通の勝率の分子で守備の1勝を1.4勝としてボーナスしたもの。",
+  },
+  {
+    key: "breakthrough",
+    label: "抜き数",
+    desc: "1×(1枚抜き) + 2×(2枚抜き) + … + n×(n枚抜き)。野球で言えば塁打数。",
+  },
+  {
+    key: "breakthroughRate",
+    label: "抜き率",
+    desc: "抜き数 ÷ 出兵数（各出兵を１回と数え、２戦目以降は数えません）。野球で言えば長打率。またの名をランカス度。",
+  },
 ];
 
 /** 武将 1 行分の指標（WPN・PontaPoint・抜き数・抜き率をまとめたもの）。 */
@@ -286,9 +302,11 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
       0
     ) || 1;
 
-  const activeLabel = activeMetric
-    ? SORT_OPTIONS.find((o) => o.key === activeMetric)?.label ?? ""
-    : "";
+  const activeOption = activeMetric
+    ? SORT_OPTIONS.find((o) => o.key === activeMetric)
+    : undefined;
+  const activeLabel = activeOption?.label ?? "";
+  const activeDesc = activeOption?.desc ?? "";
 
   // 詳細ビューを開く（絞り込みは初期化して先頭へ）。
   const openDetail = useCallback((metric: SortKey) => {
@@ -319,24 +337,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
 
   return (
     <section className="panel">
-      <div className="metric-head">
-        <h2>指標</h2>
-        <details className="swi-formula metric-detail">
-          <summary>指標の詳細</summary>
-          <p className="muted">
-            WPN = 勝率 ＋ 抜き率。勝率＝(出兵勝＋守備勝)÷戦闘数（撤退戦を除く）。野球で言えばOPS（出塁率＋長打率）のような総合力の指標。
-          </p>
-          <p className="muted">
-            PontaPoint = ジョンさん印の指標。(出兵勝 + 1.4×守備勝) ÷ 戦闘数（撤退戦を除く）。普通の勝率の分子で守備の1勝を1.4勝としてボーナスしたものです。
-          </p>
-          <p className="muted">
-            抜き数 = 1×(1枚抜き) + 2×(2枚抜き) + … + n×(n枚抜き)。野球で言えば塁打数。
-          </p>
-          <p className="muted">
-            抜き率 = 抜き数 ÷ 出兵数（各出兵を１回と数え、２戦目以降は数えません）。野球で言えば長打率。
-          </p>
-        </details>
-      </div>
+      <h2>指標</h2>
 
       {activeMetric === null ? (
         // サマリー：指標ごとの上位 TOP3 を並べ、詳細へ誘導する。
@@ -357,6 +358,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
                   詳細を見る →
                 </button>
               </div>
+              <p className="metric-section-desc muted">{opt.desc}</p>
               {rows.length === 0 ? (
                 <p className="metric-section-empty muted">
                   条件を満たす武将がいません。
@@ -394,6 +396,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
             </span>
             <span className="metric-crumb-current">{activeLabel}</span>
           </nav>
+          <p className="metric-section-desc muted">{activeDesc}</p>
 
           <div className="search-row">
             <SearchBox
