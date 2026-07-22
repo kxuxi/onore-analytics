@@ -21,6 +21,9 @@ const MIN_CONTACT_OPTIONS = [1, 5, 10, 20, 30];
 /** サマリーで各指標を上位何位まで出すか。 */
 const TOP_N = 3;
 
+/** この戦闘数（撤退戦を除く）未満の武将は指標の集計対象外にする。 */
+const MIN_BATTLES = 10;
+
 const SORT_OPTIONS: { key: SortKey; label: string; desc: string }[] = [
   {
     key: "ppn",
@@ -251,7 +254,8 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
       r.breakthroughRate = r.sorties > 0 ? r.breakthrough / r.sorties : 0;
       r.ppn = r.pontaPoint + r.breakthroughRate;
     }
-    return rows;
+    // 10戦未満（戦闘数が MIN_BATTLES 未満）の武将は指標の対象外。
+    return rows.filter((r) => r.battles >= MIN_BATTLES);
   }, [log, db]);
 
   // 兵科の選択肢（集計対象から収集）。
@@ -333,6 +337,9 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
   return (
     <section className="panel">
       <h2>指標</h2>
+      <p className="metric-note muted">
+        ※戦闘数（撤退を除く）が10戦未満の武将は集計対象外です。
+      </p>
 
       {activeMetric === null ? (
         // サマリー：指標ごとの上位 TOP3 を並べ、詳細へ誘導する。

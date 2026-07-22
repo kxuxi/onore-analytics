@@ -3899,6 +3899,10 @@ button.tag.faction-link:focus-visible {
   flex-basis: 100%;
   margin-top: 6px;
 }
+.metric-note {
+  margin: 6px 0 4px;
+  font-size: 12px;
+}
 .metric-section {
   margin-top: 24px;
 }
