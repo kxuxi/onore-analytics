@@ -1059,11 +1059,11 @@ describe("unitStats", () => {
 });
 
 describe("formatWinRate", () => {
-  it("勝率を整数パーセントに丸める", () => {
-    expect(formatWinRate(0.666, 30)).toBe("67%");
-    expect(formatWinRate(0.5, 2)).toBe("50%");
-    expect(formatWinRate(1, 4)).toBe("100%");
-    expect(formatWinRate(0, 3)).toBe("0%");
+  it("勝率を小数点第1位のパーセントにする", () => {
+    expect(formatWinRate(0.666, 30)).toBe("66.6%");
+    expect(formatWinRate(0.5, 2)).toBe("50.0%");
+    expect(formatWinRate(1, 4)).toBe("100.0%");
+    expect(formatWinRate(0, 3)).toBe("0.0%");
   });
 
   it("決着していない（decided が 0 以下）ときは — を返す", () => {

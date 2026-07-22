@@ -231,7 +231,7 @@ export function summarize(outcomes: BattleOutcome[]): StatSummary {
  */
 export function formatWinRate(rate: number, decided: number): string {
   if (decided <= 0) return "—";
-  return `${Math.round(rate * 100)}%`;
+  return `${(rate * 100).toFixed(1)}%`;
 }
 
 /** 注目側が使った兵種の使用回数（多い順）。 */
