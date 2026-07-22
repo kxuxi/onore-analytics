@@ -74,7 +74,7 @@ export function EquipTab({ log, onSelectWarlord, onSelectEquip, variant }: Props
   const [keyword, setKeyword] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("battles");
   const [minUses, setMinUses] = useState(1);
-  const [showFilter, setShowFilter] = useState(false);
+  const [showFilter, setShowFilter] = useState(true);
 
   const stats = useMemo(() => copy.stats(log), [copy, log]);
 

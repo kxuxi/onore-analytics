@@ -31,7 +31,7 @@ export function EquipSynergyTab({ log, onSelectWarlord, onSelectEquip }: Props) 
   const [keyword, setKeyword] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("winRate");
   const [minUses, setMinUses] = useState(10);
-  const [showFilter, setShowFilter] = useState(false);
+  const [showFilter, setShowFilter] = useState(true);
 
   const stats = useMemo(() => equipSynergy(log), [log]);
 

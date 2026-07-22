@@ -50,7 +50,7 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
   const [factionFilter, setFactionFilter] = useState("");
   const [roleFilter, setRoleFilter] = useState<"" | "attack" | "defense-only">("");
   const [nameQuery, setNameQuery] = useState("");
-  const [showFilter, setShowFilter] = useState(false);
+  const [showFilter, setShowFilter] = useState(true);
 
   // 経過時間をリアルタイム表示するため 30 秒ごとに現在時刻を更新。
   // タブが非表示の間はインターバルを止め、再表示時に即時更新して再開する。

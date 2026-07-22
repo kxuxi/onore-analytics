@@ -100,7 +100,7 @@ export function RankingTab({
   const [keyword, setKeyword] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("battles");
   const [minUses, setMinUses] = useState(1);
-  const [showFilter, setShowFilter] = useState(false);
+  const [showFilter, setShowFilter] = useState(true);
   const [periodKey, setPeriodKey] = useState<string>(RANKING_LAST10_KEY);
 
   // 集計期間のプリセット（先頭＝過去10年間、以降はメタ分析と同じ絶対年バケット）。

@@ -205,7 +205,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
   const [minContacts, setMinContacts] = useState(1);
   const [query, setQuery] = useState("");
   const [branch, setBranch] = useState("");
-  const [showFilter, setShowFilter] = useState(false);
+  const [showFilter, setShowFilter] = useState(true);
 
   // PontaPoint と枚抜き（抜き数・抜き率）を武将ごとに統合する。
   const ranking = useMemo<MetricRow[]>(() => {

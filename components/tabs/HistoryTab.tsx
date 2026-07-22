@@ -143,7 +143,7 @@ export function HistoryTab({
   // 実際の日付の範囲（"YYYY-MM-DD"）。空文字は未指定。
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [showFilter, setShowFilter] = useState(false);
+  const [showFilter, setShowFilter] = useState(true);
   const [page, setPage] = useState(1);
   // 入力中の体感を軽く保つため、フィルタ計算は遅延値で行う（大量履歴対策）。
   const deferredKeyword = useDeferredValue(keyword);
