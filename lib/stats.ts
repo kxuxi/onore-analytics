@@ -1549,14 +1549,14 @@ export function unitBranchLabel(
 
 /* ---------- 枚抜き集計（出兵/守備の連勝） ---------- */
 
-/** 1 出撃（同一出兵側・同一戦闘時刻）の集約。 */
+/** 1 出兵（同一出兵側・同一戦闘時刻）の集約。 */
 interface SortieAgg {
   /** 出兵側として勝利した戦目番号の集合 */
   wins: Set<number>;
 }
 
 /**
- * 1 出撃の「枚抜き枚数」= 1戦目から連続で勝った数。
+ * 1 出兵の「枚抜き枚数」= 1戦目から連続で勝った数。
  * 出兵は 1戦目→2戦目→3戦目 と進むため、最初に勝てなかった時点で止まる。
  */
 function sortieSweepCount(s: SortieAgg): number {
@@ -1580,17 +1580,17 @@ export interface SideSwiStat {
   name: string;
   faction?: string;
   branch?: string;
-  /** その側として出撃（同一戦闘時刻でまとめた回数） */
+  /** その側として出兵（同一戦闘時刻でまとめた回数） */
   sorties: number;
   /** その側で勝った戦目の総数（出兵なら出兵勝利数 / 守備なら守備勝利数） */
   wins: number;
-  /** 枚抜き枚数ごとの出撃回数（index = 枚数, 0..） */
+  /** 枚抜き枚数ごとの出兵回数（index = 枚数, 0..） */
   sweepCounts: number[];
 }
 
 /**
- * 指定した側（出兵 / 守備）の視点で、武将ごとの出撃・連勝（枚抜き）を集計する。
- * 出撃 = (注目側武将, 戦闘時刻) でまとめた 1 回。枚抜き = 1戦目からの連勝数。
+ * 指定した側（出兵 / 守備）の視点で、武将ごとの出兵・連勝（枚抜き）を集計する。
+ * 出兵 = (注目側武将, 戦闘時刻) でまとめた 1 回。枚抜き = 1戦目からの連勝数。
  * 守備側も同様に (防衛側武将, 戦闘時刻) でまとめる。重複行は除外する。
  * 
  * @param log 戦闘ログ
@@ -1606,7 +1606,7 @@ function computeSideSwi(
   // (term, 家名) で同一人物をまとめ、最新の代表名に正規化するマップ
   const nameMap = db ? logNameMap(log) : null;
 
-  // 出撃単位に集約。
+  // 出兵単位に集約。
   const sorties = new Map<string, SortieAgg>();
   // 武将ごとの最新の勢力・兵科（表示・フィルタ用）。
   const factionOf = new Map<string, string | undefined>();
@@ -1679,11 +1679,11 @@ export interface BreakthroughStat {
   name: string;
   faction?: string;
   branch?: string;
-  /** 抜き数 = Σ n×(n枚抜きの出撃数)。 */
+  /** 抜き数 = Σ n×(n枚抜きの出兵数)。 */
   score: number;
-  /** 出兵出撃数（枚抜きの母数・参考）。 */
+  /** 出兵出兵数（枚抜きの母数・参考）。 */
   sorties: number;
-  /** 枚抜きの内訳（index=n 枚抜き, value=出撃回数）。 */
+  /** 枚抜きの内訳（index=n 枚抜き, value=出兵回数）。 */
   sweepCounts: number[];
 }
 
@@ -1829,15 +1829,15 @@ export interface WarlordRankStat {
   name: string;
   faction?: string;
   branch?: string;
-  /** 平均枚抜き（出兵勝利数 / 出兵出撃数） */
+  /** 平均枚抜き（出兵勝利数 / 出兵出兵数） */
   avgBreakthrough: number;
-  /** 守備効率（守備勝利数 / 守備出撃数） */
+  /** 守備効率（守備勝利数 / 守備出兵数） */
   defenseEfficiency: number;
   /** 出兵勝率（出兵側として勝った戦目 / 出兵側として参加した決着戦目） */
   attackWinRate: number;
   /** 守備勝率（守備側として勝った戦目 / 守備側として参加した決着戦目） */
   defenseWinRate: number;
-  /** 出兵側としての出撃回数（撤退除く） */
+  /** 出兵側としての出兵回数（撤退除く） */
   attackSorties: number;
   /** 出兵勝利数（出兵側として勝った戦目の総数） */
   attackWins: number;
@@ -1845,7 +1845,7 @@ export interface WarlordRankStat {
   attackRounds: number;
   /** 出兵側として勝った決着戦目数 */
   attackWinRounds: number;
-  /** 守備側としての出撃回数（撤退除く） */
+  /** 守備側としての出兵回数（撤退除く） */
   defenseSorties: number;
   /** 守備勝利数（守備側として勝った戦目の総数） */
   defenseWins: number;
@@ -2010,7 +2010,7 @@ function computeRoundWinRates(
   return out;
 }
 
-/** 撤退を含む出撃を除外した効率用の集計。 */
+/** 撤退を含む出兵を除外した効率用の集計。 */
 function computeEfficiency(
   log: BattleRecord[],
   side: SideKey,
@@ -2042,7 +2042,7 @@ function computeEfficiency(
 
   const out = new Map<string, { wins: number; sorties: number }>();
   for (const [key, s] of sorties) {
-    // 撤退を含む出撃は効率の分母・分子から除外。
+    // 撤退を含む出兵は効率の分母・分子から除外。
     if (s.hasRetreat) continue;
     const name = key.slice(0, key.indexOf("@@"));
     const cur = out.get(name) ?? { wins: 0, sorties: 0 };
@@ -2054,7 +2054,7 @@ function computeEfficiency(
 }
 
 /**
- * 武将ごとに出兵・守備の出撃数 / 勝利数 / SWI をまとめて集計する。
+ * 武将ごとに出兵・守備の出兵数 / 勝利数 / SWI をまとめて集計する。
  * 出兵勝利数・守備勝利数はその側で勝った戦目の総数、
  * SWI（出兵 / 守備）はそれぞれの側を 1戦目からの連勝（枚抜き）で重み付け評価したもの。
  * 
@@ -2337,16 +2337,16 @@ export interface UnitStat {
   decided: number;
   /** 勝率 0..1（decided が 0 のときは 0） */
   winRate: number;
-  /** 出兵側で出撃した回数 */
+  /** 出兵側で出兵した回数 */
   attackUses: number;
-  /** 守備側で出撃した回数 */
+  /** 守備側で出兵した回数 */
   defenseUses: number;
   /** よく使う武将 TOP3 */
   topUsers: { name: string; count: number }[];
 }
 
 /**
- * 兵種ごとの出撃実績を集計し、使用回数・勝率・主な使用武将を求める。
+ * 兵種ごとの出兵実績を集計し、使用回数・勝率・主な使用武将を求める。
  * 出兵側・守備側の両方を対象とし、重複行は除外する。兵科は最頻のものを代表とする。
  */
 export function unitStats(log: BattleRecord[], range?: YearRange): UnitStat[] {

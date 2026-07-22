@@ -18,7 +18,7 @@ interface Props {
   onSelectWarlord: (name: string) => void;
 }
 
-/** 最低出兵数の選択肢。ノイズを除くためのしきい値（指標側の出撃数に適用）。 */
+/** 最低出兵数の選択肢。ノイズを除くためのしきい値（指標側の出兵数に適用）。 */
 const MIN_SORTIE_OPTIONS = [1, 5, 10, 20, 30];
 
 const METRIC_OPTIONS: {
@@ -93,7 +93,7 @@ export function SwiTab({ log, db, onSelectWarlord }: Props) {
       const va = rankMetricValue(a, metric);
       const vb = rankMetricValue(b, metric);
       if (vb !== va) return vb - va;
-      // 同値はその側の出撃数で安定させる。
+      // 同値はその側の出兵数で安定させる。
       return activeSorties(b) - activeSorties(a);
     });
   }, [ranking, query, branch, minSorties, metric]);
@@ -139,9 +139,9 @@ export function SwiTab({ log, db, onSelectWarlord }: Props) {
             : metric === "defenseWinRate"
               ? "守備勝率 = 守備側として勝った戦目数 ÷ 守備側として参加した決着戦目数。撤退を除いた全守備戦目が母数です。"
               : metric === "avgBreakthrough"
-                ? "撃破効率 = 出兵勝利数 ÷ 出兵出撃数。値が 1.00 なら、1出兵で平均1枚撃破している状態です。"
+                ? "撃破効率 = 出兵勝利数 ÷ 出兵出兵数。値が 1.00 なら、1出兵で平均1枚撃破している状態です。"
                 : metric === "defenseEfficiency"
-                  ? "守備効率 = 守備勝利数 ÷ 守備出撃数。値が 1.00 なら、1守備で平均1枚守り切っている状態です。"
+                  ? "守備効率 = 守備勝利数 ÷ 守備出兵数。値が 1.00 なら、1守備で平均1枚守り切っている状態です。"
                   : "A が B を削った時刻 T の後 40 分以内に、別イベントで B が倒されると A に 1 アシストが付きます。"}
         </p>
       </details>
@@ -256,7 +256,7 @@ export function SwiTab({ log, db, onSelectWarlord }: Props) {
         <div className="empty">
           <p className="empty-title">条件を満たす武将がいません</p>
           <p className="empty-hint">
-            「戦闘履歴」タブで戦績を登録すると、出撃データからランキングを算出します。
+            「戦闘履歴」タブで戦績を登録すると、出兵データからランキングを算出します。
             すでに登録済みの場合は、指標・検索語・兵科・最低出兵数の条件を見直してください。
           </p>
         </div>

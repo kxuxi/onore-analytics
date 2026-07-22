@@ -692,12 +692,12 @@ describe("unitUsageTrend", () => {
 
 /**
  * SWI テスト用の戦闘行。出兵側武将名・戦目番号・戦闘時刻・勝者を指定する。
- * 同じ time を共有する行は「同一出撃」として扱われる。
+ * 同じ time を共有する行は「同一出兵」として扱われる。
  */
 function swiLine(opts: {
   attacker: string;
   battleNo: number;
-  time: string; // "MM/DD HH:mm"（出撃の識別子になる）
+  time: string; // "MM/DD HH:mm"（出兵の識別子になる）
   win: boolean; // 出兵側が勝ったか
   defender?: string;
 }): string {
@@ -736,7 +736,7 @@ function efficiencyLine(opts: {
 describe("アシスト（warlordRanking）", () => {
   it("撃破効率（平均枚抜き）は 出兵勝利数 ÷ 出兵数 で計算される", () => {
     const log: BattleRecord[] = [
-      // 出撃1（10:00）で2勝
+      // 出兵1（10:00）で2勝
       rec(
         assistLine({
           leftName: "A",
@@ -757,7 +757,7 @@ describe("アシスト（warlordRanking）", () => {
         }),
         2
       ),
-      // 出撃2（11:00）で1勝
+      // 出兵2（11:00）で1勝
       rec(
         assistLine({
           leftName: "A",
@@ -776,9 +776,9 @@ describe("アシスト（warlordRanking）", () => {
     expect(a?.avgBreakthrough).toBeCloseTo(1.5);
   });
 
-  it("守備効率は 守備勝利数 ÷ 守備出撃数 で計算される", () => {
+  it("守備効率は 守備勝利数 ÷ 守備出兵数 で計算される", () => {
     const log: BattleRecord[] = [
-      // 守備出撃1（10:00）で2勝
+      // 守備出兵1（10:00）で2勝
       rec(
         assistLine({
           leftName: "B",
@@ -799,7 +799,7 @@ describe("アシスト（warlordRanking）", () => {
         }),
         2
       ),
-      // 守備出撃2（11:00）で1勝
+      // 守備出兵2（11:00）で1勝
       rec(
         assistLine({
           leftName: "D",
@@ -820,7 +820,7 @@ describe("アシスト（warlordRanking）", () => {
 
   it("撃破効率は撤退戦を分母・分子に含めない", () => {
     const log: BattleRecord[] = [
-      // 10:00 出撃は撤退 -> 除外される
+      // 10:00 出兵は撤退 -> 除外される
       rec(
         efficiencyLine({
           leftName: "A",
@@ -830,7 +830,7 @@ describe("アシスト（warlordRanking）", () => {
         }),
         1
       ),
-      // 11:00 出撃のみ有効
+      // 11:00 出兵のみ有効
       rec(
         efficiencyLine({
           leftName: "A",
@@ -850,7 +850,7 @@ describe("アシスト（warlordRanking）", () => {
 
   it("守備効率は撤退戦を分母・分子に含めない", () => {
     const log: BattleRecord[] = [
-      // 10:00 守備出撃は撤退 -> 除外される
+      // 10:00 守備出兵は撤退 -> 除外される
       rec(
         efficiencyLine({
           leftName: "B",
@@ -860,7 +860,7 @@ describe("アシスト（warlordRanking）", () => {
         }),
         1
       ),
-      // 11:00 守備出撃のみ有効
+      // 11:00 守備出兵のみ有効
       rec(
         efficiencyLine({
           leftName: "C",
@@ -1019,7 +1019,7 @@ describe("unitStats", () => {
   it("兵種ごとに使用回数・勝率・代表兵科・主な使用武将を集計する", () => {
     const stats = unitStats(log);
     const kiba = stats.find((s) => s.unit === "騎馬隊")!;
-    // 騎馬隊は左(信長)で 3 回出撃: 2勝1敗。
+    // 騎馬隊は左(信長)で 3 回出兵: 2勝1敗。
     expect(kiba.battles).toBe(3);
     expect(kiba.attackUses).toBe(3);
     expect(kiba.defenseUses).toBe(0);
@@ -1031,7 +1031,7 @@ describe("unitStats", () => {
     expect(kiba.topUsers[0]).toEqual({ name: "信長", count: 3 });
 
     const ashi = stats.find((s) => s.unit === "足軽隊")!;
-    // 足軽隊は右(勝頼)で 3 回出撃: 1勝2敗。
+    // 足軽隊は右(勝頼)で 3 回出兵: 1勝2敗。
     expect(ashi.battles).toBe(3);
     expect(ashi.defenseUses).toBe(3);
     expect(ashi.wins).toBe(1);
@@ -1769,11 +1769,11 @@ describe("antiContactRanking / buildAntiIndex（指標: アンチ接触）", () 
 describe("breakthroughRanking（抜き数）", () => {
   it("抜き数 = Σ n×(n枚抜き)。3枚抜きは3点で内側の1・2枚抜きを二重計上しない", () => {
     const log: BattleRecord[] = [
-      // 出撃、1（10:00）: 1○2○3○ = 3枚抜き
+      // 出兵、1（10:00）: 1○2○3○ = 3枚抜き
       rec(swiLine({ attacker: "信長", battleNo: 1, time: "06/15 10:00", win: true, defender: "敵A" }), 1),
       rec(swiLine({ attacker: "信長", battleNo: 2, time: "06/15 10:00", win: true, defender: "敵B" }), 2),
       rec(swiLine({ attacker: "信長", battleNo: 3, time: "06/15 10:00", win: true, defender: "敵C" }), 3),
-      // 出撃。2（11:00）: 1○2× = 1枚抜き
+      // 出兵。2（11:00）: 1○2× = 1枚抜き
       rec(swiLine({ attacker: "信長", battleNo: 1, time: "06/15 11:00", win: true, defender: "敵D" }), 4),
       rec(swiLine({ attacker: "信長", battleNo: 2, time: "06/15 11:00", win: false, defender: "敵E" }), 5),
     ];

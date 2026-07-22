@@ -191,7 +191,7 @@ function MetricRowItem({
             </span>
           ) : metric === "breakthrough" ? (
             <span className="rank-side-active">
-              抜き数 {r.breakthrough.toLocaleString("ja-JP")} ／ 出撃{" "}
+              抜き数 {r.breakthrough.toLocaleString("ja-JP")} ／ 出兵{" "}
               {r.sorties.toLocaleString("ja-JP")}
             </span>
           ) : metric === "breakthroughRate" ? (
