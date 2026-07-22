@@ -7,7 +7,6 @@ import {
   type BattleWinner,
 } from "./parser";
 import { parseActionDate } from "./action";
-import { normalizationMap } from "./storage";
 import { splitGoodAgainst } from "./unitTypeForm";
 import type { BattleRecord, UnitType, WarlordMap } from "./types";
 
@@ -128,15 +127,23 @@ function unitMatches(side: BattleSide, target: string): boolean {
 /** 指定武将が登場した戦闘を新しい順で集める。aliases に同一人物の別名を渡すと統合集計。 */
 export function collectWarlordBattles(
   log: BattleRecord[],
-  name: string,
-  aliases?: string[]
+  name: string
 ): BattleOutcome[] {
-  const targets = new Set([name.trim(), ...(aliases ?? []).map((a) => a.trim())]);
+  const nameMap = logNameMap(log);
+  const target = name.trim();
   const out: BattleOutcome[] = [];
   for (const { record, card } of dedupedCards(log)) {
+    // (term, 家名) で名寄せした代表名が対象と一致する側を集める。
     // 通常は左右どちらか一方のみ一致する。両方一致した場合は左を優先。
-    if (targets.has(card.left.name ?? "")) out.push(makeOutcome(record, card, "left"));
-    else if (targets.has(card.right.name ?? ""))
+    if (
+      resolveLogName(nameMap, record.term, card.left.family, card.left.name) ===
+      target
+    )
+      out.push(makeOutcome(record, card, "left"));
+    else if (
+      resolveLogName(nameMap, record.term, card.right.family, card.right.name) ===
+      target
+    )
       out.push(makeOutcome(record, card, "right"));
   }
   return sortByTimeDesc(out);
@@ -182,16 +189,15 @@ export function warlordNamesInLog(
   log: BattleRecord[],
   db?: WarlordMap
 ): Set<string> {
-  const normMap = db ? normalizationMap(db) : null;
+  const nameMap = db ? logNameMap(log) : null;
   const names = new Set<string>();
   for (const record of log) {
     const card = parseBattleCard(record.line);
     if (!card) continue;
     for (const side of [card.left, card.right]) {
-      let n = side.name?.trim();
-      if (!n) continue;
-      if (normMap && normMap[n]) n = normMap[n];
-      names.add(n);
+      const raw = side.name?.trim();
+      if (!raw) continue;
+      names.add(resolveLogName(nameMap, record.term, side.family, raw));
     }
   }
   return names;
@@ -589,11 +595,14 @@ export function yearBucketWinRankings(
 ): YearBucketRanking[] {
   const minDecided = opts?.minDecided ?? YEAR_RANK_MIN_DECIDED;
   const topN = opts?.topN ?? YEAR_RANK_TOP_N;
-  const normMap = db ? normalizationMap(db) : null;
-  const norm = (n: string | undefined): string | null => {
-    const k = n?.trim();
+  const nameMap = db ? logNameMap(log) : null;
+  const norm = (
+    side: { name?: string; family?: string },
+    term: number | undefined
+  ): string | null => {
+    const k = side.name?.trim();
     if (!k) return null;
-    return (normMap && normMap[k]) || k;
+    return resolveLogName(nameMap, term, side.family, k);
   };
 
   interface Tally {
@@ -612,8 +621,8 @@ export function yearBucketWinRankings(
     if (!bucket) continue;
     const table = byBucket.get(bucket.key)!;
 
-    const leftRep = norm(card.left.name);
-    const rightRep = norm(card.right.name);
+    const leftRep = norm(card.left, record.term);
+    const rightRep = norm(card.right, record.term);
     // 通常は別人。同一人物に正規化される稀なケースは片側のみ計上する。
     const sides: { rep: string; side: SideKey }[] = [];
     if (leftRep) sides.push({ rep: leftRep, side: "left" });
@@ -861,6 +870,75 @@ function gameOrder(card: BattleCard): number | null {
   const mm = card.battleAt?.match(/年\s*(\d+)\s*月/);
   const month = mm ? Number(mm[1]) : 1;
   return year * 12 + (month - 1);
+}
+
+/**
+ * 戦闘ログから「同一人物」を term + 家名(family) でグループ化し、各人物の最新の
+ * 表示名を決める名寄せマップを作る。改名（同一 term・同一家名で名前だけ変わる）を
+ * 1つにまとめ、家名が無い／term・家名が違う同名は別人として区別する。
+ *
+ * db（name キー）から作ると、同名の別人が DB 上で1レコードに統合されてしまい
+ * 区別できないため、ログ側の (term, family, name) から直接構築する。
+ * キー = `${term}\u0000${family}\u0000${name}`、値 = 代表名。
+ */
+const logNameMapCache = new WeakMap<BattleRecord[], Map<string, string>>();
+
+function logNameMap(log: BattleRecord[]): Map<string, string> {
+  const cached = logNameMapCache.get(log);
+  if (cached) return cached;
+  // (term, family) グループごとに name -> その名前が登場した最新の在ゲーム年月。
+  const groups = new Map<string, Map<string, number>>();
+  for (const { record, card } of dedupedCards(log)) {
+    const order = gameOrder(card) ?? -1;
+    for (const side of [card.left, card.right]) {
+      const name = side.name?.trim();
+      const family = side.family?.trim();
+      if (!name || !family) continue; // 家名が無い武将は名寄せ対象外
+      const groupKey = `${record.term ?? ""}\u0000${family}`;
+      let g = groups.get(groupKey);
+      if (!g) {
+        g = new Map();
+        groups.set(groupKey, g);
+      }
+      const prev = g.get(name);
+      if (prev == null || order > prev) g.set(name, order);
+    }
+  }
+  // 各グループの代表 = 最新の在ゲーム年月を持つ名前（同率は先に現れた方）。
+  const result = new Map<string, string>();
+  for (const [groupKey, names] of groups) {
+    let repName: string | null = null;
+    let repOrder = -Infinity;
+    for (const [name, order] of names) {
+      if (order > repOrder) {
+        repOrder = order;
+        repName = name;
+      }
+    }
+    if (repName == null) continue;
+    for (const name of names.keys()) {
+      result.set(`${groupKey}\u0000${name}`, repName);
+    }
+  }
+  logNameMapCache.set(log, result);
+  return result;
+}
+
+/**
+ * ログ名寄せマップで (term, 家名, 名前) を代表名へ解決する。
+ * 家名が無い、マップに無い場合は名前をそのまま返す。
+ */
+function resolveLogName(
+  map: Map<string, string> | null,
+  term: number | undefined,
+  family: string | undefined,
+  name: string | undefined
+): string {
+  const n = name?.trim() ?? "";
+  if (!map || !n) return n;
+  const f = family?.trim();
+  if (!f) return n;
+  return map.get(`${term ?? ""}\u0000${f}\u0000${n}`) ?? n;
 }
 
 /**
@@ -1525,8 +1603,8 @@ function computeSideSwi(
   db?: WarlordMap,
   range?: YearRange
 ): Map<string, SideSwiStat> {
-  // 同じ household の複数の名前を最新の代表名に正規化するマップ
-  const normMap = db ? normalizationMap(db) : null;
+  // (term, 家名) で同一人物をまとめ、最新の代表名に正規化するマップ
+  const nameMap = db ? logNameMap(log) : null;
 
   // 出撃単位に集約。
   const sorties = new Map<string, SortieAgg>();
@@ -1534,15 +1612,13 @@ function computeSideSwi(
   const factionOf = new Map<string, string | undefined>();
   const branchOf = new Map<string, string | undefined>();
 
-  for (const { card } of dedupedCards(log)) {
+  for (const { record, card } of dedupedCards(log)) {
     if (!withinYearRange(card, range)) continue;
     const self = side === "left" ? card.left : card.right;
-    let name = self.name?.trim();
-    if (!name) continue;
-    // household でグループ化（normMap が有効な場合）
-    if (normMap && normMap[name]) {
-      name = normMap[name];
-    }
+    const rawName = self.name?.trim();
+    if (!rawName) continue;
+    // (term, 家名) で同一人物をまとめ、代表名に正規化する。
+    const name = resolveLogName(nameMap, record.term, self.family, rawName);
     const key = `${name}@@${card.battleAt ?? ""}`;
     let s = sorties.get(key);
     if (!s) {
@@ -1669,11 +1745,14 @@ export function pontaPointRanking(
   db?: WarlordMap,
   range?: YearRange
 ): PontaStat[] {
-  const normMap = db ? normalizationMap(db) : null;
-  const resolve = (n?: string): string | undefined => {
-    const name = n?.trim();
+  const nameMap = db ? logNameMap(log) : null;
+  const resolve = (
+    side: { name?: string; family?: string },
+    term: number | undefined
+  ): string | undefined => {
+    const name = side.name?.trim();
     if (!name) return undefined;
-    return normMap?.[name] ?? name;
+    return resolveLogName(nameMap, term, side.family, name);
   };
   interface Acc {
     name: string;
@@ -1697,17 +1776,17 @@ export function pontaPointRanking(
     if (side.branch) e.branch = side.branch;
     return e;
   };
-  for (const { card } of dedupedCards(log)) {
+  for (const { record, card } of dedupedCards(log)) {
     if (!withinYearRange(card, range)) continue;
     const w = card.winner;
     if (w !== "left" && w !== "right") continue; // 撤退・引分・不明を除く（勝敗が付いた戦闘）のみ
-    const ln = resolve(card.left?.name);
+    const ln = resolve(card.left, record.term);
     if (ln) {
       const e = touch(ln, card.left);
       if (w === "left") e.attackWins++;
       else e.losses++;
     }
-    const rn = resolve(card.right?.name);
+    const rn = resolve(card.right, record.term);
     if (rn) {
       const e = touch(rn, card.right);
       if (w === "right") e.defenseWins++;
@@ -1817,7 +1896,7 @@ function computeAssists(
   db?: WarlordMap,
   range?: YearRange
 ): Map<string, number> {
-  const normMap = db ? normalizationMap(db) : null;
+  const nameMap = db ? logNameMap(log) : null;
   const now = new Date();
   const cards = dedupedCards(log).filter(({ card }) => withinYearRange(card, range));
 
@@ -1844,23 +1923,25 @@ function computeAssists(
   // defeatTimes: 各武将が倒された（負けた）時刻の一覧。
   const defeatTimes = new Map<string, number[]>();
 
-  for (const { card } of cards) {
+  for (const { record, card } of cards) {
     if (card.winner !== "left" && card.winner !== "right") continue;
     const t = getTime(card.battleAt);
     if (t === null) continue;
 
-    let winnerName = (
-      card.winner === "left" ? card.left : card.right
-    ).name?.trim();
-    let loserName = (
-      card.winner === "left" ? card.right : card.left
-    ).name?.trim();
-    if (winnerName && normMap && normMap[winnerName]) {
-      winnerName = normMap[winnerName];
-    }
-    if (loserName && normMap && normMap[loserName]) {
-      loserName = normMap[loserName];
-    }
+    const winnerSide = card.winner === "left" ? card.left : card.right;
+    const loserSide = card.winner === "left" ? card.right : card.left;
+    const winnerName = resolveLogName(
+      nameMap,
+      record.term,
+      winnerSide.family,
+      winnerSide.name
+    );
+    const loserName = resolveLogName(
+      nameMap,
+      record.term,
+      loserSide.family,
+      loserSide.name
+    );
     if (!winnerName || !loserName) continue;
 
     // 敗者の被倒時刻を記録。
@@ -1906,19 +1987,13 @@ function computeRoundWinRates(
   db?: WarlordMap,
   range?: YearRange
 ): Map<string, { attackWins: number; attackRounds: number; defenseWins: number; defenseRounds: number }> {
-  const normMap = db ? normalizationMap(db) : null;
+  const nameMap = db ? logNameMap(log) : null;
   const out = new Map<string, { attackWins: number; attackRounds: number; defenseWins: number; defenseRounds: number }>();
-  for (const { card } of dedupedCards(log)) {
+  for (const { record, card } of dedupedCards(log)) {
     if (!withinYearRange(card, range)) continue;
     if (card.winner !== "left" && card.winner !== "right") continue;
-    let leftName = card.left.name?.trim();
-    let rightName = card.right.name?.trim();
-    if (leftName && normMap && normMap[leftName]) {
-      leftName = normMap[leftName];
-    }
-    if (rightName && normMap && normMap[rightName]) {
-      rightName = normMap[rightName];
-    }
+    const leftName = resolveLogName(nameMap, record.term, card.left.family, card.left.name);
+    const rightName = resolveLogName(nameMap, record.term, card.right.family, card.right.name);
     if (leftName) {
       const cur = out.get(leftName) ?? { attackWins: 0, attackRounds: 0, defenseWins: 0, defenseRounds: 0 };
       cur.attackRounds += 1;
@@ -1942,21 +2017,19 @@ function computeEfficiency(
   db?: WarlordMap,
   range?: YearRange
 ): Map<string, { wins: number; sorties: number }> {
-  const normMap = db ? normalizationMap(db) : null;
+  const nameMap = db ? logNameMap(log) : null;
   interface Sortie {
     wins: Set<number>;
     hasRetreat: boolean;
   }
   const sorties = new Map<string, Sortie>();
 
-  for (const { card } of dedupedCards(log)) {
+  for (const { record, card } of dedupedCards(log)) {
     if (!withinYearRange(card, range)) continue;
     const self = side === "left" ? card.left : card.right;
-    let name = self.name?.trim();
-    if (name && normMap && normMap[name]) {
-      name = normMap[name];
-    }
-    if (!name) continue;
+    const rawName = self.name?.trim();
+    if (!rawName) continue;
+    const name = resolveLogName(nameMap, record.term, self.family, rawName);
     const key = `${name}@@${card.battleAt ?? ""}`;
     let s = sorties.get(key);
     if (!s) {
@@ -2095,7 +2168,7 @@ export function antiContactRanking(
   range?: YearRange
 ): AntiContactStat[] {
   const antiIndex = buildAntiIndex(unitTypes);
-  const normMap = db ? normalizationMap(db) : null;
+  const nameMap = db ? logNameMap(log) : null;
   interface Acc {
     name: string;
     faction?: string;
@@ -2105,14 +2178,14 @@ export function antiContactRanking(
   }
   const acc = new Map<string, Acc>();
   const sides: SideKey[] = ["left", "right"];
-  for (const { card } of dedupedCards(log)) {
+  for (const { record, card } of dedupedCards(log)) {
     if (!withinYearRange(card, range)) continue;
     for (const side of sides) {
       const self = side === "left" ? card.left : card.right;
       const opponent = side === "left" ? card.right : card.left;
-      let name = self.name?.trim();
-      if (!name) continue;
-      if (normMap && normMap[name]) name = normMap[name];
+      const rawName = self.name?.trim();
+      if (!rawName) continue;
+      const name = resolveLogName(nameMap, record.term, self.family, rawName);
       let a = acc.get(name);
       if (!a) {
         a = { name, antiContacts: 0, contacts: 0 };

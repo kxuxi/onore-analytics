@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import type { WarlordMap } from "@/lib/types";
 import type { BattleRecord } from "@/lib/types";
-import { lookup, householdAliases } from "@/lib/storage";
+import { lookup } from "@/lib/storage";
 import { displayWarlordType } from "@/lib/warlordType";
 import {
   renderWarlordCardBlob,
@@ -79,10 +79,9 @@ export function WarlordDetail({
   onSelectFaction,
   onBack,
 }: Props) {
-  const aliases = useMemo(() => householdAliases(db, name), [db, name]);
   const outcomes = useMemo(
-    () => collectWarlordBattles(log, name, aliases),
-    [log, name, aliases]
+    () => collectWarlordBattles(log, name),
+    [log, name]
   );
   const summary = useMemo(() => summarize(outcomes), [outcomes]);
   // 使用兵種の割合は戦闘ログと同じ年フィルターを共有する。

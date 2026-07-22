@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { BattleRecord, WarlordMap } from "@/lib/types";
-import { householdAliases, lookup } from "@/lib/storage";
+import { lookup } from "@/lib/storage";
 import { normalizeDisplayToken } from "@/lib/parser";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
 import { getMyWarlord, setMyWarlord } from "@/lib/myWarlord";
@@ -331,13 +331,9 @@ export function HomeTab({
   }, [allNames, query]);
 
   // 自分の武将の戦績（household 別名を統合して集計）。
-  const aliases = useMemo(
-    () => (name ? householdAliases(db, name) : []),
-    [db, name]
-  );
   const outcomes = useMemo(
-    () => (name ? collectWarlordBattles(log, name, aliases) : []),
-    [log, name, aliases]
+    () => (name ? collectWarlordBattles(log, name) : []),
+    [log, name]
   );
   const overall = useMemo(() => summarize(outcomes), [outcomes]);
   // 年別の勝敗数推移。全系列で共通の X 軸（年）に使う。

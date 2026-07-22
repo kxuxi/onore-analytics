@@ -1474,7 +1474,8 @@ describe("年代別の勝率ランキング（yearBucketWinRankings）", () => {
     const { year, leftName, rightName, winner, battleNo } = opts;
     const result = winner === "left" ? `${leftName}の勝利` : `${rightName}の勝利`;
     // 時刻(MM/DD)は重複しても battleNo で別戦闘として扱われる。
-    return `【${battleNo}戦目】 ${year}年4月 06/15 10:00 京都 自国 ${leftName} 某家 武特 騎馬隊 騎兵 槍 鎧 V.S. 敵国 ${rightName} 敵家 統特 騎馬隊 騎兵 馬 旗 ${result} 12`;
+    // 相手（右）は名寄せで統合されないよう、家名を相手ごとに固有にする。
+    return `【${battleNo}戦目】 ${year}年4月 06/15 10:00 京都 自国 ${leftName} 某家 武特 騎馬隊 騎兵 槍 鎧 V.S. 敵国 ${rightName} ${rightName}家 統特 騎馬隊 騎兵 馬 旗 ${result} 12`;
   }
 
   /** 注目武将を左、毎回ユニークな相手を右に置いた n 戦を生成する（相手は閾値未満で除外される）。 */
@@ -1574,11 +1575,11 @@ describe("年代別の勝率ランキング（yearBucketWinRankings）", () => {
     };
     const log: BattleRecord[] = [
       ...battlesFor("古名", 5, 1, 1706, 100),
-      ...battlesFor("新名", 5, 1, 1706, 200),
+      ...battlesFor("新名", 5, 1, 1707, 200),
     ];
     const rankings = yearBucketWinRankings(log, db);
     const b = rankings.find((r) => r.bucket.key === "06-11")!;
-    // 代表名（updatedAt が新しい「新名」）に統合され、決着12・10勝2敗。
+    // 代表名（在ゲーム年月が新しい「新名」）に統合され、決着12・10勝2敗。
     expect(b.entries).toHaveLength(1);
     expect(b.entries[0].name).toBe("新名");
     expect(b.entries[0].decided).toBe(12);
@@ -1687,9 +1688,10 @@ describe("antiContactRanking / buildAntiIndex（指標: アンチ接触）", () 
     oppBranch: string;
     oppName?: string;
     time: string; // "MM/DD HH:mm"
+    year?: number;
   }): string => {
-    const { selfName, selfUnit, oppBranch, oppName = "相手", time } = opts;
-    return `【1戦目】 1700年4月 ${time} 京都 己鯖 ${selfName} 某家 武特 ${selfUnit} 騎兵 槍 鞎 V.S. 敵国 ${oppName} 某家 統特 ミニエー銃兵 ${oppBranch} 馬 旗 撤退 12`;
+    const { selfName, selfUnit, oppBranch, oppName = "相手", time, year = 1700 } = opts;
+    return `【1戦目】 ${year}年4月 ${time} 京都 己鯖 ${selfName} 某家 武特 ${selfUnit} 騎兵 槍 鞎 V.S. 敵国 ${oppName} 敵家 統特 ミニエー銃兵 ${oppBranch} 馬 旗 撤退 12`;
   };
 
   it("buildAntiIndex は兵種→得意兵種の集合を作る（ダブルアンチは複数要素）", () => {
@@ -1753,8 +1755,8 @@ describe("antiContactRanking / buildAntiIndex（指標: アンチ接触）", () 
       新名: { name: "新名", household: "織田家", type: "武特", branch: "騎兵", updatedAt: 2 },
     };
     const log = [
-      rec(antiLine({ selfName: "旧名", selfUnit: "母衣衆", oppBranch: "弓兵", oppName: "A", time: "06/04 10:00" })),
-      rec(antiLine({ selfName: "新名", selfUnit: "母衣衆", oppBranch: "弓兵", oppName: "B", time: "06/04 10:01" })),
+      rec(antiLine({ selfName: "旧名", selfUnit: "母衣衆", oppBranch: "弓兵", oppName: "A", time: "06/04 10:00", year: 1700 })),
+      rec(antiLine({ selfName: "新名", selfUnit: "母衣衆", oppBranch: "弓兵", oppName: "B", time: "06/04 10:01", year: 1701 })),
     ];
     const ranking = antiContactRanking(log, unitTypes, db);
     const merged = ranking.find((r) => r.name === "新名")!;
