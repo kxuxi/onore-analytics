@@ -13,7 +13,7 @@ interface Props {
 }
 
 /** 並べ替えの指標。 */
-type SortKey = "pontaPoint" | "breakthrough" | "breakthroughRate";
+type SortKey = "wpn" | "pontaPoint" | "breakthrough" | "breakthroughRate";
 
 /** ノイズ除去用の最低戦闘数の選択肢。 */
 const MIN_CONTACT_OPTIONS = [1, 5, 10, 20, 30];
@@ -22,16 +22,21 @@ const MIN_CONTACT_OPTIONS = [1, 5, 10, 20, 30];
 const TOP_N = 3;
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "wpn", label: "WPN" },
   { key: "pontaPoint", label: "PontaPoint" },
   { key: "breakthrough", label: "抜き数" },
   { key: "breakthroughRate", label: "抜き率" },
 ];
 
-/** 武将 1 行分の指標（PontaPoint・抜き数・抜き率をまとめたもの）。 */
+/** 武将 1 行分の指標（WPN・PontaPoint・抜き数・抜き率をまとめたもの）。 */
 interface MetricRow {
   name: string;
   faction?: string;
   branch?: string;
+  /** WPN = 勝率 + 抜き率。 */
+  wpn: number;
+  /** 勝率 = (出兵勝 + 守備勝) ÷ 戦闘数（撤退戦を除く）。 */
+  winRate: number;
   /** PontaPoint = (出兵勝 + 1.4×守備勝) ÷ 戦闘数（撤退戦を除く）。 */
   pontaPoint: number;
   /** 出兵側として勝った戦闘数。 */
@@ -50,29 +55,39 @@ interface MetricRow {
 
 /** 指標 metric における行 r のバー用の数値。 */
 function metricValue(r: MetricRow, metric: SortKey): number {
-  return metric === "pontaPoint"
-    ? r.pontaPoint
-    : metric === "breakthrough"
-      ? r.breakthrough
-      : r.breakthroughRate;
+  return metric === "wpn"
+    ? r.wpn
+    : metric === "pontaPoint"
+      ? r.pontaPoint
+      : metric === "breakthrough"
+        ? r.breakthrough
+        : r.breakthroughRate;
 }
 
 /** 指標 metric における行 r の表示用ラベル。 */
 function metricLabel(r: MetricRow, metric: SortKey): string {
-  return metric === "pontaPoint"
-    ? r.battles > 0
-      ? r.pontaPoint.toFixed(3)
+  return metric === "wpn"
+    ? r.battles > 0 || r.sorties > 0
+      ? r.wpn.toFixed(3)
       : "—"
-    : metric === "breakthrough"
-      ? r.breakthrough.toLocaleString("ja-JP")
-      : r.sorties > 0
-        ? r.breakthroughRate.toFixed(3)
-        : "—";
+    : metric === "pontaPoint"
+      ? r.battles > 0
+        ? r.pontaPoint.toFixed(3)
+        : "—"
+      : metric === "breakthrough"
+        ? r.breakthrough.toLocaleString("ja-JP")
+        : r.sorties > 0
+          ? r.breakthroughRate.toFixed(3)
+          : "—";
 }
 
 /** 指標 metric で降順に並べ替えた新しい配列を返す。 */
 function sortByMetric(rows: MetricRow[], metric: SortKey): MetricRow[] {
   return [...rows].sort((a, b) => {
+    if (metric === "wpn") {
+      if (b.wpn !== a.wpn) return b.wpn - a.wpn;
+      return b.battles - a.battles;
+    }
     if (metric === "breakthrough") {
       if (b.breakthrough !== a.breakthrough)
         return b.breakthrough - a.breakthrough;
@@ -132,7 +147,12 @@ function MetricRowItem({
           <span className="swi-bar-fill" style={{ width: `${pct}%` }} />
         </span>
         <div className="swi-meta muted">
-          {metric === "breakthrough" ? (
+          {metric === "wpn" ? (
+            <span className="rank-side-active">
+              勝率 {r.winRate.toFixed(3)} ＋ 抜き率{" "}
+              {r.breakthroughRate.toFixed(3)}
+            </span>
+          ) : metric === "breakthrough" ? (
             <span className="rank-side-active">
               抜き数 {r.breakthrough.toLocaleString("ja-JP")} ／ 出撃{" "}
               {r.sorties.toLocaleString("ja-JP")}
@@ -173,10 +193,14 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
   const ranking = useMemo<MetricRow[]>(() => {
     const byName = new Map<string, MetricRow>();
     for (const p of pontaPointRanking(log, db)) {
+      const winRate =
+        p.battles > 0 ? (p.attackWins + p.defenseWins) / p.battles : 0;
       byName.set(p.name, {
         name: p.name,
         faction: p.faction,
         branch: p.branch,
+        wpn: 0,
+        winRate,
         pontaPoint: p.pontaPoint,
         attackWins: p.attackWins,
         defenseWins: p.defenseWins,
@@ -198,6 +222,8 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
           name: b.name,
           faction: b.faction,
           branch: b.branch,
+          wpn: 0,
+          winRate: 0,
           pontaPoint: 0,
           attackWins: 0,
           defenseWins: 0,
@@ -209,9 +235,10 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
       }
     }
     const rows = Array.from(byName.values());
-    // 抜き率 = 抜き数 ÷ 出兵数（出兵数 0 は 0）。
+    // 抜き率 = 抜き数 ÷ 出兵数（出兵数 0 は 0）。WPN = 勝率 + 抜き率。
     for (const r of rows) {
       r.breakthroughRate = r.sorties > 0 ? r.breakthrough / r.sorties : 0;
+      r.wpn = r.winRate + r.breakthroughRate;
     }
     return rows;
   }, [log, db]);
@@ -297,13 +324,16 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
         <details className="swi-formula metric-detail">
           <summary>指標の詳細</summary>
           <p className="muted">
+            WPN = 勝率 ＋ 抜き率。勝率＝(出兵勝＋守備勝)÷戦闘数（撤退戦を除く）。野球で言えばOPS（出塁率＋長打率）のような総合力の指標。
+          </p>
+          <p className="muted">
             PontaPoint = ジョンさん印の指標。(出兵勝 + 1.4×守備勝) ÷ 戦闘数（撤退戦を除く）。普通の勝率の分子で守備の1勝を1.4勝としてボーナスしたものです。
           </p>
           <p className="muted">
-            抜き数 = 1×(1枚抜き) + 2×(2枚抜き) + … + n×(n枚抜き)。
+            抜き数 = 1×(1枚抜き) + 2×(2枚抜き) + … + n×(n枚抜き)。野球で言えば塁打数。
           </p>
           <p className="muted">
-            抜き率 = 抜き数 ÷ 出兵数（各出兵を１回と数え、２戦目以降は数えません）。
+            抜き率 = 抜き数 ÷ 出兵数（各出兵を１回と数え、２戦目以降は数えません）。野球で言えば長打率。
           </p>
         </details>
       </div>
