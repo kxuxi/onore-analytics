@@ -75,11 +75,23 @@ interface MetricRow {
   breakthroughRate: number;
   /** 出兵数（参考）。 */
   sorties: number;
+  /** 枚抜きの内訳（index=n 枚抜き, value=回数）。抜き数の内訳表示に使う。 */
+  sweepCounts: number[];
 }
 
 /** PontaPoint（(出兵勝+1.4×守備勝)÷戦闘数）をパーセント表示（小数点第2位）に整形する。 */
 function formatPontaPoint(v: number): string {
   return `${(v * 100).toFixed(2)}%`;
+}
+
+/** 枚抜きの内訳を「1枚抜き 5 ／ 2枚抜き 3」の形に整形する（回数0の枚数は省略）。 */
+function formatSweepCounts(sweepCounts: number[]): string {
+  const parts: string[] = [];
+  for (let n = 1; n < sweepCounts.length; n++) {
+    const c = sweepCounts[n] ?? 0;
+    if (c > 0) parts.push(`${n}枚抜き ${c.toLocaleString("ja-JP")}`);
+  }
+  return parts.length > 0 ? parts.join(" ／ ") : "抜きなし";
 }
 
 /** 指標 metric における行 r のバー用の数値。 */
@@ -191,8 +203,7 @@ function MetricRowItem({
             </span>
           ) : metric === "breakthrough" ? (
             <span className="rank-side-active">
-              抜き数 {r.breakthrough.toLocaleString("ja-JP")} ／ 出兵{" "}
-              {r.sorties.toLocaleString("ja-JP")}
+              {formatSweepCounts(r.sweepCounts)}
             </span>
           ) : metric === "breakthroughRate" ? (
             <span className="rank-side-active">
@@ -244,6 +255,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
         breakthrough: 0,
         breakthroughRate: 0,
         sorties: 0,
+        sweepCounts: [],
       });
     }
     for (const b of breakthroughRanking(log, db)) {
@@ -251,6 +263,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
       if (row) {
         row.breakthrough = b.score;
         row.sorties = b.sorties;
+        row.sweepCounts = b.sweepCounts;
         row.faction = row.faction ?? b.faction;
         row.branch = row.branch ?? b.branch;
       } else {
@@ -267,6 +280,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
           breakthrough: b.score,
           breakthroughRate: 0,
           sorties: b.sorties,
+          sweepCounts: b.sweepCounts,
         });
       }
     }
