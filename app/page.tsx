@@ -14,14 +14,13 @@ import { useAuth } from "@/lib/useAuth";
 import { useDataSync } from "@/lib/useDataSync";
 import { useAppNavigation } from "@/lib/useAppNavigation";
 import { useSidebarLayout } from "@/lib/useSidebarLayout";
+import { useTermSelection } from "@/lib/useTermSelection";
+import type { SelectedTerm } from "@/lib/termSelection";
 import { ToastStack } from "@/components/Toasts";
+import { AppHeader } from "@/components/layout/AppHeader";
+import { TermSelector } from "@/components/layout/TermSelector";
 import {
-  ShareIcon,
-  CheckIcon,
-  RefreshIcon,
   ChevronUp,
-  SunIcon,
-  MoonIcon,
   HistoryIcon,
   HomeIcon,
   SearchIcon,
@@ -76,9 +75,6 @@ const NationTab = dynamic(
 const SettingsTab = dynamic(
   () => import("@/components/tabs/SettingsTab").then((m) => m.SettingsTab)
 );
-const SwiTab = dynamic(
-  () => import("@/components/tabs/SwiTab").then((m) => m.SwiTab)
-);
 const RankingTab = dynamic(
   () => import("@/components/tabs/RankingTab").then((m) => m.RankingTab)
 );
@@ -113,7 +109,6 @@ const TAB_ICONS: Record<TabKey, ReactNode> = {
   history: <HistoryIcon />,
   scout: <SearchIcon />,
   damage: <ShieldIcon />,
-  swi: <TrophyIcon />,
   unitrank: <UsersIcon />,
   weaponrank: <SwordIcon />,
   itemrank: <PackageIcon />,
@@ -136,37 +131,16 @@ const GROUP_ICONS: Record<TabGroupKey, ReactNode> = {
   warlords: <UsersIcon />,
   ranking: <TrophyIcon />,
   meta: <GridIcon />,
-  metrics: <TargetIcon />,
   encyclopedia: <BookIcon />,
   nations: <FlagIcon />,
   settings: <SlidersIcon />,
 };
-
-/** 期データがまだ無いときのフォールバック期。 */
-const FALLBACK_TERM = 145;
-
-/** 期番号が属する「10 期台」の下限（例: 146 → 140、133 → 130）。 */
-const decadeOf = (term: number) => Math.floor(term / 10) * 10;
-
-/** サイドバーの「新期」で追加した期番号の保存キー。 */
-const TERM_OPTIONS_STORAGE_KEY = "onore-tool:term-options:v1";
-
-/** 直近に選択した「対象の期」の保存キー。 */
-const TERM_SELECTED_STORAGE_KEY = "onore-tool:selected-term:v1";
 
 /** 年代別ランキングの空値（未計算時に返す安定参照）。 */
 const EMPTY_YEAR_RANKINGS: ReturnType<typeof yearBucketWinRankings> = [];
 
 /** 過去ログ記録モード（ON のとき過去の期にも登録可。管理者のみ）の保存キー。 */
 const PAST_LOG_MODE_STORAGE_KEY = "onore-tool:past-log-mode:v1";
-
-/** 共有DBを最後に取得した時刻を HH:MM 表記にする。 */
-function formatClock(ts: number): string {
-  return new Date(ts).toLocaleTimeString("ja-JP", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 export default function HomePage() {
   // 通知トーストの状態管理
@@ -180,8 +154,7 @@ export default function HomePage() {
   } = useTheme();
   // 認証状態（管理者ログイン）
   const { user, ready: authReady, isAdmin, logout } = useAuth();
-  // 「対象の期」。null = 未確定（期一覧の取得を待って復元 or 最新期に決める）。
-  const [selectedTerm, setSelectedTerm] = useState<number | "all" | null>(null);
+  const [selectedTerm, setSelectedTerm] = useState<SelectedTerm>(null);
   // 共有DB・戦闘履歴・国の色設定の取得・更新（戦闘履歴は selectedTerm の期だけ取得）
   const {
     db,
@@ -200,6 +173,14 @@ export default function HomePage() {
     refresh,
     loadFullLog,
   } = useDataSync(selectedTerm, pushToast);
+  const {
+    latestTerm,
+    termDecades,
+    selectedDecade,
+    termsInSelectedDecade,
+    addManualTerm,
+    selectDecade,
+  } = useTermSelection(terms, selectedTerm, setSelectedTerm);
   // サイドバーの開閉とモバイル判定
   const { sidebarOpen, setSidebarOpen, isMobile, toggleSidebar } =
     useSidebarLayout();
@@ -239,95 +220,12 @@ export default function HomePage() {
 
   const [linkCopied, setLinkCopied] = useState(false);
   const [showTop, setShowTop] = useState(false);
-  const [didAutoSelectLatestTerm, setDidAutoSelectLatestTerm] = useState(false);
-  const [manualTerms, setManualTerms] = useState<number[]>([]);
   const [showNewTermInput, setShowNewTermInput] = useState(false);
   const [newTermValue, setNewTermValue] = useState("");
   // 過去ログ記録モード（ON のとき過去の期にも戦闘履歴を登録できる。管理者のみ）。
   const [pastLogMode, setPastLogMode] = useState(false);
   // ウォッチリスト（お気に入り武将）。localStorage に永続化する。
   const [watchlist, setWatchlist] = useState<string[]>([]);
-
-  // 「新期」で追加した期を復元する（データ未登録でも選択肢に残す）。
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(TERM_OPTIONS_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return;
-      const terms = Array.from(
-        new Set(
-          parsed
-            .map((v) => Number(v))
-            .filter((v) => Number.isInteger(v) && v > 0)
-        )
-      ).sort((a, b) => b - a);
-      setManualTerms(terms);
-    } catch {
-      // 壊れた保存データは無視して既定値で続行する。
-    }
-  }, []);
-
-  // 追加した期の一覧を保存する。
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(TERM_OPTIONS_STORAGE_KEY, JSON.stringify(manualTerms));
-    } catch {
-      // 保存に失敗しても表示は継続する。
-    }
-  }, [manualTerms]);
-
-  // 期セレクタに出す期の一覧（新しい順）。サーバーの期一覧 API（terms）＋手動追加分から作る。
-  const termOptions = useMemo(() => {
-    const set = new Set<number>();
-    for (const t of manualTerms) set.add(t);
-    for (const t of terms) set.add(t);
-    return Array.from(set).sort((a, b) => b - a);
-  }, [terms, manualTerms]);
-
-  // 起動時は「直近に選択した期」を復元し、無ければ期一覧の取得後に最新の期を選ぶ（初回のみ）。
-  const latestTerm = termOptions[0] ?? FALLBACK_TERM;
-  useEffect(() => {
-    if (didAutoSelectLatestTerm) return;
-    // localStorage の復元はデータ取得を待たずに行える。
-    try {
-      const raw = window.localStorage.getItem(TERM_SELECTED_STORAGE_KEY);
-      if (raw === "all") {
-        setSelectedTerm("all");
-        setDidAutoSelectLatestTerm(true);
-        return;
-      }
-      if (raw !== null) {
-        const n = Number(raw);
-        if (Number.isInteger(n) && n > 0) {
-          setSelectedTerm(n);
-          setDidAutoSelectLatestTerm(true);
-          return;
-        }
-      }
-    } catch {
-      // 壊れた保存データは無視して最新の期で続行する。
-    }
-    // 復元がなければ、期一覧が取れてから最新の期を選ぶ。
-    if (termOptions.length > 0) {
-      setSelectedTerm(latestTerm);
-      setDidAutoSelectLatestTerm(true);
-    }
-  }, [didAutoSelectLatestTerm, termOptions.length, latestTerm]);
-
-  // 選択した期を保存し、次回起動時に復元できるようにする。
-  useEffect(() => {
-    if (!didAutoSelectLatestTerm) return;
-    if (selectedTerm == null) return;
-    try {
-      window.localStorage.setItem(
-        TERM_SELECTED_STORAGE_KEY,
-        selectedTerm === "all" ? "all" : String(selectedTerm)
-      );
-    } catch {
-      // 保存に失敗しても選択は継続する。
-    }
-  }, [selectedTerm, didAutoSelectLatestTerm]);
 
   // 過去ログ記録モードを localStorage から復元する（初回のみ）。
   useEffect(() => {
@@ -364,35 +262,10 @@ export default function HomePage() {
     });
   }, []);
 
-  // ドロップダウンに表示する期の一覧。
-  // 選択中の期がデータに存在しない場合（新期入力直後など）でも選択肢に残す。
-  const termOptionsWithSelected = useMemo(() => {
-    if (selectedTerm === "all" || selectedTerm == null || termOptions.includes(selectedTerm))
-      return termOptions;
-    return [selectedTerm, ...termOptions].sort((a, b) => b - a);
-  }, [termOptions, selectedTerm]);
-
-  // 期を「10 期台」（130 期台・140 期台…）でまとめた一覧（新しい順）。
-  const termDecades = useMemo(() => {
-    const set = new Set<number>();
-    for (const t of termOptionsWithSelected) set.add(decadeOf(t));
-    return Array.from(set).sort((a, b) => b - a);
-  }, [termOptionsWithSelected]);
-
-  // 選択中の期が属する 10 期台（全期間選択時・未確定時は null）。
-  const selectedDecade =
-    selectedTerm === "all" || selectedTerm == null ? null : decadeOf(selectedTerm);
-
-  // 選択中の 10 期台に含まれる期（新しい順）。
-  const termsInSelectedDecade = useMemo(() => {
-    if (selectedDecade == null) return [];
-    return termOptionsWithSelected.filter((t) => decadeOf(t) === selectedDecade);
-  }, [termOptionsWithSelected, selectedDecade]);
-
   // 戦闘履歴はサーバー側で選択期に絞り込み済み（selectedTerm の期のみ / all は全期間）。
   const filteredBattleLog = battleLog;
 
-  // 選択中の期に登録された武将のみの武将DBを構築する（db は全件取得so client 側で絞る）。
+  // db は常に全件取得されるため、選択中の期に登録された武将へクライアント側で絞る。
   const filteredDb = useMemo(() => {
     if (selectedTerm === "all") return db;
     if (selectedTerm == null) return {} as WarlordMap;
@@ -508,24 +381,11 @@ export default function HomePage() {
       pushToast("error", "期番号は正の整数で入力してください");
       return;
     }
-    setManualTerms((prev) =>
-      prev.includes(term) ? prev : [...prev, term].sort((a, b) => b - a)
-    );
+    addManualTerm(term);
     setSelectedTerm(term);
     setShowNewTermInput(false);
     setNewTermValue("");
-  }, [isAdmin, newTermValue, pushToast]);
-
-  // 「10 期台」チップを選んだら、その台の最新の期を選択する。
-  const handleSelectDecade = useCallback(
-    (decade: number) => {
-      const inDecade = termOptionsWithSelected.filter(
-        (t) => decadeOf(t) === decade
-      );
-      if (inDecade.length > 0) setSelectedTerm(inDecade[0]);
-    },
-    [termOptionsWithSelected]
-  );
+  }, [addManualTerm, isAdmin, newTermValue, pushToast, setSelectedTerm]);
 
   const handleShareLink = useCallback(async () => {
     const ok = await copyText(window.location.href);
@@ -804,8 +664,6 @@ export default function HomePage() {
             onSelectWarlord={selectWarlordNormalized}
           />
         );
-      case "swi":
-        return <SwiTab log={filteredBattleLog} db={filteredDb} onSelectWarlord={selectWarlordNormalized} />;
       case "unitrank":
         return (
           <RankingTab
@@ -1015,81 +873,19 @@ export default function HomePage() {
       <a href="#main-panel" className="skip-link">
         本文へスキップ
       </a>
-      <header className="header">
-        <div className="header-left">
-          <button
-            type="button"
-            className="hamburger"
-            aria-label={sidebarOpen ? "メニューを閉じる" : "メニューを開く"}
-            aria-expanded={sidebarOpen}
-            onClick={toggleSidebar}
-          >
-            <span />
-            <span />
-            <span />
-          </button>
-          <h1>
-            <button
-              type="button"
-              className="brand-btn"
-              onClick={() => selectTab("home")}
-              title="ホームへ"
-            >
-              ONORE ANALYTICS
-            </button>
-          </h1>
-        </div>
-        <div className="header-actions">
-          {lastFetchedAt != null && (
-            <span
-              className="header-fetched muted"
-              title="共有DBを最後に取得した時刻"
-            >
-              最終取得 {formatClock(lastFetchedAt)}
-            </span>
-          )}
-          <button
-            type="button"
-            className="btn header-theme"
-            onClick={toggleTheme}
-            aria-label={
-              resolvedTheme === "dark"
-                ? "ライトモードに切り替え"
-                : "ダークモードに切り替え"
-            }
-            title={
-              resolvedTheme === "dark"
-                ? "ライトモードに切り替え"
-                : "ダークモードに切り替え"
-            }
-          >
-            {resolvedTheme === "dark" ? <SunIcon /> : <MoonIcon />}
-          </button>
-          <button
-            type="button"
-            className={"btn header-refresh" + (refreshing ? " is-refreshing" : "")}
-            onClick={refresh}
-            disabled={refreshing || !hydrated}
-            aria-label="共有DBを最新に更新"
-            title="共有DBを最新に更新"
-          >
-            <RefreshIcon />
-            <span>{refreshing ? "更新中…" : "更新"}</span>
-          </button>
-          <button
-            type="button"
-            className={"btn header-share" + (linkCopied ? " copied" : "")}
-            onClick={handleShareLink}
-            aria-label={
-              linkCopied ? "リンクをコピーしました" : "このページのリンクをコピー"
-            }
-            title={linkCopied ? "コピーしました" : "リンクをコピー"}
-          >
-            {linkCopied ? <CheckIcon /> : <ShareIcon />}
-            <span>{linkCopied ? "コピー済み" : "共有"}</span>
-          </button>
-        </div>
-      </header>
+      <AppHeader
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={toggleSidebar}
+        onSelectHome={() => selectTab("home")}
+        lastFetchedAt={lastFetchedAt}
+        resolvedTheme={resolvedTheme}
+        onToggleTheme={toggleTheme}
+        refreshing={refreshing}
+        hydrated={hydrated}
+        onRefresh={refresh}
+        linkCopied={linkCopied}
+        onShareLink={handleShareLink}
+      />
 
       <div className="body">
         {isMobile && sidebarOpen && (
@@ -1106,105 +902,25 @@ export default function HomePage() {
           aria-label="メインメニュー"
           aria-hidden={!sidebarOpen}
         >
-          {/* 対象の期セレクター（10 期台 → 期 の 2 段切り替え） */}
-          <div className="sidebar-term">
-            <label className="sidebar-term-label" htmlFor="sidebar-decade-select">
-              対象の期
-            </label>
-            {/* 上段: 期台を選ぶドロップダウン（期台が何百に増えても幅一定・破綻しない）＋新期 */}
-            <div className="sidebar-term-row">
-              <select
-                id="sidebar-decade-select"
-                className="select sidebar-term-select"
-                value={selectedTerm === "all" ? "all" : String(selectedDecade)}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === "all") setSelectedTerm("all");
-                  else handleSelectDecade(Number(v));
-                }}
-              >
-                <option value="all">すべての期</option>
-                {termDecades.map((d) => (
-                  <option key={d} value={String(d)}>
-                    {d}期台
-                  </option>
-                ))}
-              </select>
-              {isAdmin && (
-                <button
-                  type="button"
-                  className={"btn sidebar-term-new-btn" + (showNewTermInput ? " active" : "")}
-                  title="リストにない期番号を入力して切り替える"
-                  onClick={() => {
-                    setShowNewTermInput((v) => !v);
-                    setNewTermValue("");
-                  }}
-                >
-                  新期
-                </button>
-              )}
-            </div>
-            {/* 下段: 選択中の 10 期台に含まれる期 */}
-            {selectedDecade != null && (
-              <div
-                className="sidebar-term-terms"
-                role="group"
-                aria-label={`${selectedDecade}期台の期`}
-              >
-                {termsInSelectedDecade.map((term) => (
-                  <button
-                    key={term}
-                    type="button"
-                    className={
-                      "term-chip term-chip-sm" +
-                      (selectedTerm === term ? " active" : "")
-                    }
-                    aria-pressed={selectedTerm === term}
-                    onClick={() => setSelectedTerm(term)}
-                  >
-                    {term}期
-                    {term === latestTerm && (
-                      <span className="term-chip-latest">今</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-            {showNewTermInput && (
-              <div className="sidebar-new-term" role="group" aria-label="新しい期の追加">
-                <div className="sidebar-new-term-field">
-                  <input
-                    id="sidebar-new-term-input"
-                    type="number"
-                    className="input sidebar-new-term-input"
-                    value={newTermValue}
-                    min={1}
-                    placeholder="例: 146"
-                    aria-label="追加する期番号"
-                    onChange={(e) => setNewTermValue(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") handleNewTermStart(); }}
-                  />
-                  <span className="sidebar-new-term-unit">期</span>
-                </div>
-                <div className="sidebar-new-term-actions">
-                  <button
-                    type="button"
-                    className="btn btn-danger sidebar-new-term-ok"
-                    onClick={handleNewTermStart}
-                  >
-                    追加
-                  </button>
-                  <button
-                    type="button"
-                    className="btn sidebar-new-term-cancel"
-                    onClick={() => setShowNewTermInput(false)}
-                  >
-                    キャンセル
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          <TermSelector
+            selectedTerm={selectedTerm}
+            selectedDecade={selectedDecade}
+            termDecades={termDecades}
+            termsInSelectedDecade={termsInSelectedDecade}
+            latestTerm={latestTerm}
+            isAdmin={isAdmin}
+            showNewTermInput={showNewTermInput}
+            newTermValue={newTermValue}
+            onSelectTerm={setSelectedTerm}
+            onSelectDecade={selectDecade}
+            onToggleNewTermInput={() => {
+              setShowNewTermInput((visible) => !visible);
+              setNewTermValue("");
+            }}
+            onChangeNewTermValue={setNewTermValue}
+            onSubmitNewTerm={handleNewTermStart}
+            onCancelNewTerm={() => setShowNewTermInput(false)}
+          />
 
           <nav
             className="nav"

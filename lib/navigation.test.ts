@@ -16,7 +16,7 @@ describe("buildPath", () => {
   it("入れ子グループのタブはグループ階層を含む", () => {
     expect(buildPath("damage", null)).toBe("/warlords/damage");
     expect(buildPath("units", null)).toBe("/encyclopedia/units");
-    expect(buildPath("swi", null)).toBe("/ranking");
+    expect(buildPath("metrics", null)).toBe("/ranking");
   });
 
   it("詳細ページは単数形スラッグ＋エンコード名を付ける", () => {
@@ -49,7 +49,11 @@ describe("navStateFromPath", () => {
       detailStack: [],
     });
     expect(navStateFromPath("/ranking")).toEqual({
-      tab: "swi",
+      tab: "metrics",
+      detailStack: [],
+    });
+    expect(navStateFromPath("/metrics")).toEqual({
+      tab: "metrics",
       detailStack: [],
     });
   });
@@ -93,6 +97,13 @@ describe("navStateFromSearch（旧クエリ後方互換）", () => {
   it("旧 equips タブは武器図鑑へ寄せる", () => {
     expect(navStateFromSearch("?tab=equips")).toEqual({
       tab: "weapons",
+      detailStack: [],
+    });
+  });
+
+  it("旧 swi タブは統合後の武将ランキングへ寄せる", () => {
+    expect(navStateFromSearch("?tab=swi")).toEqual({
+      tab: "metrics",
       detailStack: [],
     });
   });

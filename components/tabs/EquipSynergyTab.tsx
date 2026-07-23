@@ -24,7 +24,7 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 const MIN_USE_OPTIONS = [5, 10, 30, 50, 100];
 
 /**
- * 装備シナジー。武器（装備2）と品物（装備1）の組み合わせごとに勝率を集計し、
+ * 装備シナジー。武将の持つ武器と武将の持つ品物の組み合わせごとに勝率を集計し、
  * どの組み合わせが強いかを数値化する。両装備が揃っている側のみが母数。
  */
 export function EquipSynergyTab({ log, onSelectWarlord, onSelectEquip }: Props) {

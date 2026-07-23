@@ -320,8 +320,8 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
                 <th>国</th>
                 <th>武将名</th>
                 <th>タイプ</th>
-                <th>兵科</th>
-                <th>兵種</th>
+                <th>兵種タイプ</th>
+                <th>兵種名</th>
                 <th>行動時刻</th>
                 <th>経過</th>
               </tr>
@@ -383,10 +383,10 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
                   <td data-label="タイプ">
                     <span className="tag type">{displayWarlordType(w)}</span>
                   </td>
-                  <td data-label="兵科">
+                  <td data-label="兵種タイプ">
                     <span className="tag branch">{w.branch}</span>
                   </td>
-                  <td data-label="兵種">
+                  <td data-label="兵種名">
                     {w.unit ? (
                       <span className="tag unit">{w.unit}</span>
                     ) : (

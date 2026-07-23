@@ -54,14 +54,13 @@ export const TAB_PATH: Record<TabKey, string[]> = {
   scout: ["warlords", "scout"],
   damage: ["warlords", "damage"],
   db: ["warlords", "db"],
-  swi: ["ranking"],
+  metrics: ["ranking"],
   unitrank: ["ranking", "units"],
   weaponrank: ["ranking", "weapons"],
   itemrank: ["ranking", "items"],
   synergy: ["meta", "synergy"],
   matrix: ["meta"],
   metaenv: ["meta", "env"],
-  metrics: ["metrics"],
   units: ["encyclopedia", "units"],
   weapons: ["encyclopedia", "weapons"],
   items: ["encyclopedia", "items"],
@@ -79,6 +78,8 @@ export const PATH_TO_TAB: Record<string, TabKey> = Object.entries(
   },
   {} as Record<string, TabKey>
 );
+// 旧「武将指標」の /metrics URL も引き続き受け付ける。
+PATH_TO_TAB.metrics = "metrics";
 
 /** 旧クエリ（?w=... 等）のパラメータ名 → 詳細種類（共有リンクの後方互換用）。 */
 export const LEGACY_TAB_PARAM: Record<DetailKind, string> = {
@@ -102,8 +103,8 @@ export function buildPath(tab: TabKey, detail: DetailView | null): string {
 export function navStateFromSearch(search: string): NavState {
   const params = new URLSearchParams(search);
   const t = params.get("tab");
-  // 旧「武器・品物」タブ（equips）の共有リンクは武器図鑑へ寄せる。
-  const tabKey = t === "equips" ? "weapons" : t;
+  // 廃止・統合済みの旧タブも現在の対応画面へ寄せる。
+  const tabKey = t === "equips" ? "weapons" : t === "swi" ? "metrics" : t;
   const tab: TabKey =
     tabKey && ALL_TAB_KEYS.includes(tabKey as TabKey)
       ? (tabKey as TabKey)

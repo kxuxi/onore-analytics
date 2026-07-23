@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent, MutableRefObject } from "react";
 import type { TabKey } from "./types";
-import { TAB_GROUPS, GROUP_OF_TAB, type TabGroup, type TabGroupKey } from "./tabs";
+import {
+  TAB_GROUPS,
+  GROUP_OF_TAB,
+  ALL_TAB_KEYS,
+  type TabGroup,
+  type TabGroupKey,
+} from "./tabs";
 import {
   buildPath,
   navStateFromLocation,
@@ -153,10 +159,16 @@ export function useAppNavigation({
     const onPop = (e: PopStateEvent) => {
       fromPopState.current = true;
       const st = e.state as
-        | { tab?: TabKey; detailStack?: DetailView[] }
+        | { tab?: TabKey | "swi" | "equips"; detailStack?: DetailView[] }
         | null;
       if (st && typeof st.tab === "string") {
-        setTab(st.tab);
+        const restoredTab =
+          st.tab === "swi"
+            ? "metrics"
+            : st.tab === "equips"
+              ? "weapons"
+              : st.tab;
+        setTab(ALL_TAB_KEYS.includes(restoredTab) ? restoredTab : "home");
         setDetailStack(Array.isArray(st.detailStack) ? st.detailStack : []);
       } else {
         // state を持たないエントリ（直リンク初期エントリ等）は URL から復元。

@@ -116,7 +116,7 @@ export async function renderWarlordCardBlob(
   ctx.font = `900 76px ${FONT}`;
   ctx.fillText(truncate(ctx, data.name, CARD_W - 300), 78, 218);
 
-  // タグ（所属国／タイプ／兵科）。
+  // タグ（所属国／タイプ／兵種）。
   const tags = [data.faction, data.type, data.branch].filter(
     (t): t is string => !!t
   );

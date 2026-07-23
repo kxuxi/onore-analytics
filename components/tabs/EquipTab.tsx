@@ -6,7 +6,7 @@ import { weaponStats, itemStats, formatWinRate } from "@/lib/stats";
 import { FilterIcon, CloseIcon } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
 
-/** 集計する装備枠。weapon=装備1 / item=装備2。 */
+/** 集計する装備枠。weapon=武将の持つ武器 / item=武将の持つ品物。 */
 export type EquipVariant = "weapon" | "item";
 
 interface Props {
@@ -35,25 +35,25 @@ const VARIANT_COPY: Record<
   weapon: {
     title: "武器図鑑",
     noun: "武器",
-    slotLabel: "武器（装備2）",
+    slotLabel: "武将の持つ武器",
     kindLabel: "武器の種類",
     description:
-      "戦闘履歴の装備2（武器）を集計し、使用回数・勝率・主な使用武将を表示します。勝率は勝敗が確定した戦闘のみで算出します。",
+      "戦闘履歴の武将の持つ武器を集計し、使用回数・勝率・主な使用武将を表示します。勝率は勝敗が確定した戦闘のみで算出します。",
     searchPlaceholder: "武器名で絞り込み",
     emptyHint:
-      "「戦闘履歴」タブで戦績を登録すると、装備2（武器）のデータから図鑑を作成します。すでに登録済みの場合は、検索語や最低使用回数の条件を見直してください。",
+      "「戦闘履歴」タブで戦績を登録すると、武将の持つ武器のデータから図鑑を作成します。すでに登録済みの場合は、検索語や最低使用回数の条件を見直してください。",
     stats: weaponStats,
   },
   item: {
     title: "品物図鑑",
     noun: "品物",
-    slotLabel: "品物（装備1）",
+    slotLabel: "武将の持つ品物",
     kindLabel: "品物の種類",
     description:
-      "戦闘履歴の装備1（品物）を集計し、使用回数・勝率・主な使用武将を表示します。勝率は勝敗が確定した戦闘のみで算出します。",
+      "戦闘履歴の武将の持つ品物を集計し、使用回数・勝率・主な使用武将を表示します。勝率は勝敗が確定した戦闘のみで算出します。",
     searchPlaceholder: "品物名で絞り込み",
     emptyHint:
-      "「戦闘履歴」タブで戦績を登録すると、装備1（品物）のデータから図鑑を作成します。すでに登録済みの場合は、検索語や最低使用回数の条件を見直してください。",
+      "「戦闘履歴」タブで戦績を登録すると、武将の持つ品物のデータから図鑑を作成します。すでに登録済みの場合は、検索語や最低使用回数の条件を見直してください。",
     stats: itemStats,
   },
 };

@@ -121,12 +121,12 @@ export function MatchupRanking({
   );
 }
 
-/* ---------- 兵科別の勝率 ---------- */
+/* ---------- 兵種別の勝率 ---------- */
 
 export function BranchWinRates({ branches }: { branches: BranchStat[] }) {
   if (branches.length === 0) return null;
   return (
-    <Section title="兵科別の勝率" mobileCollapsed>
+    <Section title="兵種別の勝率" mobileCollapsed>
       <ul className="branch-list">
         {branches.map((b) => {
           return (

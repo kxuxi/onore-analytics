@@ -37,6 +37,11 @@ import { SearchBox } from "@/components/SearchBox";
 import { BATTLE_LOG_PAGE_SIZE as PAGE_SIZE } from "@/lib/stats";
 import { useAntiIndex } from "@/lib/useAntiIndex";
 import { AntiArrows } from "@/components/AntiArrows";
+import {
+  buildBattleSearchText,
+  formatGameMonthOrder,
+  parseGameMonthOrder,
+} from "@/lib/historyFilters";
 
 interface Props {
   canRegister: boolean;
@@ -57,7 +62,7 @@ interface Props {
   onBulkDelete: (ids: number[]) => Promise<void>;
 }
 
-/** 片側の装備・兵種タグを組み立てる（兵種 → 兵科 → 装備）。
+/** 片側の装備・兵種タグを組み立てる（兵種 → 兵種 → 装備）。
  * `unit: true` のタグ（兵種名）は兵種ページへ遷移できる。 */
 function sideTags(
   side: BattleSide
@@ -85,39 +90,6 @@ function sideTags(
   return tags;
 }
 
-/** カードの検索対象テキスト（生テキスト＋表示用に正規化した語）。小文字化済み。 */
-function cardSearchText(
-  record: BattleRecord,
-  card: BattleCard | null
-): string {
-  const parts: string[] = [record.line];
-  if (card) {
-    for (const side of [card.left, card.right]) {
-      if (side.name) parts.push(side.name);
-      if (side.faction) parts.push(side.faction);
-      if (side.branch) parts.push(side.branch);
-      if (side.unit) parts.push(normalizeDisplayToken(side.unit));
-      for (const e of side.equips) parts.push(normalizeDisplayToken(e));
-    }
-  }
-  return parts.join(" ").toLowerCase();
-}
-
-/** 戦闘時刻からゲーム内年月の順序値（year*12+month）を返す。取得できなければ null。 */
-function gameMonthOrder(time: string | undefined): number | null {
-  if (!time) return null;
-  const m = time.match(/(\d+)\s*年\s*(\d+)\s*月/);
-  if (!m) return null;
-  return Number(m[1]) * 12 + Number(m[2]);
-}
-
-/** ゲーム内年月の順序値を "1684年3月" 形式のラベルに変換する。 */
-function gameMonthLabel(order: number): string {
-  const month = ((order - 1) % 12) + 1;
-  const year = Math.floor((order - 1) / 12);
-  return `${year}年${month}月`;
-}
-
 const PLACEHOLDER = `戦闘履歴をここに貼り付けてください。（スマホからのコピー＆ペーストにも対応しています）`;
 
 export function HistoryTab({
@@ -133,7 +105,7 @@ export function HistoryTab({
 }: Props) {
   const [text, setText] = useState("");
   const [keyword, setKeyword] = useState("");
-  // 兵種アンチの得意兵科索引（兵種名の横の矢印表示に使う）。
+  // 兵種アンチの得意兵種索引（兵種名の横の矢印表示に使う）。
   const antiIndex = useAntiIndex();
   const [factionFilter, setFactionFilter] = useState("");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
@@ -186,7 +158,7 @@ export function HistoryTab({
           kind: "warn",
           message:
             r.rejected > 0
-              ? `項目の過不足が見つかりました。該当の戦闘は登録していません（${r.rejected}件）。出兵側・守備側はそれぞれ8項目（勢力名・武将名・家名・タイプ・兵種・兵科・装備1・装備2）かをご確認ください。`
+              ? `項目の過不足が見つかりました。該当の戦闘は登録していません（${r.rejected}件）。出兵側・守備側はそれぞれ8項目（勢力名・武将名・家名・タイプ・兵種名・兵種タイプ・武将の持つ品物・武将の持つ武器）かをご確認ください。`
               : "解析できる行が見つかりませんでした。タブ区切り・半角スペース区切りのどちらでも登録できます。",
         });
         return;
@@ -254,7 +226,7 @@ export function HistoryTab({
       if (key && seen.has(key)) continue;
       if (key) seen.add(key);
       const card = parseBattleCard(record.line);
-      out.push({ record, card, search: cardSearchText(record, card) });
+      out.push({ record, card, search: buildBattleSearchText(record, card) });
     }
     return out;
   }, [log]);
@@ -273,9 +245,9 @@ export function HistoryTab({
   const yearMonthOptions = useMemo(() => {
     const map = new Map<number, string>();
     for (const { record } of cards) {
-      const order = gameMonthOrder(record.time);
+      const order = parseGameMonthOrder(record.time);
       if (order != null && !map.has(order)) {
-        map.set(order, gameMonthLabel(order));
+        map.set(order, formatGameMonthOrder(order));
       }
     }
     return Array.from(map.entries())
@@ -306,7 +278,7 @@ export function HistoryTab({
       }
       // ゲーム内年月で絞り込み。
       if (ymLo != null || ymHi != null) {
-        const order = gameMonthOrder(record.time);
+        const order = parseGameMonthOrder(record.time);
         if (order == null) return false;
         if (ymLo != null && order < ymLo) return false;
         if (ymHi != null && order > ymHi) return false;

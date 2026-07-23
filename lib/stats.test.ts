@@ -44,13 +44,14 @@ import {
   antiContactRanking,
   buildAntiIndex,
   unitCountersBranch,
+  assetMetricRanking,
 } from "./stats";
 import type { BattleRecord, UnitType, WarlordMap } from "./types";
 import { EMPTY_UNIT } from "./unitTypeForm";
 
 /**
  * テスト用の戦闘行を組み立てる。
- * 注目武将を「織田 信長（兵科指定可）」とし、相手・勝敗・日時を差し替える。
+ * 注目武将を「織田 信長（兵種指定可）」とし、相手・勝敗・日時を差し替える。
  */
 function makeLine(opts: {
   year: number;
@@ -187,7 +188,7 @@ describe("opponentStats / matchupRanking / rivalry", () => {
 });
 
 describe("branchStats", () => {
-  it("兵科ごとに勝率を出し戦闘数の多い順に並べる", () => {
+  it("兵種ごとに勝率を出し戦闘数の多い順に並べる", () => {
     const log: BattleRecord[] = [
       rec(
         makeLine({
@@ -381,7 +382,7 @@ describe("collectFactionBattles", () => {
 });
 
 describe("factionMemberStats", () => {
-  // 武将名・兵種・兵科・所属国・勝敗を制御できる戦闘行ビルダー。
+  // 武将名・兵種名・兵種タイプ・所属国・勝敗を制御できる戦闘行ビルダー。
   // 並び順は savedAt（大きいほど新しい）で決まるよう、時刻は固定にする。
   const line = (opts: {
     self: string;
@@ -438,14 +439,14 @@ describe("factionMemberStats", () => {
 });
 
 describe("latestUnitsByBranch", () => {
-  it("兵科ごとに最新使用兵種を集計し、その他は末尾に置く", () => {
+  it("兵種ごとに最新使用兵種を集計し、その他は末尾に置く", () => {
     const groups = latestUnitsByBranch([
       { latestBranch: "弓兵", latestUnit: "ロングボウ" },
       { latestBranch: "弓兵", latestUnit: "ロングボウ" },
       { latestBranch: "弓兵", latestUnit: "剛弓" },
       { latestBranch: "騎兵", latestUnit: "南蛮象" },
       { latestBranch: "万能", latestUnit: "梓巫女" },
-      { latestUnit: "ぬりかべ" }, // 兵科不明 → その他
+      { latestUnit: "ぬりかべ" }, // 兵種不明 → その他
       { latestBranch: "弓兵" }, // 兵種なし → 無視
     ]);
     expect(groups[0].branch).toBe("弓兵"); // 人数最多（3）
@@ -633,7 +634,7 @@ describe("unitMatchupRanking / userWinRates", () => {
     expect(mitsuhide.winRate).toBeCloseTo(1);
   });
 
-  it("兵科ラベルは最多出現の兵科を返す", () => {
+  it("兵種ラベルは最多出現の兵種を返す", () => {
     expect(unitBranchLabel(outcomes)).toBe("騎兵");
   });
 });
@@ -944,7 +945,7 @@ describe("アシスト（warlordRanking）", () => {
 });
 
 describe("weaponStats / itemStats", () => {
-  // 防衛側 勝頼: 装備1=金の兜(品物) 装備2=カルバリン砲(武器)。
+  // 防衛側 勝頼: 武将の持つ品物=金の兜(品物) 武将の持つ武器=カルバリン砲(武器)。
   function equipLine(time: string, result: string): string {
     return `【1戦目】 1600年4月 ${time} 京都 織田 信長 織田家 武特 騎馬隊 騎兵 金の腕輪 鬼丸 V.S. 武田 勝頼 武田家 統特 騎馬隊 騎兵 金の兜 カルバリン砲 ${result} 12`;
   }
@@ -953,7 +954,7 @@ describe("weaponStats / itemStats", () => {
     rec(equipLine("04/11 11:00", "信長の勝利"), 2),
   ];
 
-  it("武器は装備2列を集計し、品物（装備1列）は含まない", () => {
+  it("武器は武将の持つ武器列を集計し、品物（武将の持つ品物列）は含まない", () => {
     const names = weaponStats(log).map((w) => w.name);
     expect(names).toContain("鬼丸");
     expect(names).toContain("カルバリン砲");
@@ -971,7 +972,7 @@ describe("weaponStats / itemStats", () => {
     expect(oni.topUsers[0]).toEqual({ name: "信長", count: 2 });
   });
 
-  it("品物は装備1列を集計し、武器（装備2列）は含まない", () => {
+  it("品物は武将の持つ品物列を集計し、武器（武将の持つ武器列）は含まない", () => {
     const names = itemStats(log).map((i) => i.name);
     expect(names).toContain("金の腕輪");
     expect(names).toContain("金の兜");
@@ -1016,7 +1017,7 @@ describe("unitStats", () => {
     rec(line({ result: "勝頼の勝利", time: "04/12 12:00" }), 3),
   ];
 
-  it("兵種ごとに使用回数・勝率・代表兵科・主な使用武将を集計する", () => {
+  it("兵種ごとに使用回数・勝率・代表兵種・主な使用武将を集計する", () => {
     const stats = unitStats(log);
     const kiba = stats.find((s) => s.unit === "騎馬隊")!;
     // 騎馬隊は左(信長)で 3 回出兵: 2勝1敗。
@@ -1215,7 +1216,7 @@ describe("metaTier", () => {
 });
 
 describe("metaOverview", () => {
-  // 8 トークン/側: 国 名前 家 タイプ 兵種 兵科 装備1 装備2
+  // 8 トークン/側: 国 名前 家 タイプ 兵種 兵種 武将の持つ品物 武将の持つ武器
   function metaLine(o: {
     leftUnit: string;
     leftBranch: string;
@@ -1653,20 +1654,20 @@ describe("ランキングの年フィルタ（range）と rankingPeriods", () =>
     expect(latestGameYear([])).toBeNull();
   });
 
-  it("rankingPeriods は先頭が過去10年間（最新年から遡って十年）で、以降はメタ分析の年バケット", () => {
+  it("rankingPeriods は全期間、過去10年間、年バケットの順に並ぶ", () => {
     const periods = rankingPeriods(log);
-    expect(periods[0]).toMatchObject({
+    expect(periods[0]).toEqual(META_PERIODS.at(-1));
+    expect(periods[1]).toMatchObject({
       key: RANKING_LAST10_KEY,
       label: "過去10年間",
       from: 1691, // 1700 - 9
       to: 1700,
     });
-    // 2 番目以降は META_PERIODS をそのまま並べる。
-    expect(periods.slice(1)).toEqual(META_PERIODS);
+    expect(periods.slice(2)).toEqual(META_PERIODS.slice(0, -1));
   });
 
   it("rankingPeriods はデータが無ければ過去10年間を全期間扱いにする", () => {
-    expect(rankingPeriods([])[0]).toMatchObject({
+    expect(rankingPeriods([])[1]).toMatchObject({
       key: RANKING_LAST10_KEY,
       from: null,
       to: null,
@@ -1681,7 +1682,7 @@ describe("antiContactRanking / buildAntiIndex（指標: アンチ接触）", () 
     { ...EMPTY_UNIT, name: "雑兵", category: "万能", goodAgainst: "" },
   ];
 
-  // 自分の兵種と相手の兵科を差し替えられる行ビルダー（左=自分、右=相手）。
+  // 自分の兵種と相手の兵種を差し替えられる行ビルダー（左=自分、右=相手）。
   const antiLine = (opts: {
     selfName: string;
     selfUnit: string;
@@ -1701,14 +1702,14 @@ describe("antiContactRanking / buildAntiIndex（指標: アンチ接触）", () 
     expect(idx.get("雑兵")).toEqual(new Set());
   });
 
-  it("unitCountersBranch は兵種→相手兵科のアンチ成立を判定する", () => {
+  it("unitCountersBranch は兵種→相手兵種のアンチ成立を判定する", () => {
     const idx = buildAntiIndex(unitTypes);
     expect(unitCountersBranch("母衣衆", "弓兵", idx)).toBe(true);
     expect(unitCountersBranch("母衣衆", "歩兵", idx)).toBe(false);
     // ダブルアンチはいずれかに一致で成立。
     expect(unitCountersBranch("南蛮象騎兵", "壁", idx)).toBe(true);
     expect(unitCountersBranch("南蛮象騎兵", "弓兵", idx)).toBe(true);
-    // マスタに無い兵種・空の兵科は false。
+    // マスタに無い兵種・空の兵種は false。
     expect(unitCountersBranch("架空兵", "弓兵", idx)).toBe(false);
     expect(unitCountersBranch("母衣衆", undefined, idx)).toBe(false);
     expect(unitCountersBranch(undefined, "弓兵", idx)).toBe(false);
@@ -1716,7 +1717,7 @@ describe("antiContactRanking / buildAntiIndex（指標: アンチ接触）", () 
     expect(unitCountersBranch("*俺の兵(母衣衆)", "弓兵", idx)).toBe(true);
   });
 
-  it("自分の兵種の得意兵科に相手の兵科が含まれる戦闘をアンチとして数える", () => {
+  it("自分の兵種の得意兵種に相手の兵種が含まれる戦闘をアンチとして数える", () => {
     const log = [
       rec(antiLine({ selfName: "信長", selfUnit: "母衣衆", oppBranch: "弓兵", oppName: "A", time: "06/01 10:00" })),
       rec(antiLine({ selfName: "信長", selfUnit: "母衣衆", oppBranch: "歩兵", oppName: "B", time: "06/01 10:01" })),
@@ -1741,7 +1742,7 @@ describe("antiContactRanking / buildAntiIndex（指標: アンチ接触）", () 
   });
 
   it("守備側（右）でもアンチ戦闘を数える", () => {
-    // 右側の武将「守」が母衣衆で、左（相手）の兵科が弓兵ならアンチ。
+    // 右側の武将「守」が母衣衆で、左（相手）の兵種が弓兵ならアンチ。
     const line =
       "【1戦目】 1700年4月 06/03 10:00 京都 敵国 攻 某家 統特 ミニエー銃兵 弓兵 馬 旗 V.S. 己鯖 守 某家 武特 母衣衆 騎兵 槍 鞎 撤退 12";
     const r = antiContactRanking([rec(line)], unitTypes).find((x) => x.name === "守")!;
@@ -1808,5 +1809,113 @@ describe("pontaPointRanking（PontaPoint）", () => {
   });
 });
 
+describe("assetMetricRanking（兵種・武器・品物の指標）", () => {
+  const log: BattleRecord[] = [
+    // 同一出兵で2枚抜き。左: 騎馬隊 / 武器=鎧 / 品物=槍。
+    rec(
+      swiLine({
+        attacker: "甲",
+        battleNo: 1,
+        time: "06/01 10:00",
+        win: true,
+        defender: "敵A",
+      }),
+      1
+    ),
+    rec(
+      swiLine({
+        attacker: "甲",
+        battleNo: 2,
+        time: "06/01 10:00",
+        win: true,
+        defender: "敵B",
+      }),
+      2
+    ),
+    // 別出兵は1戦目で負けるため0枚抜き。
+    rec(
+      swiLine({
+        attacker: "甲",
+        battleNo: 1,
+        time: "06/01 11:00",
+        win: false,
+        defender: "敵C",
+      }),
+      3
+    ),
+  ];
 
+  it.each([
+    ["weapon", "鎧"],
+    ["item", "槍"],
+  ] as const)("%s ごとに同じ定義の総合指標を返す", (variant, name) => {
+    const metric = assetMetricRanking(log, variant).find(
+      (row) => row.name === name
+    )!;
+    expect(metric.uses).toBe(3);
+    expect(metric.attackWins).toBe(2);
+    expect(metric.defenseWins).toBe(0);
+    expect(metric.battles).toBe(3);
+    expect(metric.winRate).toBeCloseTo(2 / 3);
+    expect(metric.pontaPoint).toBeCloseTo(2 / 3);
+    expect(metric.sorties).toBe(2);
+    expect(metric.breakthrough).toBe(2);
+    expect(metric.breakthroughRate).toBe(1);
+    expect(metric.ppn).toBeCloseTo(5 / 3);
+    expect(metric.sweepCounts[2]).toBe(1);
+    expect(metric.sweepCounts[0]).toBe(1);
+    expect(metric.topUsers[0]).toEqual({ name: "甲", count: 3 });
+  });
 
+  it("兵種は攻守の使用を合算し、守備勝ちを1.4勝として評価する", () => {
+    const unit = assetMetricRanking(log, "unit").find(
+      (row) => row.name === "騎馬隊"
+    )!;
+    // 左右が同じ兵種なので、右側の1守備勝ちも同じ兵種へ合算される。
+    expect(unit.uses).toBe(6);
+    expect(unit.attackWins).toBe(2);
+    expect(unit.defenseWins).toBe(1);
+    expect(unit.battles).toBe(6);
+    expect(unit.winRate).toBeCloseTo(0.5);
+    expect(unit.pontaPoint).toBeCloseTo((2 + 1.4) / 6);
+    expect(unit.breakthrough).toBe(2);
+    expect(unit.breakthroughRate).toBe(1);
+  });
+
+  it("ランキングと同じゲーム内年フィルターを適用する", () => {
+    expect(
+      assetMetricRanking(log, "weapon", { from: 1700, to: 1709 })
+    ).toEqual([]);
+  });
+
+  it("従来ランキングの使用回数と勝率を維持する", () => {
+    const legacyByVariant = {
+      unit: unitStats(log).map((row) => ({
+        name: row.unit,
+        uses: row.battles,
+        winRate: row.winRate,
+      })),
+      weapon: weaponStats(log).map((row) => ({
+        name: row.name,
+        uses: row.battles,
+        winRate: row.winRate,
+      })),
+      item: itemStats(log).map((row) => ({
+        name: row.name,
+        uses: row.battles,
+        winRate: row.winRate,
+      })),
+    };
+
+    for (const variant of ["unit", "weapon", "item"] as const) {
+      const metrics = new Map(
+        assetMetricRanking(log, variant).map((row) => [row.name, row])
+      );
+      for (const legacy of legacyByVariant[variant]) {
+        const metric = metrics.get(legacy.name)!;
+        expect(metric.uses).toBe(legacy.uses);
+        expect(metric.winRate).toBeCloseTo(legacy.winRate);
+      }
+    }
+  });
+});

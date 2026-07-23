@@ -28,7 +28,7 @@ export function mergeWarlords(
       w.lastActionAt
     );
 
-    // 属性（国・タイプ・兵科・兵種・装備）は「より新しい戦闘」の方を採用する。
+    // 属性（国・タイプ・兵種タイプ・兵種名・装備）は「より新しい戦闘」の方を採用する。
     // 新旧は 期 → 在ゲーム年月 → 実時刻 の順で判定し（isNewerBattle 参照）、
     // 出兵・守備のどちらで観測したかは問わず、最新の戦闘で見えたプロフィールを反映する。
     const base = isNewerBattle(w, prev, now) ? w : prev ?? w;

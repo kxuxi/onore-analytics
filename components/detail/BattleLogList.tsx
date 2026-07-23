@@ -143,7 +143,7 @@ export function BattleLogList({
   const yf = yearFilter ?? ownYearFilter;
   const showOwnFilterBar = !yearFilter;
   const filtered = yf.filtered;
-  // 兵科アンチ（じゃんけん）の得意兵科索引。兵種名の横の矢印に使う。
+  // 兵種アンチ（じゃんけん）の得意兵種索引。兵種名の横の矢印に使う。
   const antiIndex = useAntiIndex();
 
   const [page, setPage] = useState(1);

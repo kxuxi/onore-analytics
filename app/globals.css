@@ -12,7 +12,7 @@
   --success: #4caf50;
   --warning: #f0b429;
 
-  /* ラベル系（タイプ/兵科/兵種/国/警告）の配色。1か所で定義してテーマで自動切替する。
+  /* ラベル系（タイプ/兵種/兵種/国/警告）の配色。1か所で定義してテーマで自動切替する。
      .tag.* / .status.* / 各詳細ページのピル類はすべてこの変数を参照する。 */
   --label-type-fg: #ffd479;
   --label-type-bg: #2a2418;
@@ -3463,7 +3463,7 @@ button.tag.faction-link:focus-visible {
   }
 }
 
-/* 兵科別の勝率 */
+/* 兵種別の勝率 */
 .branch-list {
   list-style: none;
   margin: 0;
@@ -3855,16 +3855,6 @@ button.tag.faction-link:focus-visible {
   min-width: 0;
   text-align: left;
 }
-.rank-name > span.rank-branch {
-  flex: 0 0 auto;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--muted);
-  background: var(--panel-2);
-  border: 0.5px solid var(--border);
-  border-radius: 6px;
-  padding: 1px 6px;
-}
 .rank-value {
   flex: 0 0 auto;
   font-weight: 800;
@@ -3966,6 +3956,28 @@ button.tag.faction-link:focus-visible {
   margin: 6px 0 4px;
   font-size: 12px;
 }
+.ranking-panel > h2 {
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+.ranking-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 24px;
+  margin-top: 24px;
+}
+.ranking-metric-grid .metric-section {
+  min-width: 0;
+  margin-top: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel-2) 64%, var(--panel));
+}
 .metric-section {
   margin-top: 24px;
 }
@@ -3979,10 +3991,29 @@ button.tag.faction-link:focus-visible {
 }
 .metric-section-head h3 {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
+  color: var(--text);
 }
 .metric-section .swi-list {
   margin-top: 12px;
+}
+.ranking-metric-grid .swi-list {
+  gap: 0;
+}
+.ranking-metric-grid .swi-row {
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+  padding: 11px 0;
+  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+.ranking-metric-grid .swi-row:first-child {
+  border-top: 0;
+}
+.ranking-metric-grid .swi-rank {
+  font-size: 15px;
+}
+.ranking-metric-grid .swi-value {
+  white-space: nowrap;
 }
 .metric-section-empty {
   margin: 12px 0 0;
@@ -3992,6 +4023,24 @@ button.tag.faction-link:focus-visible {
   margin: 6px 0 0;
   font-size: 12px;
   line-height: 1.6;
+}
+.metric-description {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.metric-description > summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 600;
+}
+.metric-description > summary:hover {
+  color: var(--text);
+}
+.metric-description > p {
+  margin: 8px 0 0;
+  line-height: 1.65;
 }
 .metric-crumb {
   display: flex;
@@ -4006,6 +4055,17 @@ button.tag.faction-link:focus-visible {
 }
 .metric-crumb-current {
   font-weight: 700;
+}
+
+@media (max-width: 767px) {
+  .ranking-metric-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .ranking-metric-grid .metric-section {
+    padding: 13px;
+  }
 }
 
 /* 武器・品物図鑑 */
@@ -5434,5 +5494,3 @@ button.tag.faction-link:focus-visible {
     font-size: 22px;
   }
 }
-
-

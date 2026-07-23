@@ -4,51 +4,25 @@ import { makeErrorResponse } from "@/lib/apiError";
 import { requireAdmin } from "@/lib/authGuard";
 import { mergeWarlords } from "@/lib/storage";
 import { battleKey } from "@/lib/parser";
+import { isObject, readJsonBody } from "@/lib/apiRequest";
+import {
+  warlordCoreRowToDto,
+  type WarlordCoreRow,
+} from "@/lib/warlordDto";
 import type { BattleRecord, Warlord, WarlordMap } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-type WarlordRow = {
-  name: string;
+type WarlordRow = WarlordCoreRow & {
   household: string | null;
-  faction: string | null;
-  type: string;
-  branch: string;
-  unit: string | null;
-  battleAt: string | null;
-  lastActionAt: string | null;
-  actions: string[];
   term: number;
-  updatedAt: bigint;
-  power: number | null;
-  intelligence: number | null;
-  leadership: number | null;
-  politics: number | null;
-  strategy: number | null;
-  selfPr: string | null;
-  statsRaw: string | null;
 };
 
 function rowToWarlord(r: WarlordRow): Warlord {
   return {
-    name: r.name,
+    ...warlordCoreRowToDto(r),
     household: r.household ?? undefined,
-    faction: r.faction ?? undefined,
-    type: r.type,
-    branch: r.branch,
-    unit: r.unit ?? undefined,
-    battleAt: r.battleAt ?? undefined,
-    lastActionAt: r.lastActionAt ?? undefined,
-    actions: r.actions.length > 0 ? r.actions : undefined,
     term: r.term,
-    updatedAt: Number(r.updatedAt),
-    power: r.power ?? undefined,
-    intelligence: r.intelligence ?? undefined,
-    leadership: r.leadership ?? undefined,
-    politics: r.politics ?? undefined,
-    strategy: r.strategy ?? undefined,
-    selfPr: r.selfPr ?? undefined,
-    statsRaw: r.statsRaw ?? undefined,
   };
 }
 
@@ -101,10 +75,6 @@ const errorResponse = makeErrorResponse("api/state");
 
 function badRequest(message: string) {
   return NextResponse.json({ error: message }, { status: 400 });
-}
-
-function isObject(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
 }
 
 /**
@@ -165,13 +135,11 @@ export async function POST(req: Request) {
   try {
     const denied = requireAdmin();
     if (denied) return denied;
-    let raw: unknown;
-    try {
-      raw = await req.json();
-    } catch {
+    const bodyResult = await readJsonBody(req);
+    if (!bodyResult.ok) {
       return badRequest("リクエストボディが不正な JSON です");
     }
-    const parsed = parseStateBody(raw);
+    const parsed = parseStateBody(bodyResult.value);
     if ("error" in parsed) return badRequest(parsed.error);
     const { warlords, records } = parsed;
 

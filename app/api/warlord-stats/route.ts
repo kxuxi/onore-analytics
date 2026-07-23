@@ -2,48 +2,19 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { makeErrorResponse } from "@/lib/apiError";
 import { requireAdmin } from "@/lib/authGuard";
+import { isObject, readJsonBody } from "@/lib/apiRequest";
+import {
+  warlordCoreRowToDto,
+  type WarlordCoreRow,
+} from "@/lib/warlordDto";
 import type { Warlord, WarlordMap } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-type WarlordRow = {
-  name: string;
-  faction: string | null;
-  type: string;
-  branch: string;
-  unit: string | null;
-  battleAt: string | null;
-  lastActionAt: string | null;
-  actions: string[];
-  updatedAt: bigint;
-  power: number | null;
-  intelligence: number | null;
-  leadership: number | null;
-  politics: number | null;
-  strategy: number | null;
-  selfPr: string | null;
-  statsRaw: string | null;
-};
+type WarlordRow = WarlordCoreRow;
 
 function rowToWarlord(r: WarlordRow): Warlord {
-  return {
-    name: r.name,
-    faction: r.faction ?? undefined,
-    type: r.type,
-    branch: r.branch,
-    unit: r.unit ?? undefined,
-    battleAt: r.battleAt ?? undefined,
-    lastActionAt: r.lastActionAt ?? undefined,
-    actions: r.actions.length > 0 ? r.actions : undefined,
-    updatedAt: Number(r.updatedAt),
-    power: r.power ?? undefined,
-    intelligence: r.intelligence ?? undefined,
-    leadership: r.leadership ?? undefined,
-    politics: r.politics ?? undefined,
-    strategy: r.strategy ?? undefined,
-    selfPr: r.selfPr ?? undefined,
-    statsRaw: r.statsRaw ?? undefined,
-  };
+  return warlordCoreRowToDto(r);
 }
 
 async function loadMap(): Promise<WarlordMap> {
@@ -57,10 +28,6 @@ const errorResponse = makeErrorResponse("api/warlord-stats");
 
 function badRequest(message: string) {
   return NextResponse.json({ error: message }, { status: 400 });
-}
-
-function isObject(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
 }
 
 interface StatInput {
@@ -102,13 +69,11 @@ export async function POST(req: Request) {
   try {
     const denied = requireAdmin();
     if (denied) return denied;
-    let raw: unknown;
-    try {
-      raw = await req.json();
-    } catch {
+    const bodyResult = await readJsonBody(req);
+    if (!bodyResult.ok) {
       return badRequest("リクエストボディが不正な JSON です");
     }
-    const parsed = parseBody(raw);
+    const parsed = parseBody(bodyResult.value);
     if ("error" in parsed) return badRequest(parsed.error);
     const { stats } = parsed;
 
@@ -138,7 +103,7 @@ export async function POST(req: Request) {
           else created++;
           return prisma.warlord.upsert({
             where: { name: s.name },
-            // 既存武将は能力値・自己PRのみ更新（国・兵科など戦闘由来の情報は保持）。
+            // 既存武将は能力値・自己PRのみ更新（国・兵種など戦闘由来の情報は保持）。
             update: statFields,
             // 新規武将はランキングの国名を faction に補完して作成。
             create: {

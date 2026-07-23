@@ -31,7 +31,7 @@ model Warlord {
   household    String?  // 家督名（同じ家督名を持つ異なる名前は同一武将と見なす）
   faction      String?  // 勢力/国
   type         String   @default("") // タイプ
-  branch       String   @default("") // 兵科
+  branch       String   @default("") // 兵種
   unit         String?  // 兵種
   battleAt     String?  // 戦闘時刻 (元テキスト)
   lastActionAt String?  // 最終行動時刻

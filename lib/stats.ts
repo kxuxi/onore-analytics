@@ -9,6 +9,39 @@ import {
 import { parseActionDate } from "./action";
 import { splitGoodAgainst } from "./unitTypeForm";
 import type { BattleRecord, UnitType, WarlordMap } from "./types";
+import {
+  MATCHUP_TRAITS,
+  META_MIN_TIER_DECIDED,
+  META_PERIODS,
+  RANKING_LAST10_KEY,
+  metaTier,
+  type MetaOverview,
+  type MetaPeriod,
+  type MetaTraitStat,
+  type MetaUnitStat,
+  type MetaWarning,
+  type TraitMatchupMatrix,
+  type YearRange,
+} from "./stats/meta";
+
+export {
+  MATCHUP_TRAITS,
+  META_MIN_TIER_DECIDED,
+  META_PERIODS,
+  RANKING_LAST10_KEY,
+  metaTier,
+};
+export type {
+  MetaOverview,
+  MetaPeriod,
+  MetaTier,
+  MetaTraitStat,
+  MetaUnitStat,
+  MetaWarning,
+  TraitMatchupCell,
+  TraitMatchupMatrix,
+  YearRange,
+} from "./stats/meta";
 
 export type SideKey = "left" | "right";
 export type OutcomeResult = "win" | "loss" | "other";
@@ -347,9 +380,9 @@ export function matchupRanking(
   return { best, worst };
 }
 
-/* ---------- 兵科別の勝率 ---------- */
+/* ---------- 兵種別の勝率 ---------- */
 
-/** 兵科（万能 / 騎兵 / 歩兵 など）ごとの戦績。 */
+/** 兵種（万能 / 騎兵 / 歩兵 など）ごとの戦績。 */
 export interface BranchStat {
   branch: string;
   battles: number;
@@ -359,7 +392,7 @@ export interface BranchStat {
   winRate: number;
 }
 
-/** 注目側が出陣した兵科ごとに勝率を集計する（戦闘数の多い順）。 */
+/** 注目側が出陣した兵種ごとに勝率を集計する（戦闘数の多い順）。 */
 export function branchStats(outcomes: BattleOutcome[]): BranchStat[] {
   const map = new Map<string, BranchStat>();
   for (const o of outcomes) {
@@ -1144,7 +1177,7 @@ export interface FactionMemberStat {
   winRate: number;
   /** 現在の在籍区間で最後に使った兵種（正規化済み）。不明なら undefined。 */
   latestUnit?: string;
-  /** 最後に使った兵種の兵科。不明なら undefined。 */
+  /** 最後に使った兵種の兵種。不明なら undefined。 */
   latestBranch?: string;
 }
 
@@ -1226,20 +1259,20 @@ export function factionMemberStats(
   );
 }
 
-/** 兵科ごとにまとめた「最新使用兵種」の内訳。 */
+/** 兵種ごとにまとめた「最新使用兵種」の内訳。 */
 export interface BranchLatestUnits {
-  /** 兵科名（不明・空欄は "その他"）。 */
+  /** 兵種名（不明・空欄は "その他"）。 */
   branch: string;
-  /** この兵科を最新で使っている人数の合計。 */
+  /** この兵種を最新で使っている人数の合計。 */
   total: number;
   /** 兵種ごとの人数（多い順）。 */
   units: { unit: string; count: number }[];
 }
 
 /**
- * 武将ごとの「最新で使っている兵種」を兵科別に集計する。
- * 各エントリ（1 武将）の最新兵種を 1 票として数え、兵科 → 兵種の順にまとめる。
- * 兵科は人数の多い順（"その他" は末尾）、兵種は各兵科内で人数の多い順。
+ * 武将ごとの「最新で使っている兵種」を兵種別に集計する。
+ * 各エントリ（1 武将）の最新兵種を 1 票として数え、兵種 → 兵種の順にまとめる。
+ * 兵種は人数の多い順（"その他" は末尾）、兵種は各兵種内で人数の多い順。
  */
 export function latestUnitsByBranch(
   members: { latestBranch?: string; latestUnit?: string }[]
@@ -1526,7 +1559,7 @@ export function unitUsageTrend(
     .sort((a, b) => a.year - b.year);
 }
 
-/** この兵種が分類される兵科（最も多く登場した兵科）を返す。 */
+/** この兵種が分類される兵種（最も多く登場した兵種）を返す。 */
 export function unitBranchLabel(
   outcomes: BattleOutcome[]
 ): string | undefined {
@@ -1608,7 +1641,7 @@ function computeSideSwi(
 
   // 出兵単位に集約。
   const sorties = new Map<string, SortieAgg>();
-  // 武将ごとの最新の勢力・兵科（表示・フィルタ用）。
+  // 武将ごとの最新の勢力・兵種（表示・フィルタ用）。
   const factionOf = new Map<string, string | undefined>();
   const branchOf = new Map<string, string | undefined>();
 
@@ -1812,6 +1845,207 @@ export function pontaPointRanking(
     });
   }
   return out;
+}
+
+/** 兵種・武器・品物の指標ランキング対象。 */
+export type AssetMetricVariant = "unit" | "weapon" | "item";
+
+/** 兵種・武器・品物 1 種類分の総合指標。 */
+export interface AssetMetricStat {
+  name: string;
+  /** 代表兵種（兵種のみ）。 */
+  branch?: string;
+  /** 勝敗未確定を含む延べ使用回数。 */
+  uses: number;
+  attackWins: number;
+  defenseWins: number;
+  /** 勝敗が確定した戦闘数。 */
+  battles: number;
+  winRate: number;
+  pontaPoint: number;
+  breakthrough: number;
+  sorties: number;
+  breakthroughRate: number;
+  ppn: number;
+  sweepCounts: number[];
+  topUsers: { name: string; count: number }[];
+}
+
+function assetName(
+  side: BattleSide,
+  variant: AssetMetricVariant
+): string | undefined {
+  const raw =
+    variant === "unit"
+      ? side.unit
+      : variant === "weapon"
+        ? side.equip2
+        : side.equip1;
+  if (!raw) return undefined;
+  const name = normalizeDisplayToken(raw);
+  return name && name !== "なし" ? name : undefined;
+}
+
+/**
+ * 兵種・武器・品物ごとの PPN・PontaPoint・勝率・抜き数・抜き率を集計する。
+ *
+ * 勝敗系は左右それぞれが使用した対象へ帰属する。枚抜きは出兵側のみを対象とし、
+ * 同一対象・同一使用者・同一戦闘時刻を 1 出兵として、1戦目からの連勝数を数える。
+ */
+export function assetMetricRanking(
+  log: BattleRecord[],
+  variant: AssetMetricVariant,
+  range?: YearRange
+): AssetMetricStat[] {
+  interface Acc {
+    name: string;
+    uses: number;
+    attackWins: number;
+    defenseWins: number;
+    losses: number;
+    branches: Map<string, number>;
+    users: Map<string, number>;
+  }
+
+  const metrics = new Map<string, Acc>();
+  const sorties = new Map<string, { asset: string; wins: Set<number> }>();
+  const sides: SideKey[] = ["left", "right"];
+
+  const touch = (name: string): Acc => {
+    let current = metrics.get(name);
+    if (!current) {
+      current = {
+        name,
+        uses: 0,
+        attackWins: 0,
+        defenseWins: 0,
+        losses: 0,
+        branches: new Map(),
+        users: new Map(),
+      };
+      metrics.set(name, current);
+    }
+    return current;
+  };
+
+  for (const { record, card } of dedupedCards(log)) {
+    if (!withinYearRange(card, range)) continue;
+
+    for (const sideKey of sides) {
+      const side = sideKey === "left" ? card.left : card.right;
+      const name = assetName(side, variant);
+      if (!name) continue;
+
+      const metric = touch(name);
+      metric.uses++;
+      const user = side.name?.trim();
+      if (user) {
+        metric.users.set(user, (metric.users.get(user) ?? 0) + 1);
+      }
+      if (variant === "unit") {
+        const branch = side.branch?.trim();
+        if (branch) {
+          metric.branches.set(
+            branch,
+            (metric.branches.get(branch) ?? 0) + 1
+          );
+        }
+      }
+
+      if (card.winner === "left" || card.winner === "right") {
+        if (card.winner === sideKey) {
+          if (sideKey === "left") metric.attackWins++;
+          else metric.defenseWins++;
+        } else {
+          metric.losses++;
+        }
+      }
+    }
+
+    const attackerAsset = assetName(card.left, variant);
+    if (!attackerAsset) continue;
+    const sortieKey = [
+      attackerAsset,
+      String(record.term),
+      card.left.family ?? card.left.name,
+      card.battleAt ?? "",
+    ].join("@@");
+    let sortie = sorties.get(sortieKey);
+    if (!sortie) {
+      sortie = { asset: attackerAsset, wins: new Set() };
+      sorties.set(sortieKey, sortie);
+    }
+    if (card.winner === "left") {
+      sortie.wins.add(battleNoNumber(card.battleNo));
+    }
+  }
+
+  const sortieStats = new Map<
+    string,
+    { sorties: number; breakthrough: number; sweepCounts: number[] }
+  >();
+  for (const sortie of sorties.values()) {
+    const sweep = sortieSweepCount(sortie);
+    const current = sortieStats.get(sortie.asset) ?? {
+      sorties: 0,
+      breakthrough: 0,
+      sweepCounts: [],
+    };
+    current.sorties++;
+    current.breakthrough += sweep;
+    current.sweepCounts[sweep] =
+      (current.sweepCounts[sweep] ?? 0) + 1;
+    sortieStats.set(sortie.asset, current);
+  }
+
+  return Array.from(metrics.values())
+    .map((metric) => {
+      const battles =
+        metric.attackWins + metric.defenseWins + metric.losses;
+      const wins = metric.attackWins + metric.defenseWins;
+      const pontaPoint =
+        battles > 0
+          ? (metric.attackWins +
+              DEFENSE_WIN_BONUS * metric.defenseWins) /
+            battles
+          : 0;
+      const sortie = sortieStats.get(metric.name) ?? {
+        sorties: 0,
+        breakthrough: 0,
+        sweepCounts: [],
+      };
+      const breakthroughRate =
+        sortie.sorties > 0 ? sortie.breakthrough / sortie.sorties : 0;
+      const branch =
+        Array.from(metric.branches.entries()).sort(
+          (a, b) => b[1] - a[1]
+        )[0]?.[0];
+      const topUsers = Array.from(metric.users.entries())
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 3);
+
+      return {
+        name: metric.name,
+        branch,
+        uses: metric.uses,
+        attackWins: metric.attackWins,
+        defenseWins: metric.defenseWins,
+        battles,
+        winRate: battles > 0 ? wins / battles : 0,
+        pontaPoint,
+        breakthrough: sortie.breakthrough,
+        sorties: sortie.sorties,
+        breakthroughRate,
+        ppn: pontaPoint + breakthroughRate,
+        sweepCounts: Array.from(
+          { length: sortie.sweepCounts.length },
+          (_, index) => sortie.sweepCounts[index] ?? 0
+        ),
+        topUsers,
+      };
+    })
+    .sort((a, b) => b.uses - a.uses || b.winRate - a.winRate);
 }
 
 /* ---------- 武将ランキング（出兵 / 守備の総合） ---------- */
@@ -2105,9 +2339,9 @@ export function warlordRanking(
 /* ---------- 指標（アンチ戦闘） ---------- */
 
 /**
- * アンチ（兵科じゃんけん）の索引。兵種名 → その兵種が得意とする兵科の集合。
+ * アンチ（兵種じゃんけん）の索引。兵種名 → その兵種が得意とする兵種の集合。
  * 「兵種一覧」マスタの得意兵種をそのまま使うので、単純な 歩兵>騎兵>弓兵>歩兵 だけでなく、
- * ダブルアンチ（得意兵科を 2 つ持つ兵種。例: 南蛮象騎兵＝弓兵:壁）にも対応する。
+ * ダブルアンチ（得意兵種を 2 つ持つ兵種。例: 南蛮象騎兵＝弓兵:壁）にも対応する。
  */
 export function buildAntiIndex(unitTypes: UnitType[]): Map<string, Set<string>> {
   const map = new Map<string, Set<string>>();
@@ -2120,7 +2354,7 @@ export function buildAntiIndex(unitTypes: UnitType[]): Map<string, Set<string>> 
 }
 
 /**
- * ある兵種が指定の兵科にアンチ（得意兵科に相手の兵科が含まれる）かどうか。
+ * ある兵種が指定の兵種にアンチ（得意兵種に相手の兵種が含まれる）かどうか。
  * 兵種名はオリジナル兵の括弧表記も normalizeDisplayToken で解決する。
  * antiIndex は buildAntiIndex(兵種一覧) で作る。
  */
@@ -2139,9 +2373,9 @@ export function unitCountersBranch(
 export interface AntiContactStat {
   name: string;
   faction?: string;
-  /** 武将の（最新の）兵科。フィルタ・表示用。 */
+  /** 武将の（最新の）兵種。フィルタ・表示用。 */
   branch?: string;
-  /** アンチ戦闘数：自分の兵種の得意兵科に相手の兵科が含まれた戦闘数。 */
+  /** アンチ戦闘数：自分の兵種の得意兵種に相手の兵種が含まれた戦闘数。 */
   antiContacts: number;
   /** 戦闘数：集計対象になった戦闘総数（出兵・守備の延べ）。 */
   contacts: number;
@@ -2152,13 +2386,13 @@ export interface AntiContactStat {
 /**
  * 武将ごとに「アンチ戦闘数・率」を集計する。
  *
- * アンチ＝兵科のじゃんけん。自分の兵種（兵種一覧の得意兵種）に相手の兵科が
+ * アンチ＝兵種のじゃんけん。自分の兵種（兵種一覧の得意兵種）に相手の兵種が
  * 含まれていれば、その戦闘は「自分が有利に戦闘した（アンチ）」とみなす。
- * ダブルアンチ（得意兵科を 2 つ持つ兵種）は得意兵科のいずれかに一致すれば成立。
+ * ダブルアンチ（得意兵種を 2 つ持つ兵種）は得意兵種のいずれかに一致すれば成立。
  *
  * - 出兵側・守備側の両方を集計対象にする（1 戦闘は各陣営の武将にそれぞれ 1 戦闘）。
  * - 家督名が同じ武将は最新の名前へ統合する（db を渡した場合）。
- * - 自分の兵種が兵種一覧に無い / 相手の兵科が不明な戦闘は「非アンチの戦闘」として数える
+ * - 自分の兵種が兵種一覧に無い / 相手の兵種が不明な戦闘は「非アンチの戦闘」として数える
  *   （率の分母には含める）。
  */
 export function antiContactRanking(
@@ -2194,7 +2428,7 @@ export function antiContactRanking(
       a.contacts++;
       if (self.faction) a.faction = self.faction;
       if (self.branch) a.branch = self.branch;
-      // 自分の兵種の得意兵科に相手の兵科が含まれればアンチ戦闘。
+      // 自分の兵種の得意兵種に相手の兵種が含まれればアンチ戦闘。
       if (unitCountersBranch(self.unit, opponent.branch, antiIndex)) {
         a.antiContacts++;
       }
@@ -2235,7 +2469,7 @@ export interface EquipStat {
 }
 
 /**
- * 戦闘ログの装備枠（武器=装備1 / 品物=装備2）を集計し、装備ごとの使用回数・
+ * 戦闘ログの装備枠（武器=武将の持つ武器 / 品物=武将の持つ品物）を集計し、装備ごとの使用回数・
  * 勝率・主な使用武将を求める。`pick` で集計対象の枠を選ぶ。出兵側・守備側の
  * 両方を対象とし、重複行は除外する。「なし」など装備なしは除外する。
  */
@@ -2312,12 +2546,12 @@ function collectEquipStats(
     .sort((a, b) => b.battles - a.battles);
 }
 
-/** 武器（ゲームの装備2列）ごとの使用実績を集計する。 */
+/** ゲーム上の「武将の持つ武器」列ごとに使用実績を集計する。 */
 export function weaponStats(log: BattleRecord[], range?: YearRange): EquipStat[] {
   return collectEquipStats(log, (s) => s.equip2, range);
 }
 
-/** 品物（ゲームの装備1列）ごとの使用実績を集計する。 */
+/** ゲーム上の「武将の持つ品物」列ごとに使用実績を集計する。 */
 export function itemStats(log: BattleRecord[], range?: YearRange): EquipStat[] {
   return collectEquipStats(log, (s) => s.equip1, range);
 }
@@ -2326,7 +2560,7 @@ export function itemStats(log: BattleRecord[], range?: YearRange): EquipStat[] {
 export interface UnitStat {
   /** 兵種名（normalizeDisplayToken 済み） */
   unit: string;
-  /** 代表兵科（その兵種で最も多い兵科） */
+  /** 代表兵種（その兵種で最も多い兵種） */
   branch: string;
   /** 登場した戦闘数（攻守の延べ） */
   battles: number;
@@ -2347,7 +2581,7 @@ export interface UnitStat {
 
 /**
  * 兵種ごとの出兵実績を集計し、使用回数・勝率・主な使用武将を求める。
- * 出兵側・守備側の両方を対象とし、重複行は除外する。兵科は最頻のものを代表とする。
+ * 出兵側・守備側の両方を対象とし、重複行は除外する。兵種は最頻のものを代表とする。
  */
 export function unitStats(log: BattleRecord[], range?: YearRange): UnitStat[] {
   interface Acc {
@@ -2426,7 +2660,7 @@ export function unitStats(log: BattleRecord[], range?: YearRange): UnitStat[] {
     .sort((a, b) => b.battles - a.battles);
 }
 
-/** 装備枠。weapon=武器(装備2) / item=品物(装備1)。 */
+/** 装備枠。weapon=武器(武将の持つ武器) / item=品物(武将の持つ品物)。 */
 export type EquipSlot = "weapon" | "item";
 
 /** 装備枠に対応する取り出し関数を返す。 */
@@ -2446,7 +2680,7 @@ function equipMatches(
 }
 
 /**
- * 指定の装備（武器=装備2 / 品物=装備1）が使われた戦闘を新しい順で集める。
+ * 指定の装備（武器=武将の持つ武器 / 品物=武将の持つ品物）が使われた戦闘を新しい順で集める。
  * 同じ戦闘で両側が装備していれば 2 件になる（兵種ページと同じ方針）。
  */
 export function collectEquipBattles(
@@ -2465,11 +2699,11 @@ export function collectEquipBattles(
   return sortByTimeDesc(out);
 }
 
-/** 装備の組み合わせ（武器＝装備2 × 品物＝装備1）ごとの勝率。 */
+/** 装備の組み合わせ（武器＝武将の持つ武器 × 品物＝武将の持つ品物）ごとの勝率。 */
 export interface EquipSynergyStat {
-  /** 武器（装備2） */
+  /** 武将の持つ武器 */
   weapon: string;
-  /** 品物（装備1） */
+  /** 武将の持つ品物 */
   item: string;
   /** 登場した戦闘数（攻守の延べ） */
   battles: number;
@@ -2484,7 +2718,7 @@ export interface EquipSynergyStat {
 }
 
 /**
- * 武器（装備2）と品物（装備1）の組み合わせごとに勝率を集計し、どの組み合わせが
+ * 武将の持つ武器と武将の持つ品物の組み合わせごとに勝率を集計し、どの組み合わせが
  * 強いかを数値化する。両方の装備が揃っている側のみ対象（片方でも空・「なし」は除外）。
  * 出兵側・守備側の両方を対象とし、重複行は除外する。
  */
@@ -2542,70 +2776,6 @@ export function equipSynergy(log: BattleRecord[]): EquipSynergyStat[] {
     .sort((a, b) => b.battles - a.battles);
 }
 
-/**
- * 相性マトリックスで扱う主要な特性（タイプ）の表示順。
- * 政治家・謎などの非戦闘タイプは対戦相性の対象外とするが、戦闘狂は戦闘タイプなので含める。
- */
-export const MATCHUP_TRAITS = [
-  "武特",
-  "知特",
-  "統特",
-  "武統",
-  "知武",
-  "統知",
-  "戦闘狂",
-];
-
-/** 相性マトリックスの 1 セル（出兵側の特性 × 防衛側の特性）。 */
-export interface TraitMatchupCell {
-  /** 対戦数（出兵側＝左側の延べ） */
-  battles: number;
-  wins: number;
-  losses: number;
-  /** 勝敗が確定した数（wins + losses） */
-  decided: number;
-  /** 勝率 0..1（decided が 0 のときは 0） */
-  winRate: number;
-}
-
-/** 特性ごとの相性マトリックス。 */
-export interface TraitMatchupMatrix {
-  /** 行（出兵側）・列（防衛側）に並ぶ特性。 */
-  traits: string[];
-  /** matrix[i][j] = traits[i]（出兵側）が traits[j]（防衛側）と戦った成績。 */
-  matrix: TraitMatchupCell[][];
-}
-
-/** ゲーム内の年でフィルタする範囲（西暦・両端を含む、null＝無制限）。 */
-export interface YearRange {
-  from: number | null;
-  to: number | null;
-}
-
-/** メタ分析の集計期間プリセット（ゲーム内の年で区切る）。 */
-export interface MetaPeriod extends YearRange {
-  key: string;
-  label: string;
-}
-
-/**
- * メタ分析（相性マトリックス・環境ダッシュボード）の集計期間プリセット。
- * ゲーム内の通算年（西暦の下2桁が「○年」）で区切る。from/to は西暦で両端を含む。
- */
-export const META_PERIODS: MetaPeriod[] = [
-  { key: "y06", label: "06年-11年", from: 1606, to: 1611 },
-  { key: "y12", label: "12年-17年", from: 1612, to: 1617 },
-  { key: "y18", label: "18年-23年", from: 1618, to: 1623 },
-  { key: "y24", label: "24年-35年", from: 1624, to: 1635 },
-  { key: "y36", label: "36年-47年", from: 1636, to: 1647 },
-  { key: "y48", label: "48年-59年", from: 1648, to: 1659 },
-  { key: "y60", label: "60年以降", from: 1660, to: null },
-  { key: "all", label: "全期間", from: null, to: null },
-];
-
-/** ランキングの「過去10年間」プリセットのキー。 */
-export const RANKING_LAST10_KEY = "last10";
-
 /** ログ中で最も新しいゲーム内の年を返す（判別できる戦闘が無ければ null）。 */
 export function latestGameYear(log: BattleRecord[]): number | null {
   let max: number | null = null;
@@ -2618,8 +2788,8 @@ export function latestGameYear(log: BattleRecord[]): number | null {
 
 /**
  * ランキング（武将 / 兵種 / 武器 / 品物）用の集計期間プリセット。
- * 先頭はデフォルトの「過去10年間」（ログ中の最新のゲーム内年から遡って 10 年）。
- * 続けてメタ分析と同じ絶対年バケット（06年-11年 …）と全期間を並べ、
+ * 「全期間」「過去10年間」（ログ中の最新のゲーム内年から遡って 10 年）の順に置き、
+ * 続けてメタ分析と同じ絶対年バケット（06年-11年 …）を並べ、
  * 特定の年ごとに区切って比較できるようにする。
  */
 export function rankingPeriods(log: BattleRecord[]): MetaPeriod[] {
@@ -2628,7 +2798,9 @@ export function rankingPeriods(log: BattleRecord[]): MetaPeriod[] {
     latest != null
       ? { key: RANKING_LAST10_KEY, label: "過去10年間", from: latest - 9, to: latest }
       : { key: RANKING_LAST10_KEY, label: "過去10年間", from: null, to: null };
-  return [last10, ...META_PERIODS];
+  const all = META_PERIODS.find((period) => period.key === "all");
+  const yearBuckets = META_PERIODS.filter((period) => period.key !== "all");
+  return all ? [all, last10, ...yearBuckets] : [last10, ...yearBuckets];
 }
 
 /**
@@ -2712,81 +2884,8 @@ export function collectTraitMatchupBattles(
 
 /* ---------- メタゲーム概観（環境ダッシュボード） ---------- */
 
-/** 兵種の強度ティア（上から S+ が最強）。 */
-export type MetaTier = "S+" | "S" | "A+" | "A" | "B" | "C";
-
-/** 強度ティアを判定するのに必要な、最小の勝敗確定戦数。 */
-export const META_MIN_TIER_DECIDED = 10;
-
 /** トレンド（直近半分 − 古い半分の勝率差）の算出に必要な、片側の最小サンプル。 */
 const META_TREND_MIN_HALF = 4;
-
-/** 環境ダッシュボードに表示する 1 兵種分の集計。 */
-export interface MetaUnitStat {
-  unit: string;
-  /** 最も多く登場した兵科。 */
-  branch?: string;
-  /** 延べ登場数（左右どちらでも 1 と数える）。 */
-  appearances: number;
-  /** 採用率 0..1（appearances / (2 × 総戦闘数)）。 */
-  pickRate: number;
-  wins: number;
-  losses: number;
-  /** 勝敗が確定した数（wins + losses）。 */
-  decided: number;
-  /** 勝率 0..1。 */
-  winRate: number;
-  /** 強度ティア。確定戦数が不足する場合は null。 */
-  tier: MetaTier | null;
-  /** 直近半分 − 古い半分の勝率差（-1..1）。サンプル不足は null。 */
-  trend: number | null;
-}
-
-/** 特性（タイプ）別の採用率・勝率。 */
-export interface MetaTraitStat {
-  trait: string;
-  appearances: number;
-  pickRate: number;
-  wins: number;
-  losses: number;
-  decided: number;
-  winRate: number;
-}
-
-/** 環境警告（支配的な兵種・採用率の突出など）。 */
-export interface MetaWarning {
-  unit: string;
-  /** dominant＝高採用かつ高勝率（S+）/ overpick＝採用率が突出。 */
-  level: "dominant" | "overpick";
-  message: string;
-}
-
-/** 環境ダッシュボードの集計結果。 */
-export interface MetaOverview {
-  /** 集計対象の総戦闘数（重複除外後）。 */
-  totalBattles: number;
-  /** 兵種別の集計（採用率の高い順）。 */
-  units: MetaUnitStat[];
-  /** 特性別の集計（採用率の高い順）。 */
-  traits: MetaTraitStat[];
-  /** 環境警告。 */
-  warnings: MetaWarning[];
-}
-
-/** 採用率・勝率・確定戦数から強度ティアを判定する。 */
-export function metaTier(
-  pickRate: number,
-  winRate: number,
-  decided: number
-): MetaTier | null {
-  if (decided < META_MIN_TIER_DECIDED) return null;
-  if (pickRate > 0.15 && winRate > 0.65) return "S+";
-  if (pickRate > 0.1 && winRate > 0.6) return "S";
-  if (pickRate > 0.05 && winRate > 0.55) return "A+";
-  if (winRate >= 0.52) return "A";
-  if (winRate >= 0.45) return "B";
-  return "C";
-}
 
 /** 確定戦（時刻つき）を新しい順に半分ずつ比較し、勝率差を返す。不足なら null。 */
 function computeTrend(decidedTimed: { t: number; win: boolean }[]): number | null {
@@ -2968,4 +3067,3 @@ export function metaOverview(
 
   return { totalBattles, units: unitStats, traits: traitStats, warnings };
 }
-

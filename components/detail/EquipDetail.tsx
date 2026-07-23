@@ -24,7 +24,7 @@ import {
 
 interface Props {
   name: string;
-  /** 武器（装備2）か品物（装備1）か。 */
+  /** 武将の持つ武器か武将の持つ品物か。 */
   slot: EquipSlot;
   log: BattleRecord[];
   onSelectWarlord: (name: string) => void;
