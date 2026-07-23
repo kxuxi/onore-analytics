@@ -7,8 +7,10 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "check": "npm test && npm run lint && npm run typecheck && npm run build",
     "db:migrate": "prisma migrate deploy",
     "create-admin": "tsx prisma/create-admin.ts"
   },
