@@ -1,0 +1,818 @@
+/* ===================== ホーム画面（ダッシュボード） ===================== */
+
+/* テキストリンク風のボタン（インラインで名前などを開く共通クラス）。 */
+.link-btn {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: var(--accent);
+  cursor: pointer;
+  text-align: left;
+  border-radius: 4px;
+}
+.link-btn:hover {
+  color: var(--accent-strong);
+  text-decoration: underline;
+}
+.link-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- 武将選択（未設定 / 変更時） --- */
+.home-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 520px;
+}
+.home-picker-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+}
+.home-warlord-search {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.home-search-label {
+  color: var(--text);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+.home-warlord-search .search-box {
+  width: 100%;
+}
+.home-warlord-search .search-input {
+  min-height: var(--touch-target);
+  padding-right: calc(var(--touch-target) + var(--space-1));
+  border-color: color-mix(in srgb, var(--text) 45%, var(--border));
+}
+.home-warlord-search .search-clear {
+  width: var(--touch-target);
+  height: var(--touch-target);
+  right: 0;
+}
+.home-search-hint,
+.home-search-status,
+.home-picker-privacy {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-body);
+}
+.home-search-status {
+  min-height: 18px;
+}
+.home-search-status:empty {
+  min-height: 0;
+}
+.home-suggest {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  max-height: 312px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.home-suggest-item {
+  appearance: none;
+  width: 100%;
+  min-height: var(--touch-target);
+  text-align: left;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  padding: 10px 12px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.home-suggest-item:hover,
+.home-suggest-item[aria-selected="true"] {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.home-suggest-item:focus-visible {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+.home-search-empty {
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-subtle);
+}
+.home-picker-cancel {
+  align-self: flex-start;
+}
+
+/* --- 初回未選択時の案内 --- */
+.home-activation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: clamp(var(--space-2), 2vw, var(--space-4));
+  min-width: 0;
+}
+.home-activation-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
+  align-items: center;
+  gap: clamp(var(--space-5), 4vw, var(--space-7));
+  min-width: 0;
+}
+.home-activation-intro,
+.home-picker-card {
+  min-width: 0;
+}
+.panel .home-activation-title {
+  margin: var(--space-2) 0 var(--space-3);
+  color: var(--color-text-primary);
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  text-transform: none;
+}
+.home-activation-description {
+  max-width: 48ch;
+  margin: 0;
+  font-size: var(--font-size-body);
+  line-height: 1.75;
+}
+.home-picker-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: clamp(var(--space-4), 2.5vw, var(--space-5));
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  border-radius: var(--radius-xl);
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--accent) 8%, var(--panel)) 0%,
+      var(--surface-subtle) 100%
+    );
+  box-shadow: var(--shadow-sm);
+}
+.home-picker-card-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: var(--line-height-tight);
+}
+.home-picker-card-description {
+  margin: -4px 0 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
+}
+.home-capabilities {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.home-capability-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.home-capability-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-subtle);
+}
+.home-capability-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  color: var(--accent);
+}
+.home-capability-icon .icon {
+  width: 20px;
+  height: 20px;
+}
+.home-capability-item > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.home-capability-item strong {
+  color: var(--text);
+  font-size: var(--font-size-control);
+}
+.home-capability-item > span:last-child > span {
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
+}
+.home-explore {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+.home-explore-title {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--font-size-control);
+  font-weight: 700;
+}
+.home-explore-description {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
+}
+.home-explore-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.home-explore-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--touch-target);
+}
+.home-explore-action .icon {
+  width: 17px;
+  height: 17px;
+  color: var(--accent);
+}
+
+/* --- ダッシュボードのレイアウト --- */
+.home-dash {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.home-card {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.home-card-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+.home-card-wide {
+  grid-column: 1 / -1;
+}
+
+/* --- ヒーロー（あなたの成績） --- */
+.home-hero {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 12%, var(--panel)) 0%,
+    var(--panel) 100%
+  );
+  border-color: color-mix(in srgb, var(--accent) 26%, var(--border));
+}
+.home-hero-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.home-hero-eyebrow {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.home-hero-name {
+  margin: 2px 0 6px;
+  font-size: 26px;
+  font-weight: 800;
+}
+.home-hero-name:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
+.home-hero-name .link-btn {
+  color: var(--text);
+}
+.home-hero-name .link-btn:hover {
+  color: var(--accent);
+}
+.home-hero-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.home-change {
+  flex: 0 0 auto;
+}
+.home-empty {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.home-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.home-bigstat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--panel-2) 70%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.home-bigstat-val {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+.home-bigstat-val.good {
+  color: var(--success);
+}
+.home-bigstat-val.bad {
+  color: var(--danger);
+}
+.home-bigstat-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* --- 勝率バー行（兵種習熟度・特性別） --- */
+.home-rate-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.home-rate-row {
+  display: grid;
+  grid-template-columns: 1fr 90px 44px;
+  align-items: center;
+  gap: 10px;
+}
+.home-rate-label {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.home-rate-label > .link-btn,
+.home-rate-label > span:first-child {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-rate-count {
+  font-size: 11px;
+}
+.home-rate-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border) 60%, transparent);
+  overflow: hidden;
+}
+.home-rate-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.home-rate-fill.good {
+  background: var(--success);
+}
+.home-rate-fill.bad {
+  background: var(--danger);
+}
+.home-rate-fill.even {
+  background: var(--warning);
+}
+.home-rate-val {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* --- トレンド --- */
+.home-trend {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.home-trend-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.home-trend-label {
+  font-size: 12px;
+}
+.home-trend-val {
+  font-size: 20px;
+  font-weight: 800;
+}
+.home-trend-val.good {
+  color: var(--success);
+}
+.home-trend-val.bad {
+  color: var(--danger);
+}
+.home-trend-sub {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- 勝率の推移（折れ線・複数系列） --- */
+.home-series-hint {
+  margin: 0 0 8px;
+  font-size: 12px;
+}
+.home-series-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.home-series-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.home-series-chip:hover {
+  border-color: var(--accent);
+}
+.home-series-chip.active {
+  font-weight: 700;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+.home-series-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.home-series-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+.home-series-check:hover {
+  border-color: var(--accent);
+}
+.home-series-check.active {
+  font-weight: 700;
+  color: var(--text);
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+.home-series-check input {
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+.home-series-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.home-line-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+.home-linechart {
+  width: 100%;
+  height: auto;
+  min-width: 320px;
+  display: block;
+}
+.home-line-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.home-line-ytick {
+  fill: var(--muted);
+  font-size: 9px;
+  text-anchor: end;
+}
+.home-line-xtick {
+  fill: var(--muted);
+  font-size: 9px;
+}
+.home-line-path {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.home-line-path--loss {
+  stroke-dasharray: 4 3;
+  opacity: 0.75;
+}
+.home-line-dot {
+  stroke: none;
+}
+.home-line-mid {
+  stroke: color-mix(in srgb, var(--text) 30%, transparent);
+}
+/* 4年以上の非戦期間を覆う灰色マスクと「非戦中」ラベル。 */
+.home-line-mask {
+  fill: color-mix(in srgb, var(--text) 14%, transparent);
+}
+.home-line-masklabel {
+  fill: var(--muted);
+  font-size: 9px;
+  font-weight: 600;
+}
+
+/* --- 次のアクション --- */
+.home-action {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.home-action-warn {
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+.home-action-ok {
+  border-color: color-mix(in srgb, var(--success) 40%, var(--border));
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+}
+.home-action-head {
+  margin: 0 0 4px;
+  font-weight: 700;
+}
+.home-action p.muted {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.home-action-foot {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* --- 最近の戦闘結果（表） --- */
+.home-recent-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.home-recent-time {
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--muted);
+}
+.home-res-win {
+  color: var(--success);
+  font-weight: 700;
+}
+.home-res-loss {
+  color: var(--danger);
+  font-weight: 700;
+}
+.home-res-other {
+  color: var(--muted);
+}
+
+/* --- メタ環境 --- */
+.home-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.home-meta-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.home-meta-unit {
+  font-size: 18px;
+  font-weight: 800;
+}
+.home-meta-stats {
+  display: flex;
+  gap: 14px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.home-warn {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* --- 宿敵分析 --- */
+.home-rival {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.home-rival-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.home-rival-name {
+  font-size: 18px;
+  font-weight: 800;
+}
+.home-rival-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  flex-wrap: wrap;
+}
+.home-rival-streak {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.home-rival-recent {
+  display: flex;
+  gap: 4px;
+}
+.home-rival-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--border) 50%, transparent);
+}
+.home-rival-dot.home-res-win {
+  background: color-mix(in srgb, var(--success) 22%, transparent);
+}
+.home-rival-dot.home-res-loss {
+  background: color-mix(in srgb, var(--danger) 22%, transparent);
+}
+.home-rival-more {
+  font-size: 13px;
+  font-weight: 600;
+  align-self: flex-start;
+}
+
+/* --- ウォッチリスト（お気に入り武将・管理者のみ） --- */
+.home-watchlist-count {
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+.home-watchlist-empty {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.home-watchlist-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.home-watchlist-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.home-watchlist-name {
+  font-size: 15px;
+  font-weight: 700;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-watchlist-remove {
+  appearance: none;
+  border: 0;
+  background: none;
+  color: var(--medal-gold-fg, #f0b429);
+  cursor: pointer;
+  padding: 2px;
+  margin-left: auto;
+  display: inline-flex;
+  border-radius: 6px;
+}
+.home-watchlist-remove:hover {
+  color: color-mix(in srgb, var(--medal-gold-fg, #f0b429) 70%, var(--text));
+}
+.home-watchlist-remove:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 960px) {
+  .home-activation-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
+  }
+  .home-capability-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .home-explore {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .home-explore-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+  .home-activation {
+    gap: var(--space-5);
+    padding: var(--space-1);
+  }
+  .home-hero-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .home-hero-name {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 480px) {
+  .panel .home-activation-title {
+    font-size: 24px;
+  }
+  .home-picker-card,
+  .home-capability-item {
+    padding: var(--space-3);
+  }
+  .home-explore-actions,
+  .home-explore-action {
+    width: 100%;
+  }
+  .home-explore-action {
+    white-space: normal;
+  }
+}

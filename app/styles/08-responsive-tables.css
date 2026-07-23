@@ -1,0 +1,264 @@
+/* ---------- Small screens ---------- */
+@media (max-width: 767px) {
+  /* モバイル: サイドバーはオーバーレイ式ドロワー */
+  .sidebar {
+    position: fixed;
+    top: var(--sticky-header-offset);
+    left: 0;
+    bottom: 0;
+    height: auto;
+    z-index: 25;
+    width: min(74vw, 260px);
+    box-shadow: 6px 0 24px rgba(0, 0, 0, 0.4);
+    transform: translateX(0);
+  }
+
+  .app:not(.sidebar-open) .sidebar {
+    margin-left: 0;
+    transform: translateX(-100%);
+    box-shadow: none;
+  }
+
+  .nav-item {
+    padding: 14px 16px;
+    font-size: 16px;
+  }
+}
+
+/* ヘッダー: タブレット幅以下ではアクションのテキストラベル（最終取得時刻・更新・共有）を
+   隠してアイコンのみにする。ラベルが残るとタイトルやハンバーガーを圧迫して崩れるため。
+   操作内容は aria-label / title で読み上げ・ツールチップに残す。 */
+@media (max-width: 640px) {
+  .header-fetched { display: none; }
+  .header-actions { gap: 6px; }
+  .header-refresh span,
+  .header-share span,
+  .header-auth span { display: none; }
+  .header-refresh,
+  .header-share,
+  .header-auth {
+    gap: 0;
+    padding: 6px;
+    width: 34px;
+    height: 34px;
+    justify-content: center;
+  }
+  .page-header {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .page-header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .filter-panel-toolbar > .search-box {
+    flex-basis: 100%;
+    width: 100%;
+  }
+  .filter-panel-summary {
+    align-items: flex-start;
+  }
+  .filter-result {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .header h1 { font-size: 15px; }
+  .header h1 .sub { display: none; }
+  .main { padding: 12px 10px 80px; }
+  .app-footer { padding: 12px 10px; }
+  .app-footer-text { font-size: 12px; }
+  .panel { padding: 12px; border-radius: var(--radius-lg); }
+  .stat-grid {
+    grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  }
+  .stat .value { font-size: 18px; }
+  .filter-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .unit-form {
+    gap: 14px;
+  }
+  .unit-form-section-fields {
+    grid-template-columns: 1fr;
+  }
+  th, td { padding: 8px 10px; }
+  table { font-size: 13px; }
+  /* 算出式の重み表は横スクロールで見切れないようにする。
+     min-width:0 で内容幅による最小幅を解除し、親幅に収めてスクロールさせる。 */
+  .swi-weight-table {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* 検索行のボタン（並び順・フィルター・解除）はアイコンのみにして、
+     狭幅でも検索ボックスが潰れないようにする。
+     テキストは position:absolute で視覚的に隠しつつ、
+     スクリーンリーダー向けにアクセシビリティツリーには残す。 */
+  button.sort-toggle,
+  .filter-toggle,
+  .clear-filters {
+    gap: 0;
+    padding: 10px;
+    position: relative;
+  }
+  button.sort-toggle > span,
+  .filter-toggle > span,
+  .clear-filters > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+@media (max-width: 360px) {
+  .filter-grid { grid-template-columns: 1fr; }
+}
+
+/* DB確認: モバイル(カード表示)用の並び替えコントロール。既定は非表示。 */
+.db-sort-mobile {
+  display: none;
+}
+
+/* ===== モバイル: データテーブルをカード表示に ===== */
+@media (max-width: 680px) {
+  /* カード化対象テーブルのラッパーは枠・横スクロールを解除 */
+  .table-wrap:has(.table-card) {
+    overflow: visible;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  table.table-card {
+    min-width: 0;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 14px;
+  }
+
+  /* 見出し行は視覚的に隠す（スクリーンリーダーには残す） */
+  table.table-card thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  table.table-card tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* 1行 = 1カード（縦積み） */
+  table.table-card tr {
+    display: flex;
+    flex-direction: column;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2px 14px 6px;
+  }
+  table.table-card tbody tr:hover {
+    background: var(--panel-2);
+  }
+
+  /* セル = ラベル(左) + 値(右) の行 */
+  table.table-card td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+  }
+  table.table-card tr td:last-child {
+    border-bottom: none;
+  }
+  table.table-card td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-align: left;
+    text-transform: none;
+  }
+  /* カード内のタグは折り返さない */
+  table.table-card td .tag {
+    white-space: nowrap;
+  }
+
+  /* タイトルセル（武将名・装備名など）はカード見出しとして上部に */
+  table.table-card td.cell-title {
+    order: -1;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 10px 0;
+    text-align: left;
+  }
+  table.table-card td.cell-title::before {
+    content: none;
+  }
+  table.table-card td.cell-title .link-like {
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  /* 値が大きい / 複数あるセルは縦積み（ラベル上・内容下） */
+  table.table-card td.cell-block {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: left;
+    gap: 6px;
+  }
+  table.table-card td.cell-block::before {
+    text-align: left;
+  }
+  /* 縦積みセル内のバッジ類は自然な幅で左寄せ（横いっぱいに伸ばさない） */
+  table.table-card td.cell-block .status {
+    align-self: flex-start;
+  }
+
+  /* 空ラベルのセルはラベルを描画しない */
+  table.table-card td[data-label=""]::before {
+    content: none;
+  }
+
+  /* DB確認: モバイル並び替えコントロールを表示 */
+  .db-sort-mobile {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .db-sort-mobile .filter {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .db-sort-dir {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
+

@@ -1,0 +1,559 @@
+/* ===== 武将ページ / 兵種ページ ===== */
+.detail-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "back title actions";
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.detail-back {
+  grid-area: back;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+}
+
+.detail-share {
+  flex: 0 0 auto;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+}
+
+.detail-share.copied {
+  color: var(--success, #4caf50);
+  border-color: var(--success, #4caf50);
+}
+
+/* 武将詳細のウォッチリスト・トグル（管理者のみ）。 */
+.detail-watch {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+}
+.detail-watch.active {
+  color: var(--medal-gold-fg, #f0b429);
+  border-color: color-mix(
+    in srgb,
+    var(--medal-gold-fg, #f0b429) 60%,
+    var(--border)
+  );
+}
+
+/* 戻るボタンと見出しの右側に、操作ボタン群（編集など）と共有ボタンをまとめる。
+   margin-left:auto はラッパーへ移し、内側の共有ボタンの auto は打ち消す。 */
+.detail-head-actions {
+  grid-area: actions;
+  flex: 0 0 auto;
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detail-head-actions .detail-share {
+  margin-left: 0;
+}
+
+.detail-title {
+  grid-area: title;
+  min-width: 0;
+}
+
+.detail-title h2 {
+  margin: 2px 0 0;
+  font-size: 20px;
+  word-break: break-word;
+}
+
+/* 遷移時のプログラム的フォーカスでは枠線を出さない（キーボード操作時のみ表示） */
+.detail-title h2:focus {
+  outline: none;
+}
+.detail-title h2:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.detail-kind {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.detail-stats {
+  margin-top: 4px;
+}
+
+.detail-summary {
+  margin-top: 24px;
+}
+
+.detail-summary-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.detail-summary .detail-stats {
+  margin-top: 0;
+}
+
+@media (max-width: 600px) {
+  .detail-head {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "back actions"
+      "title title";
+    row-gap: 12px;
+  }
+
+  .detail-head-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .detail-back,
+  .detail-head-actions .btn {
+    min-height: 44px;
+  }
+
+  .detail-head-actions .detail-card-btn > span,
+  .detail-head-actions .detail-watch > span,
+  .detail-head-actions .detail-share > span {
+    display: none;
+  }
+
+  .detail-head-actions .detail-card-btn,
+  .detail-head-actions .detail-watch,
+  .detail-head-actions .detail-share {
+    justify-content: center;
+    width: 44px;
+    padding-inline: 0;
+  }
+
+  .detail-title h2 {
+    margin-top: 3px;
+    font-size: 22px;
+    line-height: 1.3;
+  }
+}
+
+.stat-win-text { color: var(--outcome-win-text); }
+.stat-loss-text { color: var(--outcome-loss-text); }
+.stat-other-text { color: var(--muted); }
+
+.wr-bar {
+  display: flex;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--panel-2);
+  border: 0.5px solid var(--border);
+  margin: 12px 0 2px;
+}
+
+.wr-win { background: var(--outcome-win-fill); }
+.wr-loss { background: var(--outcome-loss-fill); }
+
+.detail-section {
+  margin-top: 24px;
+}
+
+.detail-section h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+/* 折りたたみ見出し（Section コンポーネント）。h3 をボタン化してトグルする。 */
+.detail-section h3.section-head {
+  margin: 0;
+}
+
+.section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.section-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.section-toggle-title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.section-count {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.section-toggle-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--muted);
+  transition: color 0.15s ease;
+}
+
+.section-toggle:hover .section-toggle-icon {
+  color: var(--accent);
+}
+
+.section-body {
+  margin-top: 12px;
+}
+
+.section-body[hidden] {
+  display: none;
+}
+
+/* 「もっと見る」行（所属武将一覧などで一部だけ表示する切り替え）。 */
+.show-more-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+.show-more-btn {
+  font-size: 13px;
+}
+
+/* 戦闘ログの年フィルタ（BattleLogList）。 */
+.detail-log-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.log-filter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.log-filter-label {
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.log-filter-field {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.log-filter-field .select {
+  min-width: 96px;
+}
+
+.log-filter-sep {
+  color: var(--muted);
+}
+
+.log-filter-clear {
+  margin-left: 4px;
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+
+/* 兵種詳細のマスタ情報（種類・攻撃・防御・雇用 など）を 2 カラムの定義リストで表示。 */
+.unit-spec {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 16px;
+  margin: 0;
+}
+
+.unit-spec .spec-row {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 0.5px solid var(--border);
+  min-width: 0;
+}
+
+.unit-spec .spec-wide {
+  grid-column: 1 / -1;
+}
+
+.unit-spec dt {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.unit-spec dd {
+  margin: 0;
+  font-size: 14px;
+  word-break: break-word;
+  min-width: 0;
+}
+
+.unit-spec dd .tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+@media (max-width: 600px) {
+  .unit-spec {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pie-block {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+
+.pie-center-num {
+  fill: var(--text);
+  font-size: 22px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.pie-center-sub {
+  fill: var(--muted);
+  font-size: 11px;
+  text-anchor: middle;
+}
+
+.pie-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: 1 1 200px;
+  min-width: 180px;
+}
+
+.pie-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.pie-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex: 0 0 auto;
+}
+
+.pie-legend-name {
+  font-weight: 600;
+}
+
+.pie-legend-val {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.detail-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dl-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+
+.dl-result {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.dl-result--win {
+  background: color-mix(in srgb, var(--outcome-win-fill) 16%, transparent);
+  color: var(--outcome-win-text);
+}
+.dl-result--loss {
+  background: color-mix(in srgb, var(--outcome-loss-fill) 16%, transparent);
+  color: var(--outcome-loss-text);
+}
+.dl-result--other { background: var(--panel); color: var(--muted); }
+
+.dl-main {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.dl-meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+
+.dl-match {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dl-vs {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.dl-name {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+  word-break: break-word;
+}
+
+.dl-name:hover { color: var(--accent); text-decoration: underline; }
+.dl-name.active { color: var(--accent); }
+
+.dl-unit {
+  appearance: none;
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 0.5px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dl-unit:hover { border-color: var(--accent); color: var(--accent); }
+.dl-unit.active { border-color: var(--accent); color: var(--accent); }
+
+/* 兵種アンチの矢印（戦闘履歴カード／戦闘ログ共通）。兵種名の横に密着させる。 */
+.pill-anti-group,
+.dl-unit-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.anti-arrows {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  line-height: 1;
+}
+.anti-arrow {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+/* アンチを取っている（有利）＝赤い ↑ */
+.anti-arrow--up { color: #e5484d; }
+/* アンチを取られている（不利）＝青い ↓ */
+.anti-arrow--down { color: #3b82f6; }
+
+.dl-link {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: var(--radius-md);
+  color: var(--muted);
+}
+
+.dl-link:hover {
+  color: var(--accent);
+  background: var(--hover-surface);
+}
+.dl-link .icon { width: 15px; height: 15px; }
+
+.dl-actions {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* コピーボタンは dl-link の見た目を踏襲しつつ button 既定スタイルを打ち消す */
+.dl-copy {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.dl-copy.copied { color: var(--success, #4caf50); }
+
+@media (max-width: 600px) {
+  .dl-link {
+    min-width: var(--touch-target);
+    min-height: var(--touch-target);
+  }
+}
+
