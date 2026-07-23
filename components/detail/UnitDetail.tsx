@@ -12,12 +12,12 @@ import {
 } from "@/lib/stats";
 import { fetchUnitTypes } from "@/lib/api";
 import { parseReqStats, splitGoodAgainst } from "@/lib/unitTypeForm";
-import { BattleLogList } from "@/components/detail/BattleLogList";
 import { Section } from "@/components/detail/Section";
 import {
-  DetailHeader,
-  StatCards,
-  WinRateBar,
+  DetailBattleLogSection,
+  DetailEmptyState,
+  DetailPage,
+  DetailSummary,
 } from "@/components/detail/DetailParts";
 import {
   UnitMatchupRanking,
@@ -86,27 +86,25 @@ export function UnitDetail({
   const goodAgainst = unit ? splitGoodAgainst(unit.goodAgainst) : [];
 
   return (
-    <section className="panel detail-panel">
-      <DetailHeader
-        kind="兵種"
-        title={name}
-        tags={
-          branch ? <span className="tag branch">{branch}</span> : undefined
-        }
-        actions={
-          unit ? (
-            <button
-              type="button"
-              className="btn"
-              onClick={() => setEditing(true)}
-            >
-              編集
-            </button>
-          ) : undefined
-        }
-        onBack={onBack}
-      />
-
+    <DetailPage
+      kind="兵種"
+      title={name}
+      tags={
+        branch ? <span className="tag branch">{branch}</span> : undefined
+      }
+      actions={
+        unit ? (
+          <button
+            type="button"
+            className="btn"
+            onClick={() => setEditing(true)}
+          >
+            編集
+          </button>
+        ) : undefined
+      }
+      onBack={onBack}
+    >
       {unit && (
         <Section title="兵種データ" mobileCollapsed>
           <dl className="unit-spec">
@@ -171,17 +169,18 @@ export function UnitDetail({
       )}
 
       {outcomes.length === 0 ? (
-        <div className="empty">
-          <p className="empty-title">この兵種の戦闘データがありません</p>
-          <p className="empty-hint">
-            「{name}」が使われた戦闘履歴が見つかりませんでした。
-            「戦闘履歴」タブで戦績を登録すると、勝率や相性がここに表示されます。
-          </p>
-        </div>
+        <DetailEmptyState
+          title="この兵種の戦闘データがありません"
+          hint={
+            <>
+              「{name}」が使われた戦闘履歴が見つかりませんでした。
+              「戦闘履歴」タブで戦績を登録すると、勝率や相性がここに表示されます。
+            </>
+          }
+        />
       ) : (
         <>
-          <StatCards summary={summary} />
-          <WinRateBar summary={summary} />
+          <DetailSummary summary={summary} />
 
           <UnitMatchupRanking
             ranking={unitRanking}
@@ -192,14 +191,13 @@ export function UnitDetail({
 
           <UsageTrend points={trend} />
 
-          <Section title="戦闘ログ" count={`${outcomes.length}件`} mobileCollapsed>
-            <BattleLogList
-              outcomes={outcomes}
-              currentUnit={name}
-              onSelectWarlord={onSelectWarlord}
-              onSelectUnit={onSelectUnit}
-            />
-          </Section>
+          <DetailBattleLogSection
+            count={`${outcomes.length}件`}
+            outcomes={outcomes}
+            currentUnit={name}
+            onSelectWarlord={onSelectWarlord}
+            onSelectUnit={onSelectUnit}
+          />
         </>
       )}
 
@@ -219,6 +217,6 @@ export function UnitDetail({
           }}
         />
       )}
-    </section>
+    </DetailPage>
   );
 }

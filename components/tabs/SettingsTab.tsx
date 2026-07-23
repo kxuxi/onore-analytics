@@ -5,6 +5,7 @@ import type { WarlordMap } from "@/lib/types";
 import { FactionTab } from "@/components/tabs/FactionTab";
 import { resolveTheme, type ResolvedTheme, type ThemePref } from "@/lib/theme";
 import type { FactionColorMap } from "@/lib/factionColors";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 interface Props {
   db: WarlordMap;
@@ -72,8 +73,12 @@ export function SettingsTab({
   return (
     <>
       <section className="panel">
+        <PageHeader
+          title="環境設定"
+          description="表示テーマ、国カラー、管理者向けの記録・データ整理設定を管理します。"
+        />
         <div className="history-head">
-          <h2>テーマ（外観）</h2>
+          <h3 className="section-title">テーマ（外観）</h3>
         </div>
         <p className="muted" style={{ margin: 0, fontSize: 13 }}>
           画面のライト／ダークを切り替えます。「自動」は時間帯で切り替わります
@@ -123,7 +128,7 @@ export function SettingsTab({
       {isAdmin && onChangePastLogMode && (
         <section className="panel">
           <div className="history-head">
-            <h2>過去ログ記録モード</h2>
+            <h3 className="section-title">過去ログ記録モード</h3>
           </div>
           <p className="muted" style={{ margin: 0, fontSize: 13 }}>
             通常は最新の期にしか戦闘履歴を登録できません。このモードを ON にすると、
@@ -168,7 +173,7 @@ export function SettingsTab({
       {isAdmin && onCleanupSkewed && (
         <section className="panel">
           <div className="history-head">
-            <h2>データの整理</h2>
+            <h3 className="section-title">データの整理</h3>
           </div>
           <p className="muted" style={{ margin: 0, fontSize: 13 }}>
             項目がずれて登録された戦闘記録・武将を削除します。オリジナル兵名や

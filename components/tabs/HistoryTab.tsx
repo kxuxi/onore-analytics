@@ -2,43 +2,24 @@
 
 import { useEffect, useMemo, useRef, useState, useDeferredValue } from "react";
 import type { BattleRecord } from "@/lib/types";
-import { parseActionDate } from "@/lib/action";
+import { parseBattleEntriesChecked } from "@/lib/parser";
+import type { FactionColorMap } from "@/lib/factionColors";
+import { htmlToMarkdown } from "@/lib/clipboard";
 import {
-  parseBattleCard,
-  isSpecialToken,
-  normalizeDisplayToken,
-  extractBattleUrl,
-  battleKey,
-  parseBattleEntriesChecked,
-  type BattleCard,
-  type BattleSide,
-} from "@/lib/parser";
-import {
-  resolveFactionColor,
-  factionNameStyle,
-  DEFAULT_WIN_LEFT,
-  DEFAULT_WIN_RIGHT,
-  type FactionColorMap,
-} from "@/lib/factionColors";
-import { htmlToMarkdown, copyText } from "@/lib/clipboard";
-import {
-  FilterIcon,
-  TrophyIcon,
   ChevronLeft,
   ChevronRight,
-  ExternalLinkIcon,
   SortIcon,
-  CloseIcon,
-  CopyIcon,
-  CheckIcon,
   TrashIcon,
 } from "@/components/icons";
+import { FilterPanel, type ActiveFilter } from "@/components/FilterPanel";
 import { SearchBox } from "@/components/SearchBox";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { BattleHistoryCard } from "@/components/tabs/BattleHistoryCard";
 import { BATTLE_LOG_PAGE_SIZE as PAGE_SIZE } from "@/lib/stats";
 import { useAntiIndex } from "@/lib/useAntiIndex";
-import { AntiArrows } from "@/components/AntiArrows";
 import {
-  buildBattleSearchText,
+  buildBattleHistoryItems,
+  filterAndSortBattleHistory,
   formatGameMonthOrder,
   parseGameMonthOrder,
 } from "@/lib/historyFilters";
@@ -58,36 +39,8 @@ interface Props {
   onSelectWarlord: (name: string) => void;
   onSelectUnit: (name: string) => void;
   onDelete: (id: number) => Promise<void>;
-  /** 表示中（絞り込み結果）の戦闘履歴をまとめて削除する。 */
+  /** 現在のページに表示している戦闘履歴をまとめて削除する。 */
   onBulkDelete: (ids: number[]) => Promise<void>;
-}
-
-/** 片側の装備・兵種タグを組み立てる（兵種 → 兵種 → 装備）。
- * `unit: true` のタグ（兵種名）は兵種ページへ遷移できる。 */
-function sideTags(
-  side: BattleSide
-): { text: string; highlight: boolean; unit: boolean }[] {
-  const tags: { text: string; highlight: boolean; unit: boolean }[] = [];
-  if (side.unit) {
-    // 兵種は表示名（オリジナル兵は括弧内の素の兵種名）に正規化されるため、
-    // `*`始まり（オリジナル兵）かどうかで色を変えると、同じ「ライフル銃兵」でも
-    // 色が割れてしまう。兵種タグは常に同じスタイルで表示する。
-    tags.push({
-      text: normalizeDisplayToken(side.unit),
-      highlight: false,
-      unit: true,
-    });
-  }
-  if (side.branch)
-    tags.push({ text: side.branch, highlight: false, unit: false });
-  for (const e of side.equips) {
-    tags.push({
-      text: normalizeDisplayToken(e),
-      highlight: isSpecialToken(e),
-      unit: false,
-    });
-  }
-  return tags;
 }
 
 const PLACEHOLDER = `戦闘履歴をここに貼り付けてください。（スマホからのコピー＆ペーストにも対応しています）`;
@@ -212,24 +165,8 @@ export function HistoryTab({
     });
   };
 
-  // 各履歴をカード表示用に解析（取得・並びロジックは従来通り）。
-  // 内容が同一の行（正規化後に一致）は重複表示しないよう除外する。
-  const cards = useMemo(() => {
-    const seen = new Set<string>();
-    const out: {
-      record: BattleRecord;
-      card: BattleCard | null;
-      search: string;
-    }[] = [];
-    for (const record of log) {
-      const key = battleKey(record.line);
-      if (key && seen.has(key)) continue;
-      if (key) seen.add(key);
-      const card = parseBattleCard(record.line);
-      out.push({ record, card, search: buildBattleSearchText(record, card) });
-    }
-    return out;
-  }, [log]);
+  // 内容が同一の行は、従来どおり最初のレコードを残して重複表示しない。
+  const cards = useMemo(() => buildBattleHistoryItems(log), [log]);
 
   // フィルター用の国一覧（カードの左右いずれかに登場する勢力）
   const factionOptions = useMemo(() => {
@@ -255,68 +192,33 @@ export function HistoryTab({
       .map(([order, label]) => ({ order, label }));
   }, [cards]);
 
-  // 戦闘時刻順で表示（新しい順 / 古い順）。キーワード・国・期間で絞り込み。
-  const visibleLog = useMemo(() => {
-    const k = deferredKeyword.trim().toLowerCase();
-    const now = new Date();
-    // ゲーム内年月の範囲（未指定側は開放）。
-    const ymLo =
-      fromYm != null && toYm != null ? Math.min(fromYm, toYm) : fromYm ?? toYm;
-    const ymHi =
-      fromYm != null && toYm != null ? Math.max(fromYm, toYm) : fromYm ?? toYm;
-    // 実日付の範囲（その日の 00:00〜23:59 を含む）。
-    const dateLo = fromDate ? new Date(`${fromDate}T00:00:00`).getTime() : null;
-    const dateHi = toDate ? new Date(`${toDate}T23:59:59`).getTime() : null;
-    const list = cards.filter((item) => {
-      if (k && !item.search.includes(k)) return false;
-      const { card, record } = item;
-      if (factionFilter) {
-        const f =
-          card?.left.faction === factionFilter ||
-          card?.right.faction === factionFilter;
-        if (!f) return false;
-      }
-      // ゲーム内年月で絞り込み。
-      if (ymLo != null || ymHi != null) {
-        const order = parseGameMonthOrder(record.time);
-        if (order == null) return false;
-        if (ymLo != null && order < ymLo) return false;
-        if (ymHi != null && order > ymHi) return false;
-      }
-      // 実日付で絞り込み。
-      if (dateLo != null || dateHi != null) {
-        const d = parseActionDate(record.time, now)?.getTime() ?? null;
-        if (d == null) return false;
-        if (dateLo != null && d < dateLo) return false;
-        if (dateHi != null && d > dateHi) return false;
-      }
-      return true;
-    });
-    const timeOf = (r: BattleRecord) =>
-      parseActionDate(r.time, now)?.getTime() ?? null;
-    // newest=1（降順）/ oldest=-1（昇順）。時刻が無い行は常に末尾。
-    const dir = sortOrder === "newest" ? 1 : -1;
-    return [...list].sort((a, b) => {
-      const ta = timeOf(a.record);
-      const tb = timeOf(b.record);
-      if (ta != null && tb != null) {
-        if (tb !== ta) return (tb - ta) * dir;
-        return (b.record.savedAt - a.record.savedAt) * dir;
-      }
-      if (ta != null) return -1;
-      if (tb != null) return 1;
-      return (b.record.savedAt - a.record.savedAt) * dir;
-    });
-  }, [
-    cards,
-    deferredKeyword,
-    factionFilter,
-    sortOrder,
-    fromYm,
-    toYm,
-    fromDate,
-    toDate,
-  ]);
+  // 戦闘時刻順で表示（新しい順 / 古い順）。キーワード・国・期間で絞り込む。
+  const visibleLog = useMemo(
+    () =>
+      filterAndSortBattleHistory(
+        cards,
+        {
+          keyword: deferredKeyword,
+          faction: factionFilter,
+          fromGameMonth: fromYm,
+          toGameMonth: toYm,
+          fromDate,
+          toDate,
+          sortOrder,
+        },
+        new Date()
+      ),
+    [
+      cards,
+      deferredKeyword,
+      factionFilter,
+      sortOrder,
+      fromYm,
+      toYm,
+      fromDate,
+      toDate,
+    ]
+  );
 
   const hasActiveFilter =
     keyword.trim() !== "" ||
@@ -334,6 +236,59 @@ export function HistoryTab({
     setFromDate("");
     setToDate("");
   };
+
+  const activeFilters: ActiveFilter[] = [
+    ...(factionFilter
+      ? [
+          {
+            key: "faction",
+            label: "国",
+            value: factionFilter,
+            onRemove: () => setFactionFilter(""),
+          },
+        ]
+      : []),
+    ...(fromYm != null
+      ? [
+          {
+            key: "fromYm",
+            label: "年月（開始）",
+            value: formatGameMonthOrder(fromYm),
+            onRemove: () => setFromYm(null),
+          },
+        ]
+      : []),
+    ...(toYm != null
+      ? [
+          {
+            key: "toYm",
+            label: "年月（終了）",
+            value: formatGameMonthOrder(toYm),
+            onRemove: () => setToYm(null),
+          },
+        ]
+      : []),
+    ...(fromDate
+      ? [
+          {
+            key: "fromDate",
+            label: "日付（開始）",
+            value: fromDate,
+            onRemove: () => setFromDate(""),
+          },
+        ]
+      : []),
+    ...(toDate
+      ? [
+          {
+            key: "toDate",
+            label: "日付（終了）",
+            value: toDate,
+            onRemove: () => setToDate(""),
+          },
+        ]
+      : []),
+  ];
 
   const totalPages = Math.max(1, Math.ceil(visibleLog.length / PAGE_SIZE));
 
@@ -388,7 +343,11 @@ export function HistoryTab({
     <>
       {canRegister && (
       <section className="panel">
-        <h2>戦闘履歴を登録</h2>
+        <PageHeader
+          title="戦闘履歴"
+          description="戦闘結果の登録と、保存済み履歴の検索・確認を行います。"
+        />
+        <h3 className="section-title">戦闘履歴を登録</h3>
         <p className="muted" style={{ margin: 0, fontSize: 13 }}>
           ゲームの戦闘履歴をブラウザからコピーして貼り付け、「登録する」を押してください。
           リンク付き（各戦の詳細ページ URL）も自動で保持されます。
@@ -483,160 +442,154 @@ export function HistoryTab({
       )}
 
       <section className="panel">
+        {!canRegister && (
+          <PageHeader
+            title="戦闘履歴"
+            description="登録済みの戦闘結果を期間・国・武将名などで検索できます。"
+          />
+        )}
         <div className="history-head" ref={listTopRef}>
-          <h2>登録済み戦闘履歴</h2>
-          <span className="count-badge" role="status" aria-live="polite">
-            {hasActiveFilter
-              ? `全${cards.length.toLocaleString("ja-JP")}件中 ${visibleLog.length.toLocaleString("ja-JP")}件`
-              : `全${cards.length.toLocaleString("ja-JP")}件`}
-          </span>
+          <h3 className="section-title">登録済み戦闘履歴</h3>
         </div>
 
-        <div className="search-row">
-          <SearchBox
-            value={keyword}
-            onChange={setKeyword}
-            placeholder="履歴を絞り込み（武将名など）"
-          />
-          <button
-            type="button"
-            className="btn sort-toggle"
-            onClick={() =>
-              setSortOrder((o) => (o === "newest" ? "oldest" : "newest"))
-            }
-            aria-label={
-              sortOrder === "newest"
-                ? "並び順: 新しい順（クリックで古い順に切替）"
-                : "並び順: 古い順（クリックで新しい順に切替）"
-            }
-            title="登録日時の並び替え"
-          >
-            <SortIcon />
-            <span>{sortOrder === "newest" ? "新しい順" : "古い順"}</span>
-          </button>
-          <button
-            type="button"
-            className={
-              "btn filter-toggle" +
-              (showFilter ||
+        <FilterPanel
+          id="history-filters"
+          search={
+            <SearchBox
+              value={keyword}
+              onChange={setKeyword}
+              placeholder="履歴を絞り込み（武将名など）"
+            />
+          }
+          expanded={showFilter}
+          onToggle={() => setShowFilter((v) => !v)}
+          toggleActive={Boolean(
+            showFilter ||
               factionFilter ||
               fromYm != null ||
               toYm != null ||
               fromDate ||
               toDate
-                ? " active"
-                : "")
-            }
-            onClick={() => setShowFilter((v) => !v)}
-            aria-expanded={showFilter}
-          >
-            <FilterIcon />
-            <span>フィルター</span>
-          </button>
-          {hasActiveFilter && (
+          )}
+          hasActiveFilters={hasActiveFilter}
+          onClear={clearFilters}
+          activeFilters={activeFilters}
+          resultText={
+            hasActiveFilter
+              ? `全${cards.length.toLocaleString(
+                  "ja-JP"
+                )}件中 ${visibleLog.length.toLocaleString("ja-JP")}件`
+              : `全${cards.length.toLocaleString("ja-JP")}件`
+          }
+          leadingActions={
             <button
               type="button"
-              className="btn clear-filters"
-              onClick={clearFilters}
-              title="絞り込み条件をすべて解除"
+              className="btn sort-toggle"
+              onClick={() =>
+                setSortOrder((o) => (o === "newest" ? "oldest" : "newest"))
+              }
+              aria-label={
+                sortOrder === "newest"
+                  ? "並び順: 新しい順（クリックで古い順に切替）"
+                  : "並び順: 古い順（クリックで新しい順に切替）"
+              }
+              title="戦闘日時の並び替え"
             >
-              <CloseIcon />
-              <span>解除</span>
+              <SortIcon />
+              <span>{sortOrder === "newest" ? "新しい順" : "古い順"}</span>
             </button>
-          )}
-          {canDelete && pageItems.length > 0 && (
-            <button
-              type="button"
-              className="btn faction-delete"
-              onClick={handleBulkDelete}
-              disabled={bulkDeleting}
-              title="このページに表示中の戦闘履歴を削除します（取り消せません）"
+          }
+          trailingActions={
+            canDelete && pageItems.length > 0 ? (
+              <button
+                type="button"
+                className="btn faction-delete"
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                title="このページに表示中の戦闘履歴を削除します（取り消せません）"
+              >
+                <TrashIcon />
+                <span>
+                  {bulkDeleting
+                    ? "削除中…"
+                    : `表示中の${pageItems.length.toLocaleString(
+                        "ja-JP"
+                      )}件を削除`}
+                </span>
+              </button>
+            ) : undefined
+          }
+        >
+          <label className="filter">
+            <span>国</span>
+            <select
+              className="select"
+              value={factionFilter}
+              onChange={(e) => setFactionFilter(e.target.value)}
             >
-              <TrashIcon />
-              <span>
-                {bulkDeleting
-                  ? "削除中…"
-                  : `表示中の${pageItems.length.toLocaleString(
-                      "ja-JP"
-                    )}件を削除`}
-              </span>
-            </button>
-          )}
-        </div>
-
-        {showFilter && (
-          <div className="filter-grid">
-            <label className="filter">
-              <span>国</span>
-              <select
-                className="select"
-                value={factionFilter}
-                onChange={(e) => setFactionFilter(e.target.value)}
-              >
-                <option value="">すべて</option>
-                {factionOptions.map((f) => (
-                  <option key={f} value={f}>
-                    {f}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="filter">
-              <span>年月（開始）</span>
-              <select
-                className="select"
-                value={fromYm ?? ""}
-                onChange={(e) =>
-                  setFromYm(e.target.value ? Number(e.target.value) : null)
-                }
-              >
-                <option value="">指定なし</option>
-                {yearMonthOptions.map(({ order, label }) => (
-                  <option key={order} value={order}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="filter">
-              <span>年月（終了）</span>
-              <select
-                className="select"
-                value={toYm ?? ""}
-                onChange={(e) =>
-                  setToYm(e.target.value ? Number(e.target.value) : null)
-                }
-              >
-                <option value="">指定なし</option>
-                {yearMonthOptions.map(({ order, label }) => (
-                  <option key={order} value={order}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="filter">
-              <span>日付（開始）</span>
-              <input
-                type="date"
-                className="text-input"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                aria-label="実際の日付で絞り込む（開始）"
-              />
-            </label>
-            <label className="filter">
-              <span>日付（終了）</span>
-              <input
-                type="date"
-                className="text-input"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                aria-label="実際の日付で絞り込む（終了）"
-              />
-            </label>
-          </div>
-        )}
+              <option value="">すべて</option>
+              {factionOptions.map((f) => (
+                <option key={f} value={f}>
+                  {f}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="filter">
+            <span>年月（開始）</span>
+            <select
+              className="select"
+              value={fromYm ?? ""}
+              onChange={(e) =>
+                setFromYm(e.target.value ? Number(e.target.value) : null)
+              }
+            >
+              <option value="">指定なし</option>
+              {yearMonthOptions.map(({ order, label }) => (
+                <option key={order} value={order}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="filter">
+            <span>年月（終了）</span>
+            <select
+              className="select"
+              value={toYm ?? ""}
+              onChange={(e) =>
+                setToYm(e.target.value ? Number(e.target.value) : null)
+              }
+            >
+              <option value="">指定なし</option>
+              {yearMonthOptions.map(({ order, label }) => (
+                <option key={order} value={order}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="filter">
+            <span>日付（開始）</span>
+            <input
+              type="date"
+              className="text-input"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              aria-label="実際の日付で絞り込む（開始）"
+            />
+          </label>
+          <label className="filter">
+            <span>日付（終了）</span>
+            <input
+              type="date"
+              className="text-input"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              aria-label="実際の日付で絞り込む（終了）"
+            />
+          </label>
+        </FilterPanel>
 
         {visibleLog.length === 0 ? (
           log.length === 0 ? (
@@ -711,304 +664,5 @@ export function HistoryTab({
         )}
       </section>
     </>
-  );
-}
-
-interface CardProps {
-  record: BattleRecord;
-  card: BattleCard | null;
-  factionColors: FactionColorMap;
-  highlight: string;
-  antiIndex: Map<string, Set<string>>;
-  onSelectWarlord: (name: string) => void;
-  onSelectUnit: (name: string) => void;
-  onDelete: (id: number) => Promise<void>;
-  canDelete?: boolean;
-}
-
-/** 検索語に一致する部分を <mark> で強調表示する（大文字小文字を区別しない）。 */
-function highlightMatch(text: string, query: string): React.ReactNode {
-  const q = query.trim();
-  if (!q) return text;
-  const lower = text.toLowerCase();
-  const lowerQ = q.toLowerCase();
-  const out: React.ReactNode[] = [];
-  let i = 0;
-  let key = 0;
-  while (i < text.length) {
-    const idx = lower.indexOf(lowerQ, i);
-    if (idx === -1) {
-      out.push(text.slice(i));
-      break;
-    }
-    if (idx > i) out.push(text.slice(i, idx));
-    out.push(
-      <mark key={key++} className="hl">
-        {text.slice(idx, idx + q.length)}
-      </mark>
-    );
-    i = idx + q.length;
-  }
-  return out;
-}
-
-function BattleHistoryCard({
-  record,
-  card,
-  factionColors,
-  highlight,
-  antiIndex,
-  onSelectWarlord,
-  onSelectUnit,
-  onDelete,
-  canDelete = false,
-}: CardProps) {
-  // コピー完了の一時表示（フックは早期 return より前で宣言する）
-  const [copied, setCopied] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-
-  // 解析できなかった行は生テキストで表示（データを失わない）
-  if (!card) {
-    const { url } = extractBattleUrl(record.line);
-    return (
-      <li className="battle-card battle-card--raw">
-        {record.time && <span className="bc-time">{record.time}</span>}
-        <span className="bc-raw-line">{highlightMatch(record.line, highlight)}</span>
-        {url && (
-          <a
-            className="bc-link"
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <ExternalLinkIcon />
-            <span>詳細を見る</span>
-          </a>
-        )}
-      </li>
-    );
-  }
-
-  const safeCard = card;
-
-  // 左右それぞれの国の色を求める（未設定なら左=緑 / 右=橙の既定色）。
-  const leftColor = resolveFactionColor(
-    safeCard.left.faction,
-    DEFAULT_WIN_LEFT,
-    factionColors
-  );
-  const rightColor = resolveFactionColor(
-    safeCard.right.faction,
-    DEFAULT_WIN_RIGHT,
-    factionColors
-  );
-  // 勝者の名前はその国の色で塗る（引分・撤退・不明は色なし）。
-  const winnerColor =
-    safeCard.winner === "left"
-      ? leftColor
-      : safeCard.winner === "right"
-      ? rightColor
-      : undefined;
-  const winnerName =
-    safeCard.winner === "left"
-      ? safeCard.left.name
-      : safeCard.winner === "right"
-      ? safeCard.right.name
-      : "—";
-  const resultLabel =
-    safeCard.winner === "draw"
-      ? "引分"
-      : safeCard.winner === "retreat"
-      ? "撤退"
-      : safeCard.winner === "unknown"
-      ? safeCard.resultRaw
-      : "勝利";
-
-  // カード余白のクリックで戦闘ログ URL を開く（武将名・兵種ボタンは stopPropagation）。
-  const openUrl = () => {
-    if (safeCard.url) window.open(safeCard.url, "_blank", "noopener,noreferrer");
-  };
-
-  // 戦闘ログの URL をクリップボードへコピー（共有用）。
-  const copyLink = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!safeCard.url) return;
-    const ok = await copyText(safeCard.url);
-    if (ok) {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
-    }
-  };
-
-  // 戦闘記録を削除（確認後）。
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!record.id) return; // id がない場合は削除不可
-    if (!window.confirm("この戦闘履歴を削除してよろしいですか？（取り消せません）")) {
-      return;
-    }
-    setDeleting(true);
-    try {
-      await onDelete(record.id);
-    } catch {
-      window.alert("削除に失敗しました。もう一度お試しください。");
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  const renderTeam = (
-    side: BattleSide,
-    opponent: BattleSide,
-    align: "left" | "right",
-    color: string
-  ) => (
-    <div className={`bc-team bc-team--${align}`}>
-      {side.faction && (
-        <span
-          className="bc-faction"
-          style={factionNameStyle(side.faction, factionColors)}
-        >
-          {highlightMatch(side.faction, highlight)}
-        </span>
-      )}
-      <button
-        type="button"
-        className="bc-name bc-name-btn"
-        style={{ color }}
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelectWarlord(side.name);
-        }}
-        title={`${side.name} の戦績を見る`}
-      >
-        {highlightMatch(side.name, highlight)}
-      </button>
-      <div className="bc-tags">
-        {sideTags(side).map((t, i) =>
-          t.unit ? (
-            <span key={`${t.text}-${i}`} className="pill-anti-group">
-              <button
-                type="button"
-                className={"pill pill-btn" + (t.highlight ? " highlight" : "")}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectUnit(t.text);
-                }}
-                title={`${t.text} の戦績を見る`}
-              >
-                {highlightMatch(t.text, highlight)}
-              </button>
-              <AntiArrows self={side} opponent={opponent} antiIndex={antiIndex} />
-            </span>
-          ) : (
-            <span
-              key={`${t.text}-${i}`}
-              className={"pill" + (t.highlight ? " highlight" : "")}
-            >
-              {highlightMatch(t.text, highlight)}
-            </span>
-          )
-        )}
-      </div>
-    </div>
-  );
-
-  return (
-    <li
-      className={"battle-card" + (safeCard.url ? " battle-card--link" : "")}
-      style={{
-        borderLeftWidth: 2,
-        borderLeftStyle: "solid",
-        borderLeftColor: leftColor,
-        borderRightWidth: 2,
-        borderRightStyle: "solid",
-        borderRightColor: rightColor,
-      }}
-      onClick={safeCard.url ? openUrl : undefined}
-      role={safeCard.url ? "link" : undefined}
-      tabIndex={safeCard.url ? 0 : undefined}
-      onKeyDown={
-        safeCard.url
-          ? (e) => {
-              if (e.key === "Enter") openUrl();
-            }
-          : undefined
-      }
-    >
-      <div className="bc-header">
-        <div className="bc-header-left">
-          {safeCard.battleNo && (
-            <span className="bc-badge">{safeCard.battleNo}</span>
-          )}
-          {safeCard.place && <span className="bc-place">{safeCard.place}</span>}
-        </div>
-        <div className="bc-header-right">
-          {safeCard.turns && (
-            <span className="bc-turns">{safeCard.turns}ターン</span>
-          )}
-          {(safeCard.battleAt || record.time) && (
-            <span className="bc-time">{safeCard.battleAt ?? record.time}</span>
-          )}
-          {safeCard.url && (
-            <button
-              type="button"
-              className={"bc-link-icon bc-copy-btn" + (copied ? " copied" : "")}
-              onClick={copyLink}
-              aria-label={
-                copied ? "リンクをコピーしました" : "戦闘ログのリンクをコピー"
-              }
-              title={copied ? "コピーしました" : "リンクをコピー"}
-            >
-              {copied ? <CheckIcon /> : <CopyIcon />}
-            </button>
-          )}
-          {safeCard.url && (
-            <a
-              className="bc-link-icon"
-              href={safeCard.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              aria-label="戦闘ログの詳細を開く"
-              title="戦闘ログの詳細を開く"
-            >
-              <ExternalLinkIcon />
-            </a>
-          )}
-          {canDelete && (
-            <button
-              type="button"
-              className="bc-link-icon bc-delete-btn"
-              onClick={handleDelete}
-              disabled={deleting}
-              aria-label="戦闘履歴を削除"
-              title="戦闘履歴を削除"
-            >
-              <TrashIcon />
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="bc-vs">
-        {renderTeam(safeCard.left, safeCard.right, "left", leftColor)}
-        <div className="bc-vs-label">VS</div>
-        {renderTeam(safeCard.right, safeCard.left, "right", rightColor)}
-      </div>
-
-      <div className="bc-result">
-        <span className="bc-result-label">
-          <TrophyIcon />
-          {resultLabel}
-        </span>
-        <span
-          className="bc-winner"
-          style={winnerColor ? { color: winnerColor } : undefined}
-        >
-          {winnerName}
-        </span>
-      </div>
-    </li>
   );
 }

@@ -10,12 +10,12 @@ import {
   unitUsage,
   type EquipSlot,
 } from "@/lib/stats";
-import { BattleLogList } from "@/components/detail/BattleLogList";
 import { Section } from "@/components/detail/Section";
 import {
-  DetailHeader,
-  StatCards,
-  WinRateBar,
+  DetailBattleLogSection,
+  DetailEmptyState,
+  DetailPage,
+  DetailSummary,
 } from "@/components/detail/DetailParts";
 import {
   UnitMatchupRanking,
@@ -55,21 +55,20 @@ export function EquipDetail({
   );
 
   return (
-    <section className="panel detail-panel">
-      <DetailHeader kind={kind} title={name} onBack={onBack} />
-
+    <DetailPage kind={kind} title={name} onBack={onBack}>
       {outcomes.length === 0 ? (
-        <div className="empty">
-          <p className="empty-title">この{kind}の戦闘履歴がまだありません</p>
-          <p className="empty-hint">
-            「戦闘履歴」タブで戦績を登録すると、この{kind}を装備した戦闘の
-            勝率や使用武将がここに表示されます。
-          </p>
-        </div>
+        <DetailEmptyState
+          title={`この${kind}の戦闘履歴がまだありません`}
+          hint={
+            <>
+              「戦闘履歴」タブで戦績を登録すると、この{kind}を装備した戦闘の
+              勝率や使用武将がここに表示されます。
+            </>
+          }
+        />
       ) : (
         <>
-          <StatCards summary={summary} />
-          <WinRateBar summary={summary} />
+          <DetailSummary summary={summary} />
 
           <UserWinRateList users={users} onSelectWarlord={onSelectWarlord} />
 
@@ -97,15 +96,14 @@ export function EquipDetail({
             </Section>
           )}
 
-          <Section title="戦闘ログ" count={`${outcomes.length}件`} mobileCollapsed>
-            <BattleLogList
-              outcomes={outcomes}
-              onSelectWarlord={onSelectWarlord}
-              onSelectUnit={onSelectUnit}
-            />
-          </Section>
+          <DetailBattleLogSection
+            count={`${outcomes.length}件`}
+            outcomes={outcomes}
+            onSelectWarlord={onSelectWarlord}
+            onSelectUnit={onSelectUnit}
+          />
         </>
       )}
-    </section>
+    </DetailPage>
   );
 }

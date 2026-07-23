@@ -2,8 +2,12 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { BattleRecord, WarlordMap } from "@/lib/types";
-import { FilterIcon, CloseIcon } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
+import {
+  FilterPanel,
+  type ActiveFilter,
+} from "@/components/FilterPanel";
+import { PageHeader } from "@/components/layout/PageHeader";
 import {
   breakthroughRanking,
   formatWinRate,
@@ -11,6 +15,12 @@ import {
   rankingPeriods,
   warlordRanking,
 } from "@/lib/stats";
+import {
+  DEFAULT_RANKING_FILTERS_OPEN,
+  DEFAULT_RANKING_MIN_COUNT,
+  DEFAULT_RANKING_PERIOD_KEY,
+  WARLORD_RANKING_MIN_COUNT_OPTIONS,
+} from "@/lib/rankingDefaults";
 
 interface Props {
   log: BattleRecord[];
@@ -32,16 +42,16 @@ type SortKey =
   | "assists";
 
 /** ノイズ除去用の最低戦闘数の選択肢。 */
-const MIN_CONTACT_OPTIONS = [1, 5, 10, 20, 30];
+const MIN_CONTACT_OPTIONS = WARLORD_RANKING_MIN_COUNT_OPTIONS;
 
 /** サマリーで各指標を上位何位まで出すか。 */
 const TOP_N = 3;
 
 /** 初期表示では最低戦闘数を10回以上にする。 */
-const DEFAULT_MIN_CONTACTS = 10;
+const DEFAULT_MIN_CONTACTS = DEFAULT_RANKING_MIN_COUNT;
 
 /** 武将ランキングを開いたときに選択する集計期間。 */
-const DEFAULT_PERIOD_KEY = "all";
+const DEFAULT_PERIOD_KEY = DEFAULT_RANKING_PERIOD_KEY;
 
 const SORT_OPTIONS: { key: SortKey; label: string; desc: string }[] = [
   {
@@ -379,7 +389,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
   const [query, setQuery] = useState("");
   const [branch, setBranch] = useState("");
   const [warlordType, setWarlordType] = useState("");
-  const [showFilter, setShowFilter] = useState(true);
+  const [showFilter, setShowFilter] = useState(DEFAULT_RANKING_FILTERS_OPEN);
   const [periodKey, setPeriodKey] = useState<string>(DEFAULT_PERIOD_KEY);
   const periods = useMemo(() => rankingPeriods(log), [log]);
   const range = useMemo(
@@ -479,15 +489,19 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
           (warlordType ? row.warlordType === warlordType : true) &&
           (q ? row.name.includes(q) : true)
       );
-      return SORT_OPTIONS.map((opt) => ({
-        opt,
-        rows: sortByMetric(
+      return SORT_OPTIONS.map((opt) => {
+        const eligibleRows = sortByMetric(
           filteredBySharedConditions.filter(
             (row) => metricContactCount(row, opt.key) >= minContacts
           ),
           opt.key
-        ).slice(0, TOP_N),
-      }));
+        );
+        return {
+          opt,
+          totalCount: eligibleRows.length,
+          rows: eligibleRows.slice(0, TOP_N),
+        };
+      });
     },
     [ranking, query, branch, warlordType, minContacts]
   );
@@ -540,13 +554,47 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
     setWarlordType("");
     setMinContacts(1);
   };
+  const activeFilters: ActiveFilter[] = [
+    ...(minContacts !== 1
+      ? [
+          {
+            key: "minimum-contacts",
+            label: activeMetric
+              ? metricContactLabel(activeMetric)
+              : "最低戦闘数",
+            value: `${minContacts}回以上`,
+            onRemove: () => setMinContacts(1),
+          },
+        ]
+      : []),
+    ...(branch
+      ? [
+          {
+            key: "branch",
+            label: "兵種タイプ",
+            value: branch,
+            onRemove: () => setBranch(""),
+          },
+        ]
+      : []),
+    ...(warlordType
+      ? [
+          {
+            key: "warlord-type",
+            label: "武将タイプ",
+            value: warlordType,
+            onRemove: () => setWarlordType(""),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <section className="panel ranking-panel">
-      <h2>武将ランキング</h2>
-      <p className="metric-note muted">
-        ※初期設定では、各指標の集計対象回数が10回未満の武将を除外します。
-      </p>
+      <PageHeader
+        title="武将ランキング"
+        description="※初期設定では、各指標の集計対象回数が10回未満の武将を除外します。"
+      />
 
       <div className="tmx-periods" role="tablist" aria-label="集計期間">
         {periods.map((period) => (
@@ -565,39 +613,28 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
         ))}
       </div>
 
-      <div className="search-row">
-        <SearchBox
-          value={query}
-          onChange={setQuery}
-          placeholder="武将名で検索"
-        />
-        <button
-          type="button"
-          className={
-            "btn filter-toggle" +
-            (showFilter || hasDropdownFilter ? " active" : "")
-          }
-          onClick={() => setShowFilter((v) => !v)}
-          aria-expanded={showFilter}
-        >
-          <FilterIcon />
-          <span>フィルター</span>
-        </button>
-        {hasFilter && (
-          <button
-            type="button"
-            className="btn clear-filters"
-            onClick={clearFilters}
-            title="絞り込み条件をすべて解除"
-          >
-            <CloseIcon />
-            <span>解除</span>
-          </button>
-        )}
-      </div>
-
-      {showFilter && (
-        <div className="filter-grid">
+      <FilterPanel
+        id="warlord-ranking-filters"
+        search={
+          <SearchBox
+            value={query}
+            onChange={setQuery}
+            placeholder="武将名で検索"
+          />
+        }
+        expanded={showFilter}
+        onToggle={() => setShowFilter((visible) => !visible)}
+        toggleActive={showFilter || hasDropdownFilter}
+        hasActiveFilters={hasFilter}
+        onClear={clearFilters}
+        activeFilters={activeFilters}
+        resultText={
+          activeMetric
+            ? `該当 ${detailRows.length.toLocaleString("ja-JP")}名`
+            : `${SORT_OPTIONS.length.toLocaleString("ja-JP")}指標`
+        }
+      >
+        <>
           <label className="filter">
             <span>
               {activeMetric
@@ -646,13 +683,13 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
               ))}
             </select>
           </label>
-        </div>
-      )}
+        </>
+      </FilterPanel>
 
       {activeMetric === null ? (
         // サマリー：指標ごとの上位 TOP3 を並べ、詳細へ誘導する。
         <div className="ranking-metric-grid">
-          {summaries.map(({ opt, rows }) => {
+          {summaries.map(({ opt, rows, totalCount }) => {
             const max = rows.reduce(
               (m, r) => Math.max(m, metricValue(r, opt.key)),
               0
@@ -660,7 +697,12 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
             return (
               <div className="metric-section" key={opt.key}>
                 <div className="metric-section-head">
-                  <h3>{opt.label}</h3>
+                  <h3>
+                    {opt.label}
+                    <span className="metric-section-count">
+                      対象{totalCount.toLocaleString("ja-JP")}名
+                    </span>
+                  </h3>
                   <button
                     type="button"
                     className="link-like"
@@ -711,11 +753,8 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
             </span>
             <span className="metric-crumb-current">{activeLabel}</span>
           </nav>
+          <h3 className="sr-only">{activeLabel}ランキング</h3>
           <p className="metric-section-desc muted">{activeDesc}</p>
-
-          <p className="sr-only" role="status" aria-live="polite">
-            該当 {detailRows.length.toLocaleString("ja-JP")}件
-          </p>
 
           {detailRows.length === 0 ? (
             <div className="empty">
