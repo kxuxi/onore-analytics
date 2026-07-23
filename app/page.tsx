@@ -139,6 +139,26 @@ const GROUP_ICONS: Record<TabGroupKey, ReactNode> = {
 /** 年代別ランキングの空値（未計算時に返す安定参照）。 */
 const EMPTY_YEAR_RANKINGS: ReturnType<typeof yearBucketWinRankings> = [];
 
+/** 一覧・分析・管理画面は、表やカードを2列で扱えるデータ画面幅を使う。 */
+const DATA_LAYOUT_TABS = new Set<TabKey>([
+  "history",
+  "scout",
+  "damage",
+  "unitrank",
+  "weaponrank",
+  "itemrank",
+  "synergy",
+  "matrix",
+  "metaenv",
+  "metrics",
+  "db",
+  "units",
+  "weapons",
+  "items",
+  "nations",
+  "factions",
+]);
+
 /** 過去ログ記録モード（ON のとき過去の期にも登録可。管理者のみ）の保存キー。 */
 const PAST_LOG_MODE_STORAGE_KEY = "onore-tool:past-log-mode:v1";
 
@@ -980,7 +1000,10 @@ export default function HomePage() {
         </aside>
 
         <main
-          className="main"
+          className={
+            "main" +
+            (!detail && DATA_LAYOUT_TABS.has(tab) ? " main--wide" : "")
+          }
           id="main-panel"
           role="tabpanel"
           aria-labelledby={hasSubtabs ? `subtab-${tab}` : `group-${activeGroup}`}

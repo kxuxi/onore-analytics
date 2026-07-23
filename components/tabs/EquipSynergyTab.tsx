@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import type { BattleRecord } from "@/lib/types";
 import { equipSynergy, formatWinRate } from "@/lib/stats";
 import { FilterIcon, CloseIcon } from "@/components/icons";
@@ -60,10 +61,10 @@ export function EquipSynergyTab({ log, onSelectWarlord, onSelectEquip }: Props) 
 
   return (
     <section className="panel">
-      <h2>装備シナジー</h2>
-      <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-        武器と品物の組み合わせごとに勝率を集計します。
-      </p>
+      <PageHeader
+        title="装備シナジー"
+        description="武器と品物の組み合わせごとに勝率を集計します。"
+      />
 
       <div className="stat-grid">
         <div className="stat">
