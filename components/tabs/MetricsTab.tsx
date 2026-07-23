@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import type { BattleRecord, WarlordMap } from "@/lib/types";
 import { FilterIcon, CloseIcon } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
+import { PageHeader } from "@/components/layout/PageHeader";
 import {
   breakthroughRanking,
   formatWinRate,
@@ -549,10 +550,10 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
 
   return (
     <section className="panel ranking-panel">
-      <h2>武将ランキング</h2>
-      <p className="metric-note muted">
-        ※初期設定では、各指標の集計対象回数が10回未満の武将を除外します。
-      </p>
+      <PageHeader
+        title="武将ランキング"
+        description="※初期設定では、各指標の集計対象回数が10回未満の武将を除外します。"
+      />
 
       <div className="tmx-periods" role="tablist" aria-label="集計期間">
         {periods.map((period) => (
@@ -717,6 +718,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
             </span>
             <span className="metric-crumb-current">{activeLabel}</span>
           </nav>
+          <h3 className="sr-only">{activeLabel}ランキング</h3>
           <p className="metric-section-desc muted">{activeDesc}</p>
 
           <p className="sr-only" role="status" aria-live="polite">

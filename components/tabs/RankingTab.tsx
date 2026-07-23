@@ -16,6 +16,7 @@ import {
 } from "@/lib/rankingDefaults";
 import { FilterIcon, CloseIcon } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 /** ランキングの対象。unit=兵種 / weapon=武器(武将の持つ武器) / item=品物(武将の持つ品物)。 */
 export type RankVariant = "unit" | "weapon" | "item";
@@ -366,8 +367,7 @@ export function RankingTab({
 
   return (
     <section className="panel ranking-panel">
-      <h2>{copy.title}</h2>
-      <p className="metric-note muted">{copy.description}</p>
+      <PageHeader title={copy.title} description={copy.description} />
 
       <div className="tmx-periods" role="tablist" aria-label="集計期間">
         {periods.map((period) => (
@@ -537,6 +537,7 @@ export function RankingTab({
               {activeOption?.label}
             </span>
           </nav>
+          <h3 className="sr-only">{activeOption?.label}ランキング</h3>
           <p className="metric-section-desc muted">
             {activeOption?.description}
           </p>
