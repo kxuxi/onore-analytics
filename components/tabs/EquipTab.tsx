@@ -2,10 +2,17 @@
 
 import { useMemo, useState } from "react";
 import type { BattleRecord } from "@/lib/types";
-import { weaponStats, itemStats, formatWinRate } from "@/lib/stats";
+import { weaponStats, itemStats } from "@/lib/stats";
 import { FilterPanel, type ActiveFilter } from "@/components/FilterPanel";
 import { SearchBox } from "@/components/SearchBox";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { EquipCatalogResults } from "./EquipCatalogResults";
+import {
+  EQUIP_CATALOG_MIN_USE_OPTIONS,
+  EQUIP_CATALOG_SORT_OPTIONS,
+  filterAndSortEquipCatalog,
+  type EquipCatalogSortKey,
+} from "./equipCatalog";
 
 /** 集計する装備枠。weapon=武将の持つ武器 / item=武将の持つ品物。 */
 export type EquipVariant = "weapon" | "item";
@@ -56,41 +63,20 @@ const VARIANT_COPY: Record<
   },
 };
 
-type SortKey = "battles" | "winRate" | "name";
-
-const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "battles", label: "使用回数（多い順）" },
-  { key: "winRate", label: "勝率（高い順）" },
-  { key: "name", label: "名前（あいうえお順）" },
-];
-
-/** 勝率の信頼度を確保するための最低使用回数の選択肢。 */
-const MIN_USE_OPTIONS = [1, 10, 50, 100];
-
 export function EquipTab({ log, onSelectWarlord, onSelectEquip, variant }: Props) {
   const copy = VARIANT_COPY[variant];
   const [keyword, setKeyword] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("battles");
+  const [sortKey, setSortKey] =
+    useState<EquipCatalogSortKey>("battles");
   const [minUses, setMinUses] = useState(1);
   const [showFilter, setShowFilter] = useState(true);
 
   const stats = useMemo(() => copy.stats(log), [copy, log]);
 
-  const view = useMemo(() => {
-    const k = keyword.trim();
-    const filtered = stats.filter(
-      (e) => e.battles >= minUses && (k ? e.name.includes(k) : true)
-    );
-    return [...filtered].sort((a, b) => {
-      if (sortKey === "winRate") {
-        return b.winRate - a.winRate || b.battles - a.battles;
-      }
-      if (sortKey === "name") {
-        return a.name.localeCompare(b.name, "ja");
-      }
-      return b.battles - a.battles || b.winRate - a.winRate;
-    });
-  }, [stats, keyword, sortKey, minUses]);
+  const view = useMemo(
+    () => filterAndSortEquipCatalog(stats, keyword, sortKey, minUses),
+    [stats, keyword, sortKey, minUses]
+  );
 
   // 検索ボックスとは別にトグルする並べ替え・絞り込み（既定値と異なると「適用中」扱い）。
   const hasDropdownFilter = sortKey !== "battles" || minUses !== 1;
@@ -106,7 +92,9 @@ export function EquipTab({ log, onSelectWarlord, onSelectEquip, variant }: Props
       key: "sort",
       label: "並べ替え",
       value:
-        SORT_OPTIONS.find((option) => option.key === sortKey)?.label ?? sortKey,
+        EQUIP_CATALOG_SORT_OPTIONS.find(
+          (option) => option.key === sortKey
+        )?.label ?? sortKey,
       onRemove: () => setSortKey("battles"),
     });
   }
@@ -120,7 +108,7 @@ export function EquipTab({ log, onSelectWarlord, onSelectEquip, variant }: Props
   }
 
   return (
-    <section className="panel">
+    <section className="panel catalog-panel">
       <PageHeader title={copy.title} description={copy.description} />
 
       <FilterPanel
@@ -149,9 +137,11 @@ export function EquipTab({ log, onSelectWarlord, onSelectEquip, variant }: Props
           <select
             className="select"
             value={sortKey}
-            onChange={(e) => setSortKey(e.target.value as SortKey)}
+            onChange={(e) =>
+              setSortKey(e.target.value as EquipCatalogSortKey)
+            }
           >
-            {SORT_OPTIONS.map((o) => (
+            {EQUIP_CATALOG_SORT_OPTIONS.map((o) => (
               <option key={o.key} value={o.key}>
                 {o.label}
               </option>
@@ -165,7 +155,7 @@ export function EquipTab({ log, onSelectWarlord, onSelectEquip, variant }: Props
             value={minUses}
             onChange={(e) => setMinUses(Number(e.target.value))}
           >
-            {MIN_USE_OPTIONS.map((v) => (
+            {EQUIP_CATALOG_MIN_USE_OPTIONS.map((v) => (
               <option key={v} value={v}>
                 {v}回以上
               </option>
@@ -180,77 +170,13 @@ export function EquipTab({ log, onSelectWarlord, onSelectEquip, variant }: Props
           <p className="empty-hint">{copy.emptyHint}</p>
         </div>
       ) : (
-        <div className="table-wrap">
-          <table className="table-card">
-            <thead>
-              <tr>
-                <th>{copy.slotLabel}</th>
-                <th>使用回数</th>
-                <th>勝率</th>
-                <th>攻 / 守</th>
-                <th>主な使用武将</th>
-              </tr>
-            </thead>
-            <tbody>
-              {view.map((e) => (
-                <tr key={e.name}>
-                  <td className="cell-title">
-                    <button
-                      type="button"
-                      className="tag unit tag-btn"
-                      onClick={() => onSelectEquip(e.name)}
-                      title={`${e.name} の詳細を見る`}
-                    >
-                      {e.name}
-                    </button>
-                  </td>
-                  <td data-label="使用回数">
-                    {e.battles.toLocaleString("ja-JP")}
-                  </td>
-                  <td data-label="勝率">
-                    <span>
-                      {e.decided > 0 ? (
-                        <>
-                          {formatWinRate(e.winRate, e.decided)}
-                          <span className="muted equip-decided">
-                            （{e.wins.toLocaleString("ja-JP")}/
-                            {e.decided.toLocaleString("ja-JP")}）
-                          </span>
-                        </>
-                      ) : (
-                        <span className="muted">-</span>
-                      )}
-                    </span>
-                  </td>
-                  <td className="equip-split" data-label="攻 / 守">
-                    <span>
-                      {e.attackUses.toLocaleString("ja-JP")} /{" "}
-                      {e.defenseUses.toLocaleString("ja-JP")}
-                    </span>
-                  </td>
-                  <td className="cell-block" data-label="主な使用武将">
-                    <span className="equip-users">
-                      {e.topUsers.map((u) => (
-                        <button
-                          key={u.name}
-                          type="button"
-                          className="link-like"
-                          onClick={() => onSelectWarlord(u.name)}
-                          title={`${u.name} の戦績を見る`}
-                        >
-                          {u.name}
-                          <span className="muted">
-                            ×{u.count.toLocaleString("ja-JP")}
-                          </span>
-                        </button>
-                      ))}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <EquipCatalogResults
+          entries={view}
+          noun={copy.noun}
+          slotLabel={copy.slotLabel}
+          onSelectWarlord={onSelectWarlord}
+          onSelectEquip={onSelectEquip}
+        />
       )}
     </section>
   );
