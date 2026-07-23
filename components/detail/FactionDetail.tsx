@@ -18,12 +18,12 @@ import {
   type FactionColorMap,
 } from "@/lib/factionColors";
 import { copyText } from "@/lib/clipboard";
-import { BattleLogList } from "@/components/detail/BattleLogList";
 import { Section } from "@/components/detail/Section";
 import {
-  DetailHeader,
-  StatCards,
-  WinRateBar,
+  DetailBattleLogSection,
+  DetailEmptyState,
+  DetailPage,
+  DetailSummary,
 } from "@/components/detail/DetailParts";
 import { BranchWinRates } from "@/components/detail/WarlordInsights";
 
@@ -120,30 +120,27 @@ export function FactionDetail({
   );
 
   return (
-    <section className="panel detail-panel">
-      <DetailHeader
-        kind="国"
-        title={name}
-        titleColor={factionNameStyle(name, colors)?.color as string | undefined}
-        tags={tags}
-        onBack={onBack}
-      />
-
+    <DetailPage
+      kind="国"
+      title={name}
+      titleColor={factionNameStyle(name, colors)?.color as string | undefined}
+      tags={tags}
+      onBack={onBack}
+    >
       {outcomes.length === 0 && members.length === 0 ? (
-        <div className="empty">
-          <p className="empty-title">この国のデータがありません</p>
-          <p className="empty-hint">
-            「{name}」が登場する戦闘履歴・所属武将が見つかりませんでした。
-            「戦闘履歴」タブで戦績を登録すると、勝率や主力兵種がここに表示されます。
-          </p>
-        </div>
+        <DetailEmptyState
+          title="この国のデータがありません"
+          hint={
+            <>
+              「{name}」が登場する戦闘履歴・所属武将が見つかりませんでした。
+              「戦闘履歴」タブで戦績を登録すると、勝率や主力兵種がここに表示されます。
+            </>
+          }
+        />
       ) : (
         <>
           {outcomes.length > 0 && (
-            <>
-              <StatCards summary={summary} />
-              <WinRateBar summary={summary} />
-            </>
+            <DetailSummary summary={summary} />
           )}
 
           {canViewLatestUnits && (
@@ -163,22 +160,17 @@ export function FactionDetail({
             <>
               <BranchWinRates branches={branches} />
 
-              <Section
-                title="戦闘ログ"
+              <DetailBattleLogSection
                 count={`${outcomes.length}件`}
-                mobileCollapsed
-              >
-                <BattleLogList
-                  outcomes={outcomes}
-                  onSelectWarlord={onSelectWarlord}
-                  onSelectUnit={onSelectUnit}
-                />
-              </Section>
+                outcomes={outcomes}
+                onSelectWarlord={onSelectWarlord}
+                onSelectUnit={onSelectUnit}
+              />
             </>
           )}
         </>
       )}
-    </section>
+    </DetailPage>
   );
 }
 

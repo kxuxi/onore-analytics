@@ -22,9 +22,9 @@ function UnitRankRow({
   onSelectUnit: (name: string) => void;
 }) {
   return (
-    <li className="rank-row">
-      <span className="rank-no">{rank}</span>
-      <span className="rank-name">
+    <li className="detail-rank-row">
+      <span className="detail-rank-no">{rank}</span>
+      <span className="detail-rank-name">
         <button
           type="button"
           className="link-like"
@@ -34,8 +34,10 @@ function UnitRankRow({
           {stat.unit}
         </button>
       </span>
-      <span className="rank-rate">{formatWinRate(stat.winRate, stat.decided)}</span>
-      <span className="rank-record">
+      <span className="detail-rank-rate">
+        {formatWinRate(stat.winRate, stat.decided)}
+      </span>
+      <span className="detail-rank-record">
         {stat.wins.toLocaleString("ja-JP")}勝{stat.losses.toLocaleString("ja-JP")}敗
       </span>
     </li>
@@ -52,10 +54,12 @@ export function UnitMatchupRanking({
   if (ranking.best.length === 0) return null;
   return (
     <Section title="敵兵種との相性" mobileCollapsed>
-      <div className="rank-cols">
-        <div className="rank-col">
-          <h4 className="rank-head rank-head--good">相性の良い敵兵種</h4>
-          <ol className="rank-list">
+      <div className="detail-rank-cols">
+        <div className="detail-rank-col">
+          <h4 className="detail-rank-head detail-rank-head--good">
+            相性の良い敵兵種
+          </h4>
+          <ol className="detail-rank-list">
             {ranking.best.map((s, i) => (
               <UnitRankRow
                 key={s.unit}
@@ -67,9 +71,11 @@ export function UnitMatchupRanking({
           </ol>
         </div>
         {ranking.worst.length > 0 && (
-          <div className="rank-col">
-            <h4 className="rank-head rank-head--bad">苦手な敵兵種</h4>
-            <ol className="rank-list">
+          <div className="detail-rank-col">
+            <h4 className="detail-rank-head detail-rank-head--bad">
+              苦手な敵兵種
+            </h4>
+            <ol className="detail-rank-list">
               {ranking.worst.map((s, i) => (
                 <UnitRankRow
                   key={s.unit}
@@ -147,10 +153,52 @@ export function UserWinRateList({
 type TrendMetric = "rate" | "wins" | "losses";
 
 const TREND_METRICS: { key: TrendMetric; label: string; color: string }[] = [
-  { key: "rate", label: "使用率", color: "#3b82f6" },
-  { key: "wins", label: "勝利数", color: "#22c55e" },
-  { key: "losses", label: "敗北数", color: "#ef4444" },
+  { key: "rate", label: "使用率", color: "var(--chart-primary)" },
+  { key: "wins", label: "勝利数", color: "var(--chart-win)" },
+  { key: "losses", label: "敗北数", color: "var(--chart-loss)" },
 ];
+
+function trendValue(point: UsageTrendPoint, metric: TrendMetric): number {
+  if (metric === "rate") return point.rate * 100;
+  return metric === "wins" ? point.wins : point.losses;
+}
+
+function formatTrendValue(value: number, metric: TrendMetric): string {
+  if (metric === "rate") {
+    return `${value.toLocaleString("ja-JP", {
+      maximumFractionDigits: 1,
+    })}%`;
+  }
+  return `${value.toLocaleString("ja-JP")}戦`;
+}
+
+/** 折れ線を見なくても期間・始点・終点・最大値を把握できる文章要約。 */
+export function describeUsageTrend(
+  points: UsageTrendPoint[],
+  metric: TrendMetric
+): string {
+  const metricLabel =
+    TREND_METRICS.find((candidate) => candidate.key === metric)?.label ??
+    "使用率";
+  if (points.length === 0) return `${metricLabel}の年別推移。データなし`;
+
+  const first = points[0];
+  const last = points[points.length - 1];
+  const peak = points.reduce((best, point) =>
+    trendValue(point, metric) > trendValue(best, metric) ? point : best
+  );
+
+  return `${metricLabel}の年別推移。${first.year}年は${formatTrendValue(
+    trendValue(first, metric),
+    metric
+  )}、${last.year}年は${formatTrendValue(
+    trendValue(last, metric),
+    metric
+  )}。最大は${peak.year}年の${formatTrendValue(
+    trendValue(peak, metric),
+    metric
+  )}`;
+}
 
 /** 年別の推移を 1 本の折れ線で描く（Y 軸は指標に応じて % か戦闘数）。 */
 function TrendLineChart({
@@ -175,8 +223,7 @@ function TrendLineChart({
   const xAt = (i: number) =>
     padL + (n <= 1 ? plotW / 2 : (i / (n - 1)) * plotW);
   const isRate = metric === "rate";
-  const valueOf = (p: UsageTrendPoint) =>
-    isRate ? p.rate * 100 : metric === "wins" ? p.wins : p.losses;
+  const valueOf = (point: UsageTrendPoint) => trendValue(point, metric);
   const rawMax = Math.max(0, ...points.map(valueOf));
   const niceMax = Math.max(4, Math.ceil(rawMax / 4) * 4);
   const yAt = (v: number) => padT + (1 - v / niceMax) * plotH;
@@ -189,7 +236,7 @@ function TrendLineChart({
         className="home-linechart"
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label="年別の推移グラフ"
+        aria-label={describeUsageTrend(points, metric)}
       >
         {[0, 0.25, 0.5, 0.75, 1].map((g) => {
           const v = niceMax * g;
