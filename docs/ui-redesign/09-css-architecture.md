@@ -2,17 +2,78 @@
 
 ## 状態
 
-実装前調査・分割計画済み
+実装・検証完了
 
 ## 依存関係
 
 - UI 08
 
+## 実施結果
+
+### 変更内容
+
+- `app/globals.css`を単一entrypointのまま残し、既存6,724行をcascade順どおり15個の責務別CSSへ分割した
+- `postcss-import`で分割ファイルを先に結合し、Next.js既定相当のPostCSS変換を同じ順番・同じbrowser targetで適用した
+- import順、ファイル存在、named containerの所有範囲、PostCSS plugin順を`lib/cssArchitecture.test.ts`の4テストで固定した
+- 参照0を静的検索、動的class生成、HTML注入、実装履歴、既存テストから確認した旧CSSを571行削除した
+- 分割前後の17画面をLight / Dark、Desktop / Mobile、Dialog展開を含めて保存した
+
+実装はロールバック単位を分けた。
+
+- `a0a355e`: 挙動を変えない機械的分割
+- `a334e9e`: 参照されない旧CSSだけを削除
+
+### 変更理由
+
+単一ファイルでは、1画面の変更でも6,000行を超えるcascadeを横断して所有箇所を探す必要があった。責務と読込順を明示して探索範囲を狭め、既にUIから置換された旧実装だけを除くことで、保守性と配信量を同時に改善するため。
+
+### 互換性
+
+- 機械的分割直後に15ファイルを連結したsourceは、変更前と134,042 bytes・SHA-256 `b085a090a5f2e4f32c2c4c7186a1e3ef0f8da0c0eac88baccc5617786ff62915`でbyte単位に一致した
+- 機械的分割直後のproduction CSSも、変更前と1 asset・100,276 bytes・gzip 17,954 bytes・SHA-256 `f80d2585583615652511cc21ec89558c30c3098947ca4684077a212238cfcb01`でbyte単位に一致した
+- root layoutのimport、現役class、token値、breakpoint、named container、Dark / Lightテーマ、URL、component、API、DB、環境変数、保存方式は変更していない
+- `@media` 22件と`@container` 5件は削除後も不変。4件あったkeyframesは、参照0の`slide-in`だけを除き3件を維持した
+- `.rank-side-active`、`.rank-users`、`rank-${rank}`、`dl-result--${result}`、`bh-result--${winner}`、`bh-tag--${kind}`等の現役・動的classは削除していない
+
+### 検証結果
+
+- `npm test`: 43ファイル / 408件成功
+- `npm run lint`: warning・errorなし
+- `npm run typecheck`: 成功
+- `npm run build`: 成功
+- `git diff --check`: 成功
+- 15 CSSファイルのPostCSS構文解析: 成功
+- production HTMLが参照するCSS: Home / Loginとも一意に1 asset
+- 17画面の横方向overflow: 0件
+- screenshot実行中のwrite request: 0件
+- Chrome Rule Usage: production stylesheet 1件、観測30 range中30 range使用。訪問matrix内だけの補助値として扱った
+
+### Before / After
+
+| 指標 | Before | After | 差分 |
+| --- | ---: | ---: | ---: |
+| source行数 | 6,724 | 6,153 | -571（-8.49%） |
+| source bytes | 134,042 | 123,571 | -10,471（-7.81%） |
+| rule | 1,025 | 932 | -93（-9.07%） |
+| declaration | 3,762 | 3,428 | -334（-8.88%） |
+| production CSS asset | 1 | 1 | 変更なし |
+| production CSS bytes | 100,276 | 92,077 | -8,199（-8.18%） |
+| production CSS gzip | 17,954 | 16,798 | -1,156（-6.44%） |
+| `@media` / `@container` | 22 / 5 | 22 / 5 | 変更なし |
+
+17画面のPNGは11件がSHA-256まで完全一致した。残る6件は各5〜7画素、channel差最大9/255のアンチエイリアス差だけで、レイアウト・色・文字・状態の差はなかった。再撮影では差が出る画面が入れ替わり、初回差分の3画面がBeforeと完全一致したため、Chromeの非決定的なラスタライズ揺らぎと判定した。
+
+### 残っているリスク
+
+- `postcss.config.js`はNext.js内蔵PostCSS pluginとbrowser targetを参照する。Next.js更新時はplugin path、対象browser、production CSS asset数を再検証する
+- static searchで参照0でも、リポジトリ外の未管理ブラウザ拡張等が内部classを流用している可能性までは保証できない。ただしpackageはprivateで、公開class契約や外部HTML注入経路はない
+- Chrome screenshotは数画素のアンチエイリアス揺らぎがあるため、今後もhashだけでなく差分画素数・位置・目視を併用する
+
 ## 目的
 
 単一の`app/globals.css`へ積み重なったデザイントークン、共通部品、各画面、レスポンシブ規則を、現在のcascade、specificity、読み込み順を変えずに責務別ファイルへ分割する。変更箇所の特定と回帰確認を容易にし、参照を完全に追跡できる死蔵CSSだけを独立工程で削除する。
 
-## 現在の構成
+## 変更前の構成
 
 - 読込経路は`app/layout.tsx`の`import "./globals.css"`だけ
 - `app/globals.css`: 6,724行、134,042 bytes
@@ -99,9 +160,9 @@
 - `vh`の直後にある`dvh`: 古いbrowser向けfallback
 - safe-area変数を加算した`bottom` / `right`: fallbackとnotch対応
 
-### 分割後に削除を検討する死蔵CSS
+### 分割後に削除した死蔵CSS
 
-次は`app`、`components`、`lib`の静的参照、動的class生成、`classList`、HTML注入を調査し、専用classの参照が0件だった候補。分割と同じcommitでは削除せず、削除前後を独立検証する。
+次は`app`、`components`、`lib`の静的参照、動的class生成、`classList`、HTML注入、関連実装の削除履歴を調査し、専用classの参照が0件だったもの。分割とは別commitで削除し、削除前後を独立検証した。
 
 - 旧Drawerと専用`slide-in`
 - `.btn-block`
@@ -112,6 +173,7 @@
 - `.pill-anti-group`
 - 旧所属補助class
 - 旧`.rank-*`ランキング
+- `.rank-sep`
 - 旧`.trend-*`棒グラフ
 - 旧Home rate / trend / action / meta / rival群
 - 完全同一の`.th-sort:hover`重複1件

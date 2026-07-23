@@ -1,0 +1,185 @@
+{
+  "generatedAt": "2026-07-23T15:17:02.683Z",
+  "cases": [
+    {
+      "filename": "home-desktop-1440-light.png",
+      "path": "/",
+      "readyText": "ホーム",
+      "theme": "light",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "60bbbc466099c75af270256eb24788239896b5f887fc771ac178ab4e75353b40",
+      "horizontalOverflow": false
+    },
+    {
+      "filename": "home-desktop-1440-dark.png",
+      "path": "/",
+      "readyText": "ホーム",
+      "theme": "dark",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "4cce26eae25355d624252872fa553ac913e2924ea0fd36a70b8851ae83c62e16",
+      "horizontalOverflow": false
+    },
+    {
+      "filename": "home-mobile-390-light.png",
+      "path": "/",
+      "readyText": "ホーム",
+      "theme": "light",
+      "width": 390,
+      "height": 844,
+      "sha256": "a13ff7e6c6b5bd5e4d2da1277a05e0e005220e1f1b4f380c0d481fb801fb2829",
+      "horizontalOverflow": false
+    },
+    {
+      "filename": "history-desktop-1440-light.png",
+      "path": "/history",
+      "readyText": "戦闘履歴",
+      "theme": "light",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "a6896ae57438bf09294885bfc07a1274068066c4448d056494e0f16262918239",
+      "horizontalOverflow": false
+    },
+    {
+      "filename": "history-mobile-390-light.png",
+      "path": "/history",
+      "readyText": "戦闘履歴",
+      "theme": "light",
+      "width": 390,
+      "height": 844,
+      "sha256": "b1ea0cbe46d8549a47fc49f508fe8a0b05c1e99c26ac66b4d6effacd3d2fd25f",
+      "horizontalOverflow": false
+    },
+    {
+      "filename": "ranking-desktop-1440-light.png",
+      "path": "/ranking",
+      "readyText": "武将ランキング",
+      "theme": "light",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "c22d194676573521ed7d28ef99b28cae6fdec328eff0d7acc6fd991bdc548199",
+      "horizontalOverflow": false
+    },
+    {
+      "filename": "ranking-desktop-1440-dark.png",
+      "path": "/ranking",
+      "readyText": "武将ランキング",
+      "theme": "dark",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "4388e6cfc6ae018a233caa9ed58096525d25fc0f36c3112d6bdc397f2d7eb0e9",
+      "horizontalOverflow": false
+    },
+    {
+      "filename": "unit-ranking-mobile-390-light.png",
+      "path": "/ranking/units",
+      "readyText": "兵種ランキング",
+      "theme": "light",
+      "width": 390,
+      "height": 844,
+      "sha256": "c966348bc9328b12b6949c6564305d34fdfdb3566a1dd18db2b5e025ed87f086",
+      "horizontalOverflow": false
+    },
+    {
+      "filename": "catalog-desktop-1440-light.png",
+      "path": "/encyclopedia/units",
+      "readyText": "兵種図鑑",
+      "theme": "light",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "2dd46ac924603610f26d0713dec81e132e1a695e732dedd4d9775b85300136bc",
+      "horizontalOverflow": false
+    },
+    {
+      "filename": "catalog-mobile-390-light.png",
+      "path": "/encyclopedia/units",
+      "readyText": "兵種図鑑",
+      "theme": "light",
+      "width": 390,
+      "height": 844,
+      "sha256": "3cfa3e8bcef3b5f0513e75c023b2795c9d4f5cdf826b3594443c876916581370",
+      "horizontalOverflow": false
+    },
+    {
+      "filename": "warlord-detail-desktop-1440-dark.png",
+      "path": "/warlord/%E5%9B%A0%E5%B9%A1%E6%9C%88%E5%A4%9C",
+      "readyText": "因幡月夜",
+      "theme": "dark",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "2db4a674eb442f83bdc8fa6836dc7918582f214b514467625be8aacbd2013693",
+      "horizontalOverflow": false
+    },
+    {
+      "filename": "unit-detail-desktop-1440-light.png",
+      "path": "/unit/%E5%89%9B%E5%BC%93%E5%83%A7%E5%85%B5",
+      "readyText": "剛弓僧兵",
+      "theme": "light",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "083b9f41b9a32448279aa0e5df10ff37ecd3062983778a70a58725f3b8100dba",
+      "horizontalOverflow": false
+    },
+    {
+      "filename": "unit-edit-desktop-1440-light.png",
+      "path": "/unit/%E5%89%9B%E5%BC%93%E5%83%A7%E5%85%B5",
+      "readyText": "剛弓僧兵",
+      "theme": "light",
+      "width": 1440,
+      "height": 1000,
+      "action": "open-unit-editor",
+      "sha256": "251f72e2480646179a311755c0c7d8b493e01d631223e1e0f5d455a0610d869a",
+      "horizontalOverflow": false
+    },
+    {
+      "filename": "matrix-desktop-1440-light.png",
+      "path": "/meta",
+      "readyText": "相性マトリックス",
+      "theme": "light",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "e5f4ed4aadb9739783a0f4544d23ae7f866b6a1603cef227dd72081149ec4f90",
+      "horizontalOverflow": false
+    },
+    {
+      "filename": "db-desktop-1440-light.png",
+      "path": "/warlords/db",
+      "readyText": "DB確認",
+      "theme": "light",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "edb48b1cf764869c1e2a012d51147fb6380c9b17a1150cb282d8539ebb1b5c69",
+      "horizontalOverflow": false
+    },
+    {
+      "filename": "settings-desktop-1440-light.png",
+      "path": "/settings",
+      "readyText": "環境設定",
+      "theme": "light",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "3d593e8b73f87dbd8909229845c4b77702283643944d630bda1a5eababc96027",
+      "horizontalOverflow": false
+    },
+    {
+      "filename": "login-desktop-1440-light.png",
+      "path": "/login",
+      "readyText": "ログイン",
+      "theme": "light",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "97816689a2526e3622b9865d0d33bcce1cbe7e1933f7915be82737e3a0de35b1",
+      "horizontalOverflow": false
+    }
+  ],
+  "summary": {
+    "screenshots": 17,
+    "horizontalOverflowFailures": 0,
+    "productionStylesheets": 1,
+    "observedRuleRanges": 30,
+    "usedRuleRanges": 30,
+    "unusedRuleRanges": 0,
+    "writeRequests": 0
+  }
+}
