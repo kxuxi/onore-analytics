@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Warlord, WarlordMap } from "@/lib/types";
-import { FilterIcon, CloseIcon } from "@/components/icons";
+import { FilterPanel, type ActiveFilter } from "@/components/FilterPanel";
 import { SearchBox } from "@/components/SearchBox";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
 import { normalizationMap, householdAliases } from "@/lib/storage";
 import { displayWarlordType } from "@/lib/warlordType";
@@ -162,15 +163,51 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
     setFactionFilter("");
     setRoleFilter("");
   };
+  const activeFilters: ActiveFilter[] = [
+    ...(statusFilter
+      ? [
+          {
+            key: "status",
+            label: "ステータス",
+            value: ACTION_LABEL[statusFilter],
+            onRemove: () => setStatusFilter(""),
+          },
+        ]
+      : []),
+    ...(factionFilter
+      ? [
+          {
+            key: "faction",
+            label: "国",
+            value: factionFilter,
+            onRemove: () => setFactionFilter(""),
+          },
+        ]
+      : []),
+    ...(roleFilter
+      ? [
+          {
+            key: "role",
+            label: "役割",
+            value: roleFilter === "attack" ? "出兵あり" : "守備のみ",
+            onRemove: () => setRoleFilter(""),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <section className="panel">
-      <h2>被弾表（行動状況）</h2>
-      <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-        出兵・守備のどちらで登場した武将も行動時刻から行動状況を判定します。
-        40分以内={ACTION_LABEL.done} / 40分〜1時間20分={ACTION_LABEL.ready} /
-        1時間20分以上={ACTION_LABEL.unknown}。
-      </p>
+      <PageHeader
+        title="被弾表（行動状況）"
+        description={
+          <>
+            出兵・守備のどちらで登場した武将も行動時刻から行動状況を判定します。
+            40分以内={ACTION_LABEL.done} / 40分〜1時間20分=
+            {ACTION_LABEL.ready} / 1時間20分以上={ACTION_LABEL.unknown}。
+          </>
+        }
+      />
       <p className="muted" style={{ margin: 0, fontSize: 12 }}>
         最終更新{" "}
         {now ? now.toLocaleTimeString("ja-JP", { hour12: false }) : "--:--:--"}
@@ -220,39 +257,23 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
         </ul>
       </details>
 
-      <div className="search-row">
-        <SearchBox
-          value={nameQuery}
-          onChange={setNameQuery}
-          placeholder="武将名で絞り込み"
-        />
-        <button
-          type="button"
-          className={
-            "btn filter-toggle" +
-            (showFilter || hasDropdownFilter ? " active" : "")
-          }
-          onClick={() => setShowFilter((v) => !v)}
-          aria-expanded={showFilter}
-        >
-          <FilterIcon />
-          <span>フィルター</span>
-        </button>
-        {hasFilter && (
-          <button
-            type="button"
-            className="btn clear-filters"
-            onClick={clearFilters}
-            title="絞り込み条件をすべて解除"
-          >
-            <CloseIcon />
-            <span>解除</span>
-          </button>
-        )}
-      </div>
-
-      {showFilter && (
-        <div className="filter-grid">
+      <FilterPanel
+        id="damage-filters"
+        search={
+          <SearchBox
+            value={nameQuery}
+            onChange={setNameQuery}
+            placeholder="武将名で絞り込み"
+          />
+        }
+        expanded={showFilter}
+        onToggle={() => setShowFilter((visible) => !visible)}
+        toggleActive={showFilter || hasDropdownFilter}
+        hasActiveFilters={hasFilter}
+        onClear={clearFilters}
+        activeFilters={activeFilters}
+        resultText={`表示 ${rows.length.toLocaleString("ja-JP")}件`}
+      >
           <label className="filter">
             <span>ステータス</span>
             <select
@@ -299,8 +320,7 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
               <option value="defense-only">守備のみ</option>
             </select>
           </label>
-        </div>
-      )}
+      </FilterPanel>
 
       <div className="table-wrap">
         {rows.length === 0 ? (

@@ -1,0 +1,115 @@
+/* 配色をテーマ追従にすると、滑らかに切り替わって見えるようにする。 */
+html,
+body {
+  transition:
+    background-color var(--duration-normal) var(--ease-standard),
+    color var(--duration-normal) var(--ease-standard);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* 視覚的に隠しつつスクリーンリーダーには読ませるユーティリティ */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans",
+    "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  -webkit-text-size-adjust: 100%;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  color: inherit;
+}
+
+textarea {
+  width: 100%;
+  min-height: 180px;
+  padding: var(--space-3);
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  resize: vertical;
+  font-size: var(--font-size-control);
+  line-height: 1.45;
+}
+
+textarea:focus,
+input:focus {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+/* キーボード操作時の可視フォーカス（マウス時は出さない）。
+   テキスト風ボタンやチップ等、ブラウザ標準のフォーカス枠が出ない要素に付与。 */
+.nav-item:focus-visible,
+.link-like:focus-visible,
+.bh-participant:focus-visible,
+.bh-tag--unit:focus-visible,
+.bh-action:focus-visible,
+.bh-card-overlay:focus-visible,
+.bh-disclosure:focus-visible,
+.bh-raw-link:focus-visible,
+.pill-btn:focus-visible,
+.dl-name:focus-visible,
+.dl-unit:focus-visible,
+.dl-link:focus-visible,
+.pie-legend-name:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* キーボード操作時のみ表示する「本文へスキップ」リンク。 */
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  padding: 8px 14px;
+  background: var(--accent);
+  color: #0b1220;
+  font-weight: 700;
+  border-radius: 8px;
+  text-decoration: none;
+  transform: translateY(-150%);
+  transition: transform 0.15s ease;
+}
+.skip-link:focus {
+  transform: translateY(0);
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}

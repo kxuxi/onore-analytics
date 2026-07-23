@@ -126,7 +126,7 @@ export function FactionTab({
   return (
     <section className="panel">
       <div className="history-head">
-        <h2>国カラー設定</h2>
+        <h3 className="section-title">国カラー設定</h3>
         <span className="count-badge">
           {assigned} / {factions.length} 設定済
         </span>
