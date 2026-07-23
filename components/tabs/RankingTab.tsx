@@ -14,8 +14,11 @@ import {
   DEFAULT_RANKING_MIN_COUNT,
   DEFAULT_RANKING_PERIOD_KEY,
 } from "@/lib/rankingDefaults";
-import { FilterIcon, CloseIcon } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
+import {
+  FilterPanel,
+  type ActiveFilter,
+} from "@/components/FilterPanel";
 import { PageHeader } from "@/components/layout/PageHeader";
 
 /** ランキングの対象。unit=兵種 / weapon=武器(武将の持つ武器) / item=品物(武将の持つ品物)。 */
@@ -359,6 +362,28 @@ export function RankingTab({
     setMinUses(1);
     setUnitType("");
   };
+  const activeFilters: ActiveFilter[] = [
+    ...(minUses !== 1
+      ? [
+          {
+            key: "minimum-uses",
+            label: "最低使用回数",
+            value: `${minUses}回以上`,
+            onRemove: () => setMinUses(1),
+          },
+        ]
+      : []),
+    ...(variant === "unit" && unitType
+      ? [
+          {
+            key: "unit-type",
+            label: "兵種タイプ",
+            value: unitType,
+            onRemove: () => setUnitType(""),
+          },
+        ]
+      : []),
+  ];
 
   const openAssetDetail = (name: string) => {
     if (variant === "unit") onSelectUnit(name);
@@ -386,39 +411,28 @@ export function RankingTab({
         ))}
       </div>
 
-      <div className="search-row">
-        <SearchBox
-          value={keyword}
-          onChange={setKeyword}
-          placeholder={copy.searchPlaceholder}
-        />
-        <button
-          type="button"
-          className={
-            "btn filter-toggle" +
-            (showFilter || hasFilter ? " active" : "")
-          }
-          onClick={() => setShowFilter((visible) => !visible)}
-          aria-expanded={showFilter}
-        >
-          <FilterIcon />
-          <span>フィルター</span>
-        </button>
-        {hasFilter && (
-          <button
-            type="button"
-            className="btn clear-filters"
-            onClick={clearFilters}
-            title="絞り込み条件をすべて解除"
-          >
-            <CloseIcon />
-            <span>解除</span>
-          </button>
-        )}
-      </div>
-
-      {showFilter && (
-        <div className="filter-grid">
+      <FilterPanel
+        id={`${variant}-ranking-filters`}
+        search={
+          <SearchBox
+            value={keyword}
+            onChange={setKeyword}
+            placeholder={copy.searchPlaceholder}
+          />
+        }
+        expanded={showFilter}
+        onToggle={() => setShowFilter((visible) => !visible)}
+        toggleActive={showFilter || hasFilter}
+        hasActiveFilters={hasFilter}
+        onClear={clearFilters}
+        activeFilters={activeFilters}
+        resultText={
+          hasFilter
+            ? `全${rows.length.toLocaleString("ja-JP")}件中 ${filteredRows.length.toLocaleString("ja-JP")}件`
+            : `全${rows.length.toLocaleString("ja-JP")}件`
+        }
+      >
+        <>
           {activeMetric && (
             <label className="filter">
               <span>指標</span>
@@ -468,8 +482,8 @@ export function RankingTab({
               </select>
             </label>
           )}
-        </div>
-      )}
+        </>
+      </FilterPanel>
 
       {activeMetric === null ? (
         <div className="ranking-metric-grid">
@@ -540,10 +554,6 @@ export function RankingTab({
           <h3 className="sr-only">{activeOption?.label}ランキング</h3>
           <p className="metric-section-desc muted">
             {activeOption?.description}
-          </p>
-
-          <p className="sr-only" role="status" aria-live="polite">
-            該当 {detailRows.length.toLocaleString("ja-JP")}件
           </p>
 
           {detailRows.length === 0 ? (

@@ -22,17 +22,16 @@ import {
 } from "@/lib/factionColors";
 import { htmlToMarkdown, copyText } from "@/lib/clipboard";
 import {
-  FilterIcon,
   TrophyIcon,
   ChevronLeft,
   ChevronRight,
   ExternalLinkIcon,
   SortIcon,
-  CloseIcon,
   CopyIcon,
   CheckIcon,
   TrashIcon,
 } from "@/components/icons";
+import { FilterPanel, type ActiveFilter } from "@/components/FilterPanel";
 import { SearchBox } from "@/components/SearchBox";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { BATTLE_LOG_PAGE_SIZE as PAGE_SIZE } from "@/lib/stats";
@@ -336,6 +335,59 @@ export function HistoryTab({
     setToDate("");
   };
 
+  const activeFilters: ActiveFilter[] = [
+    ...(factionFilter
+      ? [
+          {
+            key: "faction",
+            label: "国",
+            value: factionFilter,
+            onRemove: () => setFactionFilter(""),
+          },
+        ]
+      : []),
+    ...(fromYm != null
+      ? [
+          {
+            key: "fromYm",
+            label: "年月（開始）",
+            value: formatGameMonthOrder(fromYm),
+            onRemove: () => setFromYm(null),
+          },
+        ]
+      : []),
+    ...(toYm != null
+      ? [
+          {
+            key: "toYm",
+            label: "年月（終了）",
+            value: formatGameMonthOrder(toYm),
+            onRemove: () => setToYm(null),
+          },
+        ]
+      : []),
+    ...(fromDate
+      ? [
+          {
+            key: "fromDate",
+            label: "日付（開始）",
+            value: fromDate,
+            onRemove: () => setFromDate(""),
+          },
+        ]
+      : []),
+    ...(toDate
+      ? [
+          {
+            key: "toDate",
+            label: "日付（終了）",
+            value: toDate,
+            onRemove: () => setToDate(""),
+          },
+        ]
+      : []),
+  ];
+
   const totalPages = Math.max(1, Math.ceil(visibleLog.length / PAGE_SIZE));
 
   // 絞り込み・件数変化でページ範囲を補正
@@ -496,158 +548,146 @@ export function HistoryTab({
         )}
         <div className="history-head" ref={listTopRef}>
           <h3 className="section-title">登録済み戦闘履歴</h3>
-          <span className="count-badge" role="status" aria-live="polite">
-            {hasActiveFilter
-              ? `全${cards.length.toLocaleString("ja-JP")}件中 ${visibleLog.length.toLocaleString("ja-JP")}件`
-              : `全${cards.length.toLocaleString("ja-JP")}件`}
-          </span>
         </div>
 
-        <div className="search-row">
-          <SearchBox
-            value={keyword}
-            onChange={setKeyword}
-            placeholder="履歴を絞り込み（武将名など）"
-          />
-          <button
-            type="button"
-            className="btn sort-toggle"
-            onClick={() =>
-              setSortOrder((o) => (o === "newest" ? "oldest" : "newest"))
-            }
-            aria-label={
-              sortOrder === "newest"
-                ? "並び順: 新しい順（クリックで古い順に切替）"
-                : "並び順: 古い順（クリックで新しい順に切替）"
-            }
-            title="登録日時の並び替え"
-          >
-            <SortIcon />
-            <span>{sortOrder === "newest" ? "新しい順" : "古い順"}</span>
-          </button>
-          <button
-            type="button"
-            className={
-              "btn filter-toggle" +
-              (showFilter ||
+        <FilterPanel
+          id="history-filters"
+          search={
+            <SearchBox
+              value={keyword}
+              onChange={setKeyword}
+              placeholder="履歴を絞り込み（武将名など）"
+            />
+          }
+          expanded={showFilter}
+          onToggle={() => setShowFilter((v) => !v)}
+          toggleActive={Boolean(
+            showFilter ||
               factionFilter ||
               fromYm != null ||
               toYm != null ||
               fromDate ||
               toDate
-                ? " active"
-                : "")
-            }
-            onClick={() => setShowFilter((v) => !v)}
-            aria-expanded={showFilter}
-          >
-            <FilterIcon />
-            <span>フィルター</span>
-          </button>
-          {hasActiveFilter && (
+          )}
+          hasActiveFilters={hasActiveFilter}
+          onClear={clearFilters}
+          activeFilters={activeFilters}
+          resultText={
+            hasActiveFilter
+              ? `全${cards.length.toLocaleString(
+                  "ja-JP"
+                )}件中 ${visibleLog.length.toLocaleString("ja-JP")}件`
+              : `全${cards.length.toLocaleString("ja-JP")}件`
+          }
+          leadingActions={
             <button
               type="button"
-              className="btn clear-filters"
-              onClick={clearFilters}
-              title="絞り込み条件をすべて解除"
+              className="btn sort-toggle"
+              onClick={() =>
+                setSortOrder((o) => (o === "newest" ? "oldest" : "newest"))
+              }
+              aria-label={
+                sortOrder === "newest"
+                  ? "並び順: 新しい順（クリックで古い順に切替）"
+                  : "並び順: 古い順（クリックで新しい順に切替）"
+              }
+              title="登録日時の並び替え"
             >
-              <CloseIcon />
-              <span>解除</span>
+              <SortIcon />
+              <span>{sortOrder === "newest" ? "新しい順" : "古い順"}</span>
             </button>
-          )}
-          {canDelete && pageItems.length > 0 && (
-            <button
-              type="button"
-              className="btn faction-delete"
-              onClick={handleBulkDelete}
-              disabled={bulkDeleting}
-              title="このページに表示中の戦闘履歴を削除します（取り消せません）"
+          }
+          trailingActions={
+            canDelete && pageItems.length > 0 ? (
+              <button
+                type="button"
+                className="btn faction-delete"
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                title="このページに表示中の戦闘履歴を削除します（取り消せません）"
+              >
+                <TrashIcon />
+                <span>
+                  {bulkDeleting
+                    ? "削除中…"
+                    : `表示中の${pageItems.length.toLocaleString(
+                        "ja-JP"
+                      )}件を削除`}
+                </span>
+              </button>
+            ) : undefined
+          }
+        >
+          <label className="filter">
+            <span>国</span>
+            <select
+              className="select"
+              value={factionFilter}
+              onChange={(e) => setFactionFilter(e.target.value)}
             >
-              <TrashIcon />
-              <span>
-                {bulkDeleting
-                  ? "削除中…"
-                  : `表示中の${pageItems.length.toLocaleString(
-                      "ja-JP"
-                    )}件を削除`}
-              </span>
-            </button>
-          )}
-        </div>
-
-        {showFilter && (
-          <div className="filter-grid">
-            <label className="filter">
-              <span>国</span>
-              <select
-                className="select"
-                value={factionFilter}
-                onChange={(e) => setFactionFilter(e.target.value)}
-              >
-                <option value="">すべて</option>
-                {factionOptions.map((f) => (
-                  <option key={f} value={f}>
-                    {f}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="filter">
-              <span>年月（開始）</span>
-              <select
-                className="select"
-                value={fromYm ?? ""}
-                onChange={(e) =>
-                  setFromYm(e.target.value ? Number(e.target.value) : null)
-                }
-              >
-                <option value="">指定なし</option>
-                {yearMonthOptions.map(({ order, label }) => (
-                  <option key={order} value={order}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="filter">
-              <span>年月（終了）</span>
-              <select
-                className="select"
-                value={toYm ?? ""}
-                onChange={(e) =>
-                  setToYm(e.target.value ? Number(e.target.value) : null)
-                }
-              >
-                <option value="">指定なし</option>
-                {yearMonthOptions.map(({ order, label }) => (
-                  <option key={order} value={order}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="filter">
-              <span>日付（開始）</span>
-              <input
-                type="date"
-                className="text-input"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                aria-label="実際の日付で絞り込む（開始）"
-              />
-            </label>
-            <label className="filter">
-              <span>日付（終了）</span>
-              <input
-                type="date"
-                className="text-input"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                aria-label="実際の日付で絞り込む（終了）"
-              />
-            </label>
-          </div>
-        )}
+              <option value="">すべて</option>
+              {factionOptions.map((f) => (
+                <option key={f} value={f}>
+                  {f}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="filter">
+            <span>年月（開始）</span>
+            <select
+              className="select"
+              value={fromYm ?? ""}
+              onChange={(e) =>
+                setFromYm(e.target.value ? Number(e.target.value) : null)
+              }
+            >
+              <option value="">指定なし</option>
+              {yearMonthOptions.map(({ order, label }) => (
+                <option key={order} value={order}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="filter">
+            <span>年月（終了）</span>
+            <select
+              className="select"
+              value={toYm ?? ""}
+              onChange={(e) =>
+                setToYm(e.target.value ? Number(e.target.value) : null)
+              }
+            >
+              <option value="">指定なし</option>
+              {yearMonthOptions.map(({ order, label }) => (
+                <option key={order} value={order}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="filter">
+            <span>日付（開始）</span>
+            <input
+              type="date"
+              className="text-input"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              aria-label="実際の日付で絞り込む（開始）"
+            />
+          </label>
+          <label className="filter">
+            <span>日付（終了）</span>
+            <input
+              type="date"
+              className="text-input"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              aria-label="実際の日付で絞り込む（終了）"
+            />
+          </label>
+        </FilterPanel>
 
         {visibleLog.length === 0 ? (
           log.length === 0 ? (
