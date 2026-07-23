@@ -493,7 +493,6 @@
 .dl-unit.active { border-color: var(--accent); color: var(--accent); }
 
 /* 兵種アンチの矢印（戦闘履歴カード／戦闘ログ共通）。兵種名の横に密着させる。 */
-.pill-anti-group,
 .dl-unit-wrap {
   display: inline-flex;
   align-items: center;
@@ -556,4 +555,3 @@
     min-height: var(--touch-target);
   }
 }
-

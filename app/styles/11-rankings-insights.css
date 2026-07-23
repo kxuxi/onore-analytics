@@ -247,27 +247,6 @@
   white-space: nowrap;
 }
 
-.user-winrate-name-wrap {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 7px;
-  min-width: 0;
-  overflow: hidden;
-}
-
-/* 過去にこの国へ在籍していた武将の目印（現在の所属先 or 元所属）。 */
-.member-left-tag {
-  flex: 0 0 auto;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--label-faction-fg);
-  border: 1px solid var(--label-faction-border);
-  background: var(--label-faction-bg);
-  border-radius: 999px;
-  padding: 1px 7px;
-  white-space: nowrap;
-}
-
 .user-winrate-meta {
   display: inline-flex;
   align-items: baseline;
@@ -497,137 +476,11 @@
   color: var(--text);
   font-weight: 600;
 }
-.rank-sep {
-  opacity: 0.5;
-}
 
-/* 兵種・武器・品物ランキング（リーダーボード） */
-.rank-list {
-  list-style: none;
-  margin: 16px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.rank-row {
-  display: grid;
-  grid-template-columns: 36px 1fr;
-  align-items: start;
-  gap: 12px;
-}
-.rank-rank {
-  font-weight: 800;
-  font-size: 18px;
-  color: var(--muted);
-  text-align: center;
-  line-height: 1.4;
-}
-.rank-row:nth-child(1) .rank-rank {
-  color: #ffce63;
-}
-.rank-row:nth-child(2) .rank-rank {
-  color: #cdd6e0;
-}
-.rank-row:nth-child(3) .rank-rank {
-  color: #e0955a;
-}
-.rank-main {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-.rank-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-}
-.rank-name {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 8px;
-  font-weight: 700;
-  font-size: 14px;
-  min-width: 0;
-  text-align: left;
-}
-.rank-value {
-  flex: 0 0 auto;
-  font-weight: 800;
-  font-size: 16px;
-  color: #1d9e75;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.rank-value .rank-unit {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--muted);
-  margin-left: 1px;
-}
-.rank-bar {
-  height: 8px;
-  border-radius: 999px;
-  background: var(--panel-2);
-  border: 0.5px solid var(--border);
-  overflow: hidden;
-}
-.rank-bar-fill {
-  display: block;
-  height: 100%;
-  background: linear-gradient(90deg, #1d9e75, #2e9e57);
-}
-.rank-meta {
-  font-size: 11px;
-  line-height: 1.5;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px 6px;
-}
 .rank-users {
   display: inline-flex;
   flex-wrap: wrap;
   gap: 2px 8px;
-}
-
-/* SWI 算出式・重みの凡例 */
-.swi-formula {
-  margin: 4px 0 0;
-  font-size: 13px;
-}
-.swi-formula > summary {
-  cursor: pointer;
-  color: var(--muted);
-  user-select: none;
-}
-.swi-formula > summary:hover {
-  color: var(--text);
-}
-.swi-formula > p {
-  margin: 8px 0;
-  font-size: 12px;
-  line-height: 1.6;
-}
-.swi-weight-table {
-  border-collapse: collapse;
-  font-size: 12px;
-  margin-top: 4px;
-}
-.swi-weight-table th,
-.swi-weight-table td {
-  border: 1px solid var(--border);
-  padding: 3px 10px;
-  text-align: center;
-}
-.swi-weight-table th {
-  color: var(--muted);
-  font-weight: 600;
-}
-.swi-weight-table td:last-child {
-  color: #1d9e75;
-  font-variant-numeric: tabular-nums;
 }
 
 /* 指標タブ：指標別サマリー・パンくず */
@@ -744,4 +597,3 @@
     padding: 13px;
   }
 }
-

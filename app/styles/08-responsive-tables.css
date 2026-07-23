@@ -86,17 +86,6 @@
   }
   th, td { padding: 8px 10px; }
   table { font-size: 13px; }
-  /* 算出式の重み表は横スクロールで見切れないようにする。
-     min-width:0 で内容幅による最小幅を解除し、親幅に収めてスクロールさせる。 */
-  .swi-weight-table {
-    display: block;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    overflow-x: auto;
-    white-space: nowrap;
-    -webkit-overflow-scrolling: touch;
-  }
   /* 検索行のボタン（並び順・フィルター・解除）はアイコンのみにして、
      狭幅でも検索ボックスが潰れないようにする。
      テキストは position:absolute で視覚的に隠しつつ、
@@ -261,4 +250,3 @@
     white-space: nowrap;
   }
 }
-

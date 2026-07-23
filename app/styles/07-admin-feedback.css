@@ -137,11 +137,6 @@
   flex: 0 0 auto;
 }
 
-.mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12px;
-}
-
 .swatch {
   display: inline-block;
   width: 10px;
@@ -619,4 +614,3 @@ button.tag.faction-link:focus-visible {
   font-size: 13px;
   font-weight: 600;
 }
-

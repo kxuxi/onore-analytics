@@ -380,94 +380,6 @@
   color: var(--muted);
 }
 
-/* --- 勝率バー行（兵種習熟度・特性別） --- */
-.home-rate-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.home-rate-row {
-  display: grid;
-  grid-template-columns: 1fr 90px 44px;
-  align-items: center;
-  gap: 10px;
-}
-.home-rate-label {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-.home-rate-label > .link-btn,
-.home-rate-label > span:first-child {
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.home-rate-count {
-  font-size: 11px;
-}
-.home-rate-bar {
-  height: 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--border) 60%, transparent);
-  overflow: hidden;
-}
-.home-rate-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: var(--accent);
-}
-.home-rate-fill.good {
-  background: var(--success);
-}
-.home-rate-fill.bad {
-  background: var(--danger);
-}
-.home-rate-fill.even {
-  background: var(--warning);
-}
-.home-rate-val {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  font-size: 14px;
-}
-
-/* --- トレンド --- */
-.home-trend {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-.home-trend-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 10px 6px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-.home-trend-label {
-  font-size: 12px;
-}
-.home-trend-val {
-  font-size: 20px;
-  font-weight: 800;
-}
-.home-trend-val.good {
-  color: var(--success);
-}
-.home-trend-val.bad {
-  color: var(--danger);
-}
-.home-trend-sub {
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-}
-
 /* --- 勝率の推移（折れ線・複数系列） --- */
 .home-series-hint {
   margin: 0 0 8px;
@@ -478,30 +390,6 @@
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 10px;
-}
-.home-series-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: none;
-  color: var(--muted);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-.home-series-chip:hover {
-  border-color: var(--accent);
-}
-.home-series-chip.active {
-  font-weight: 700;
-  background: color-mix(in srgb, currentColor 8%, transparent);
-}
-.home-series-chip:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
 }
 .home-series-check {
   display: inline-flex;
@@ -563,10 +451,6 @@
   stroke-linejoin: round;
   stroke-linecap: round;
 }
-.home-line-path--loss {
-  stroke-dasharray: 4 3;
-  opacity: 0.75;
-}
 .home-line-dot {
   stroke: none;
 }
@@ -581,34 +465,6 @@
   fill: var(--muted);
   font-size: 9px;
   font-weight: 600;
-}
-
-/* --- 次のアクション --- */
-.home-action {
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-}
-.home-action-warn {
-  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
-  background: color-mix(in srgb, var(--danger) 10%, transparent);
-}
-.home-action-ok {
-  border-color: color-mix(in srgb, var(--success) 40%, var(--border));
-  background: color-mix(in srgb, var(--success) 10%, transparent);
-}
-.home-action-head {
-  margin: 0 0 4px;
-  font-weight: 700;
-}
-.home-action p.muted {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
-}
-.home-action-foot {
-  margin: 0;
-  font-size: 13px;
 }
 
 /* --- 最近の戦闘結果（表） --- */
@@ -631,88 +487,6 @@
 }
 .home-res-other {
   color: var(--muted);
-}
-
-/* --- メタ環境 --- */
-.home-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.home-meta-top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.home-meta-unit {
-  font-size: 18px;
-  font-weight: 800;
-}
-.home-meta-stats {
-  display: flex;
-  gap: 14px;
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
-}
-.home-warn {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-/* --- 宿敵分析 --- */
-.home-rival {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.home-rival-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.home-rival-name {
-  font-size: 18px;
-  font-weight: 800;
-}
-.home-rival-stats {
-  display: flex;
-  gap: 12px;
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
-  flex-wrap: wrap;
-}
-.home-rival-streak {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-}
-.home-rival-recent {
-  display: flex;
-  gap: 4px;
-}
-.home-rival-dot {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  background: color-mix(in srgb, var(--border) 50%, transparent);
-}
-.home-rival-dot.home-res-win {
-  background: color-mix(in srgb, var(--success) 22%, transparent);
-}
-.home-rival-dot.home-res-loss {
-  background: color-mix(in srgb, var(--danger) 22%, transparent);
-}
-.home-rival-more {
-  font-size: 13px;
-  font-weight: 600;
-  align-self: flex-start;
 }
 
 /* --- ウォッチリスト（お気に入り武将・管理者のみ） --- */

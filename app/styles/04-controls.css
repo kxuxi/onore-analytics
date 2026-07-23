@@ -135,10 +135,6 @@
   border-color: var(--danger);
 }
 
-.btn-block {
-  width: 100%;
-}
-
 /* ---------- Inputs ---------- */
 .text-input {
   flex: 1 1 200px;
@@ -367,4 +363,3 @@
   background-repeat: no-repeat;
   padding-right: 30px;
 }
-
