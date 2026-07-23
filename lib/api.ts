@@ -6,6 +6,11 @@ import type {
   WarlordMap,
 } from "./types";
 import type { FactionColorMap } from "./factionColors";
+import {
+  readJsonResponse,
+  responseErrorMessage,
+  throwIfResponseFailed,
+} from "./httpClient";
 
 export type StateResponse = {
   db: WarlordMap;
@@ -66,10 +71,7 @@ export async function importWarlordStats(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ stats }),
   });
-  if (!res.ok) {
-    const data = await res.json().catch(() => null);
-    throw new Error(data?.error ?? "能力値の取り込みに失敗しました");
-  }
+  await throwIfResponseFailed(res, "能力値の取り込みに失敗しました");
   return res.json();
 }
 
@@ -92,10 +94,7 @@ export async function deleteBattleRecord(id: number): Promise<void> {
   const res = await fetch(`/api/battle-records/${id}`, {
     method: "DELETE",
   });
-  if (!res.ok) {
-    const data = await res.json().catch(() => null);
-    throw new Error(data?.error ?? "削除に失敗しました");
-  }
+  await throwIfResponseFailed(res, "削除に失敗しました");
 }
 
 /**
@@ -109,14 +108,15 @@ export async function bulkDeleteBattleRecords(ids: number[]): Promise<number> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ids }),
   });
-  const data = await res.json().catch(() => null);
+  const data = await readJsonResponse<{ error?: unknown; deleted?: number }>(
+    res
+  );
   if (!res.ok) {
-    throw new Error(data?.error ?? "一括削除に失敗しました");
+    throw new Error(responseErrorMessage(data, "一括削除に失敗しました"));
   }
   return data?.deleted ?? 0;
 }
 
-/** 指定した国が関わる戦闘履歴をすべて削除（管理者のみ）。削除できた件数を返す。 */
 /**
  * 指定した国を削除する（管理者のみ）。
  * その国が関わる戦闘記録と、その国に所属する武将（DB 名簿）をまとめて削除する。
@@ -129,9 +129,13 @@ export async function deleteFaction(
     `/api/battle-records/by-faction/${encodeURIComponent(faction)}`,
     { method: "DELETE" }
   );
-  const data = await res.json().catch(() => null);
+  const data = await readJsonResponse<{
+    error?: unknown;
+    deleted?: number;
+    deletedWarlords?: number;
+  }>(res);
   if (!res.ok) {
-    throw new Error(data?.error ?? "削除に失敗しました");
+    throw new Error(responseErrorMessage(data, "削除に失敗しました"));
   }
   return {
     records: data?.deleted ?? 0,
@@ -152,9 +156,13 @@ export async function cleanupSkewedData(): Promise<{
   const res = await fetch("/api/battle-records/cleanup-skewed", {
     method: "DELETE",
   });
-  const data = await res.json().catch(() => null);
+  const data = await readJsonResponse<{
+    error?: unknown;
+    deleted?: number;
+    deletedWarlords?: number;
+  }>(res);
   if (!res.ok) {
-    throw new Error(data?.error ?? "データの整理に失敗しました");
+    throw new Error(responseErrorMessage(data, "データの整理に失敗しました"));
   }
   return {
     records: data?.deleted ?? 0,
@@ -200,10 +208,7 @@ export async function upsertUnitType(unit: UnitType): Promise<UnitType> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(unit),
   });
-  if (!res.ok) {
-    const data = await res.json().catch(() => null);
-    throw new Error(data?.error ?? "兵種の保存に失敗しました");
-  }
+  await throwIfResponseFailed(res, "兵種の保存に失敗しました");
   invalidateUnitTypesCache();
   return res.json();
 }
@@ -227,10 +232,7 @@ export async function bulkUpsertUnitTypes(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ units }),
   });
-  if (!res.ok) {
-    const data = await res.json().catch(() => null);
-    throw new Error(data?.error ?? "兵種の一括取り込みに失敗しました");
-  }
+  await throwIfResponseFailed(res, "兵種の一括取り込みに失敗しました");
   invalidateUnitTypesCache();
   return res.json();
 }
@@ -255,10 +257,7 @@ export async function saveFactionColorsToDb(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(colors),
   });
-  if (!res.ok) {
-    const data = await res.json().catch(() => null);
-    throw new Error(data?.error ?? "国の色の保存に失敗しました");
-  }
+  await throwIfResponseFailed(res, "国の色の保存に失敗しました");
 }
 
 /** 現在のログイン状態を取得する（未ログインなら null）。 */
@@ -279,10 +278,7 @@ export async function login(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
   });
-  if (!res.ok) {
-    const data = await res.json().catch(() => null);
-    throw new Error(data?.error ?? "ログインに失敗しました");
-  }
+  await throwIfResponseFailed(res, "ログインに失敗しました");
   const data = (await res.json()) as { user: AuthUser };
   return data.user;
 }

@@ -1,4 +1,4 @@
-export type TabKey = "home" | "history" | "scout" | "db" | "damage" | "units" | "weapons" | "items" | "nations" | "factions" | "swi" | "unitrank" | "weaponrank" | "itemrank" | "synergy" | "matrix" | "metaenv" | "metrics";
+export type TabKey = "home" | "history" | "scout" | "db" | "damage" | "units" | "weapons" | "items" | "nations" | "factions" | "unitrank" | "weaponrank" | "itemrank" | "synergy" | "matrix" | "metaenv" | "metrics";
 
 export interface Warlord {
   /** 武将名（プライマリキー） */
@@ -9,7 +9,7 @@ export interface Warlord {
   faction?: string;
   /** タイプ: 武特 / 統特 / 知特 / 武統 / 統知 / 知武 / 政治家 / 謎 など */
   type: string;
-  /** 兵科: 騎兵 / 歩兵 / 弓兵 / 万能 / 妖怪 など */
+  /** 兵種: 騎兵 / 歩兵 / 弓兵 / 万能 / 妖怪 など */
   branch: string;
   /** 兵種名 (例: 重騎兵 など) — 参考情報 */
   unit?: string;

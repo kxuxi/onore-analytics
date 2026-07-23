@@ -11,7 +11,6 @@ export type TabGroupKey =
   | "history"
   | "warlords"
   | "ranking"
-  | "metrics"
   | "meta"
   | "encyclopedia"
   | "nations"
@@ -23,14 +22,13 @@ export const TAB_LABELS: Record<TabKey, string> = {
   history: "戦闘履歴",
   scout: "偵察検索",
   damage: "被弾表",
-  swi: "武将ランキング",
   unitrank: "兵種ランキング",
   weaponrank: "武器ランキング",
   itemrank: "品物ランキング",
   synergy: "装備シナジー",
   matrix: "相性表",
   metaenv: "環境",
-  metrics: "指標",
+  metrics: "武将ランキング",
   db: "DB確認",
   units: "兵種",
   weapons: "武器",
@@ -54,8 +52,11 @@ export const TAB_GROUPS: TabGroup[] = [
   { key: "home", label: "ホーム", tabs: ["home"] },
   { key: "history", label: "戦闘履歴", tabs: ["history"] },
   { key: "warlords", label: "武将", tabs: ["scout", "damage", "db"] },
-  { key: "ranking", label: "ランキング", tabs: ["swi", "unitrank", "weaponrank", "itemrank"] },
-  { key: "metrics", label: "指標", tabs: ["metrics"] },
+  {
+    key: "ranking",
+    label: "ランキング",
+    tabs: ["metrics", "unitrank", "weaponrank", "itemrank"],
+  },
   { key: "meta", label: "メタ分析", tabs: ["matrix", "metaenv", "synergy"] },
   { key: "encyclopedia", label: "図鑑", tabs: ["units", "weapons", "items"] },
   { key: "nations", label: "国", tabs: ["nations"] },
@@ -76,13 +77,13 @@ export const ALL_TAB_KEYS: TabKey[] = TAB_GROUPS.flatMap((g) => g.tabs);
 
 /**
  * 未ログイン（管理者以外）でも閲覧できるグループ。
- * 戦闘履歴・ランキング・指標・メタ分析・図鑑・国を公開し、残りは管理者専用にする。
+ * 戦闘履歴・ランキング（指標を含む）・メタ分析・図鑑・国を公開し、
+ * 残りは管理者専用にする。
  */
 export const PUBLIC_TAB_GROUPS: TabGroupKey[] = [
   "home",
   "history",
   "ranking",
-  "metrics",
   "meta",
   "encyclopedia",
   "nations",

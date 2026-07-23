@@ -8,19 +8,21 @@ export const dynamic = "force-dynamic";
 
 const errorResponse = makeErrorResponse("api/unit-types");
 
-function normalize(body: Partial<UnitType>): Omit<UnitType, "name"> {
+function normalizeUnitTypeFields(
+  input: Partial<UnitType>
+): Omit<UnitType, "name"> {
   return {
-    category: (body.category ?? "").toString(),
-    goodAgainst: (body.goodAgainst ?? "").toString(),
-    attack: Number(body.attack ?? 0) || 0,
-    defense: Number(body.defense ?? 0) || 0,
-    cost: (body.cost ?? "").toString(),
-    tech: (body.tech ?? "").toString(),
-    years: (body.years ?? "").toString(),
-    reqStats: (body.reqStats ?? "").toString(),
-    facility: (body.facility ?? "").toString(),
-    special: (body.special ?? "").toString(),
-    bonus: (body.bonus ?? "").toString(),
+    category: (input.category ?? "").toString(),
+    goodAgainst: (input.goodAgainst ?? "").toString(),
+    attack: Number(input.attack ?? 0) || 0,
+    defense: Number(input.defense ?? 0) || 0,
+    cost: (input.cost ?? "").toString(),
+    tech: (input.tech ?? "").toString(),
+    years: (input.years ?? "").toString(),
+    reqStats: (input.reqStats ?? "").toString(),
+    facility: (input.facility ?? "").toString(),
+    special: (input.special ?? "").toString(),
+    bonus: (input.bonus ?? "").toString(),
   };
 }
 
@@ -74,7 +76,7 @@ export async function POST(req: Request) {
     if (!name) {
       return NextResponse.json({ error: "name は必須です" }, { status: 400 });
     }
-    const data = normalize(body);
+    const data = normalizeUnitTypeFields(body);
     const row = await prisma.unitType.upsert({
       where: { name },
       create: { name, ...data },
@@ -105,34 +107,34 @@ export async function PUT(req: Request) {
       );
     }
     // 生の配列 or { units: [...] } のどちらでも受け付ける。
-    const list = Array.isArray(raw)
+    const unitInputs = Array.isArray(raw)
       ? raw
       : raw &&
           typeof raw === "object" &&
           Array.isArray((raw as { units?: unknown }).units)
         ? (raw as { units: unknown[] }).units
         : null;
-    if (!list) {
+    if (!unitInputs) {
       return NextResponse.json(
         { error: "units 配列が必要です" },
         { status: 400 }
       );
     }
-    if (list.length === 0) {
+    if (unitInputs.length === 0) {
       return NextResponse.json(
         { error: "取り込む兵種がありません" },
         { status: 400 }
       );
     }
-    if (list.length > BULK_MAX_UNITS) {
+    if (unitInputs.length > BULK_MAX_UNITS) {
       return NextResponse.json(
         { error: `一度に取り込める兵種は${BULK_MAX_UNITS}件までです` },
         { status: 400 }
       );
     }
     const seen = new Set<string>();
-    const ops = [];
-    for (const item of list) {
+    const upsertOperations = [];
+    for (const item of unitInputs) {
       if (typeof item !== "object" || item === null) {
         return NextResponse.json(
           { error: "各兵種はオブジェクトである必要があります" },
@@ -150,8 +152,8 @@ export async function PUT(req: Request) {
       // 同名が複数あれば最初の 1 件のみ（同一トランザクション内の重複更新を避ける）。
       if (seen.has(name)) continue;
       seen.add(name);
-      const data = normalize(body);
-      ops.push(
+      const data = normalizeUnitTypeFields(body);
+      upsertOperations.push(
         prisma.unitType.upsert({
           where: { name },
           create: { name, ...data },
@@ -159,8 +161,8 @@ export async function PUT(req: Request) {
         })
       );
     }
-    await prisma.$transaction(ops);
-    return NextResponse.json({ ok: true, count: ops.length });
+    await prisma.$transaction(upsertOperations);
+    return NextResponse.json({ ok: true, count: upsertOperations.length });
   } catch (err) {
     return errorResponse("PUT", err);
   }

@@ -160,7 +160,7 @@ describe("parseBattleLine の兵種正規化", () => {
 
   it("命名に半角空白を含むオリジナル兵も 1 トークンとして解析する", () => {
     // 「*中指 末弟・末妹(ライフル銃兵)」は命名に空白があるが、分割前に
-    // 1 トークンへまとめるため以降の項目（兵科・装備）がずれない。
+    // 1 トークンへまとめるため以降の項目（兵種・装備）がずれない。
     const w = parseBattleLine(withUnit("*中指 末弟・末妹(ライフル銃兵)"));
     expect(w[0].unit).toBe("ライフル銃兵");
     expect(w[0].type).toBe("武特");
@@ -186,7 +186,7 @@ describe("parseBattleLine の兵種正規化", () => {
 });
 
 describe("スマホ貼り付け（リンク喪失で詰まった形式）", () => {
-  // PC ではリンク [本文](URL) が「場所↔勢力名」「装備2↔勝敗」の境界を作るが、
+  // PC ではリンク [本文](URL) が「場所↔勢力名」「武将の持つ武器↔勝敗」の境界を作るが、
   // スマホではリンクが失われ、プレーンテキストとして詰まって貼られる。
   const mobileGlued =
     "【1戦目】1688年3月06/15 12:51植物公園サルの修行寺R 半端な鍛錬武特 純粋家 武特 鬼武者っぽい🙉 歩兵 示現流兵法巻 六字名号旗 V.S. けつなあな確定 佐山聡 佐山家 武特 剣豪 歩兵 龍の腕輪 五郎入道正宗半端な鍛錬武特の勝利12";
@@ -213,13 +213,13 @@ describe("スマホ貼り付け（リンク喪失で詰まった形式）", () =
     expect(w[1].actions).toBeUndefined();
   });
 
-  it("装備2に連結した勝敗を切り離し、勝者・ターン数・装備を復元する", () => {
+  it("武将の持つ武器に連結した勝敗を切り離し、勝者・ターン数・装備を復元する", () => {
     const card = parseBattleCard(mobileGlued);
     expect(card).not.toBeNull();
     expect(card!.winner).toBe("left");
     expect(card!.turns).toBe("12");
     expect(card!.right.equips).toEqual(["龍の腕輪", "五郎入道正宗"]);
-    // 装備1列 / 装備2列として枠の位置を保持する。
+    // 武将の持つ品物列 / 武将の持つ武器列として枠の位置を保持する。
     expect(card!.right.equip1).toBe("龍の腕輪");
     expect(card!.right.equip2).toBe("五郎入道正宗");
     expect(card!.left.equip1).toBe("示現流兵法巻");
@@ -237,17 +237,17 @@ describe("スマホ貼り付け（リンク喪失で詰まった形式）", () =
   });
 });
 
-describe("装備枠（装備1 / 装備2 の位置保持）", () => {
-  it("片方の枠が「なし」でも、装備1・装備2の対応を取り違えない", () => {
+describe("装備枠（武将の持つ品物 / 武将の持つ武器 の位置保持）", () => {
+  it("片方の枠が「なし」でも、武将の持つ品物・武将の持つ武器の対応を取り違えない", () => {
     const line =
       "【1戦目】 1583年4月 10:23 京都 織田 信長 織田家 武特 騎馬隊 騎兵 なし 鐦 V.S. 武田 勝頼 武田家 統特 騎馬隊 騎兵 馬 なし 信長の勝利 12";
     const card = parseBattleCard(line);
     expect(card).not.toBeNull();
-    // 出兵側: 装備1=なし、装備2=鐦。
+    // 出兵側: 武将の持つ品物=なし、武将の持つ武器=鐦。
     expect(card!.left.equip1).toBeUndefined();
     expect(card!.left.equip2).toBe("鐦");
     expect(card!.left.equips).toEqual(["鐦"]);
-    // 守備側: 装備1=馬、装備2=なし。
+    // 守備側: 武将の持つ品物=馬、武将の持つ武器=なし。
     expect(card!.right.equip1).toBe("馬");
     expect(card!.right.equip2).toBeUndefined();
     expect(card!.right.equips).toEqual(["馬"]);

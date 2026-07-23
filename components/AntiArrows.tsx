@@ -6,14 +6,14 @@ interface Props {
   self: BattleSide;
   /** 相手側（アンチ判定に使う）。 */
   opponent: BattleSide;
-  /** 兵種 → 得意兵科 の索引（useAntiIndex で取得）。 */
+  /** 兵種 → 得意兵種 の索引（useAntiIndex で取得）。 */
   antiIndex: Map<string, Set<string>>;
 }
 
 /**
  * 兵種名の横に出すアンチ矢印。
- * - 赤い ↑：自分の兵種が相手の兵科にアンチ（有利＝アンチを取っている）。
- * - 青い ↓：相手の兵種が自分の兵科にアンチ（不利＝アンチを取られている）。
+ * - 赤い ↑：自分の兵種が相手の兵種にアンチ（有利＝アンチを取っている）。
+ * - 青い ↓：相手の兵種が自分の兵種にアンチ（不利＝アンチを取られている）。
  * 取り合い（相互アンチ）のときは上下どちらも表示する。
  */
 export function AntiArrows({ self, opponent, antiIndex }: Props) {

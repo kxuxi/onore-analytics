@@ -193,9 +193,15 @@ export function DbTab({ db, colors, onSelectWarlord, onSelectFaction, onImportSt
   // 絞り込み中の一覧をタブ区切り（TSV）でクリップボードへコピーする。
   const handleCopyTsv = async () => {
     if (filtered.length === 0) return;
-    const header = ["国", "武将名", "タイプ", "兵科", "兵種", "行動時間", "更新日時"].join(
-      "\t"
-    );
+    const header = [
+      "国",
+      "武将名",
+      "タイプ",
+      "兵種タイプ",
+      "兵種名",
+      "行動時間",
+      "更新日時",
+    ].join("\t");
     const lines = filtered.map((w) =>
       [
         w.faction ?? "",
@@ -344,7 +350,7 @@ export function DbTab({ db, colors, onSelectWarlord, onSelectFaction, onImportSt
           </select>
         </label>
         <label className="filter">
-          <span>兵科</span>
+          <span>兵種タイプ</span>
           <select
             className="select"
             value={branch}
@@ -359,7 +365,7 @@ export function DbTab({ db, colors, onSelectWarlord, onSelectFaction, onImportSt
           </select>
         </label>
         <label className="filter">
-          <span>兵種</span>
+          <span>兵種名</span>
           <select
             className="select"
             value={unit}
@@ -392,8 +398,8 @@ export function DbTab({ db, colors, onSelectWarlord, onSelectFaction, onImportSt
             <option value="faction">国</option>
             <option value="name">武将名</option>
             <option value="type">タイプ</option>
-            <option value="branch">兵科</option>
-            <option value="unit">兵種</option>
+            <option value="branch">兵種タイプ</option>
+            <option value="unit">兵種名</option>
             <option value="lastActionAt">行動時間</option>
           </select>
         </label>
@@ -434,8 +440,8 @@ export function DbTab({ db, colors, onSelectWarlord, onSelectFaction, onImportSt
                 <SortableTh label="国" field="faction" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="武将名" field="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="タイプ" field="type" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="兵科" field="branch" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="兵種" field="unit" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="兵種タイプ" field="branch" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="兵種名" field="unit" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="行動時間" field="lastActionAt" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="更新日時" field="updatedAt" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
               </tr>
@@ -471,10 +477,10 @@ export function DbTab({ db, colors, onSelectWarlord, onSelectFaction, onImportSt
                   <td data-label="タイプ">
                     <span className="tag type">{displayWarlordType(w)}</span>
                   </td>
-                  <td data-label="兵科">
+                  <td data-label="兵種タイプ">
                     <span className="tag branch">{w.branch}</span>
                   </td>
-                  <td data-label="兵種">
+                  <td data-label="兵種名">
                     {w.unit ? (
                       <span className="tag unit">{w.unit}</span>
                     ) : (

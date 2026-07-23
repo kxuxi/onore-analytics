@@ -8,7 +8,7 @@ import { buildAntiIndex } from "./stats";
 const EMPTY_INDEX: Map<string, Set<string>> = new Map();
 
 /**
- * 兵種一覧を取得してアンチ索引（兵種名 → 得意兵科の集合）を返すフック。
+ * 兵種一覧を取得してアンチ索引（兵種名 → 得意兵種の集合）を返すフック。
  * 取得は fetchUnitTypes のキャッシュを使うため、複数箇所で呼んでも 1 リクエストに集約される。
  * 取得前・取得失敗時は空の索引を返す（＝アンチ矢印は出ない）。
  */

@@ -24,6 +24,10 @@ describe("TAB_GROUPS の導出", () => {
       }
     }
   });
+
+  it("武将ランキングはランキンググループへ統合されている", () => {
+    expect(GROUP_OF_TAB.metrics).toBe("ranking");
+  });
 });
 
 describe("公開範囲（認可の境界）", () => {
@@ -44,11 +48,10 @@ describe("公開範囲（認可の境界）", () => {
     expect(isPublicGroup("settings")).toBe(false);
   });
 
-  it("閲覧公開タブ（ホーム・戦闘履歴・ランキング・指標・メタ・図鑑・国）は公開されている", () => {
+  it("閲覧公開タブ（ホーム・戦闘履歴・ランキング・メタ・図鑑・国）は公開されている", () => {
     const publicTabs: TabKey[] = [
       "home",
       "history",
-      "swi",
       "unitrank",
       "weaponrank",
       "itemrank",

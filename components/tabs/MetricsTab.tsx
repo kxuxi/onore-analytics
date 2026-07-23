@@ -4,7 +4,13 @@ import { useCallback, useMemo, useState } from "react";
 import type { BattleRecord, WarlordMap } from "@/lib/types";
 import { FilterIcon, CloseIcon } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
-import { breakthroughRanking, pontaPointRanking, formatWinRate } from "@/lib/stats";
+import {
+  breakthroughRanking,
+  formatWinRate,
+  pontaPointRanking,
+  rankingPeriods,
+  warlordRanking,
+} from "@/lib/stats";
 
 interface Props {
   log: BattleRecord[];
@@ -13,7 +19,17 @@ interface Props {
 }
 
 /** 並べ替えの指標。 */
-type SortKey = "ppn" | "pontaPoint" | "winRate" | "breakthrough" | "breakthroughRate";
+type SortKey =
+  | "ppn"
+  | "pontaPoint"
+  | "winRate"
+  | "breakthrough"
+  | "breakthroughRate"
+  | "attackWinRate"
+  | "defenseWinRate"
+  | "avgBreakthrough"
+  | "defenseEfficiency"
+  | "assists";
 
 /** ノイズ除去用の最低戦闘数の選択肢。 */
 const MIN_CONTACT_OPTIONS = [1, 5, 10, 20, 30];
@@ -21,8 +37,11 @@ const MIN_CONTACT_OPTIONS = [1, 5, 10, 20, 30];
 /** サマリーで各指標を上位何位まで出すか。 */
 const TOP_N = 3;
 
-/** この戦闘数（撤退戦を除く）未満の武将は指標の集計対象外にする。 */
-const MIN_BATTLES = 10;
+/** 初期表示では最低戦闘数を10回以上にする。 */
+const DEFAULT_MIN_CONTACTS = 10;
+
+/** 武将ランキングを開いたときに選択する集計期間。 */
+const DEFAULT_PERIOD_KEY = "all";
 
 const SORT_OPTIONS: { key: SortKey; label: string; desc: string }[] = [
   {
@@ -50,6 +69,31 @@ const SORT_OPTIONS: { key: SortKey; label: string; desc: string }[] = [
     label: "抜き率",
     desc: "抜き数 ÷ 出兵数（各出兵を１回と数え、２戦目以降は数えません）。野球で言えば長打率。またの名をランカス度。",
   },
+  {
+    key: "attackWinRate",
+    label: "出兵勝率",
+    desc: "出兵側として参加した決着戦目のうち、勝利した戦目の割合。",
+  },
+  {
+    key: "defenseWinRate",
+    label: "守備勝率",
+    desc: "守備側として参加した決着戦目のうち、勝利した戦目の割合。",
+  },
+  {
+    key: "avgBreakthrough",
+    label: "撃破効率",
+    desc: "出兵側での勝利戦目数 ÷ 撤退を含まない出兵数。1出兵あたりの平均撃破数を示します。",
+  },
+  {
+    key: "defenseEfficiency",
+    label: "守備効率",
+    desc: "守備側での勝利戦目数 ÷ 撤退を含まない守備回数。1守備あたりの平均撃破数を示します。",
+  },
+  {
+    key: "assists",
+    label: "アシスト数",
+    desc: "削った相手が、その後40分以内に別の戦闘で倒された回数。",
+  },
 ];
 
 /** 武将 1 行分の指標（PPN・PontaPoint・抜き数・抜き率をまとめたもの）。 */
@@ -57,6 +101,8 @@ interface MetricRow {
   name: string;
   faction?: string;
   branch?: string;
+  /** 武将タイプ（武特・知特・統特など）。 */
+  warlordType?: string;
   /** PPN = PontaPoint + 抜き率。 */
   ppn: number;
   /** PontaPoint = (出兵勝 + 1.4×守備勝) ÷ 戦闘数（撤退戦を除く）。 */
@@ -77,6 +123,62 @@ interface MetricRow {
   sorties: number;
   /** 枚抜きの内訳（index=n 枚抜き, value=回数）。抜き数の内訳表示に使う。 */
   sweepCounts: number[];
+  /** 出兵側として参加した決着戦目の勝率。 */
+  attackWinRate: number;
+  /** 守備側として参加した決着戦目の勝率。 */
+  defenseWinRate: number;
+  /** 出兵側の勝利戦目数 ÷ 撤退を含まない出兵数。 */
+  avgBreakthrough: number;
+  /** 守備側の勝利戦目数 ÷ 撤退を含まない守備数。 */
+  defenseEfficiency: number;
+  /** 出兵側として参加した決着戦目数。 */
+  attackRounds: number;
+  /** 出兵側として勝った決着戦目数。 */
+  attackWinRounds: number;
+  /** 守備側として参加した決着戦目数。 */
+  defenseRounds: number;
+  /** 守備側として勝った決着戦目数。 */
+  defenseWinRounds: number;
+  /** 撤退を含まない出兵数。 */
+  attackSorties: number;
+  /** 撤退を含まない守備数。 */
+  defenseSorties: number;
+  /** アシスト数。 */
+  assists: number;
+}
+
+/** 各集計結果を安全に結合するための空行を作る。 */
+function createMetricRow(
+  name: string,
+  faction?: string,
+  branch?: string
+): MetricRow {
+  return {
+    name,
+    faction,
+    branch,
+    ppn: 0,
+    pontaPoint: 0,
+    attackWins: 0,
+    defenseWins: 0,
+    battles: 0,
+    winRate: 0,
+    breakthrough: 0,
+    breakthroughRate: 0,
+    sorties: 0,
+    sweepCounts: [],
+    attackWinRate: 0,
+    defenseWinRate: 0,
+    avgBreakthrough: 0,
+    defenseEfficiency: 0,
+    attackRounds: 0,
+    attackWinRounds: 0,
+    defenseRounds: 0,
+    defenseWinRounds: 0,
+    attackSorties: 0,
+    defenseSorties: 0,
+    assists: 0,
+  };
 }
 
 /** PontaPoint（(出兵勝+1.4×守備勝)÷戦闘数）をパーセント表示（小数点第2位）に整形する。 */
@@ -97,60 +199,75 @@ function formatSweepCounts(sweepCounts: number[]): string {
 
 /** 指標 metric における行 r のバー用の数値。 */
 function metricValue(r: MetricRow, metric: SortKey): number {
-  return metric === "ppn"
-    ? r.ppn
-    : metric === "pontaPoint"
-      ? r.pontaPoint
-      : metric === "winRate"
-        ? r.winRate
-        : metric === "breakthrough"
-          ? r.breakthrough
-          : r.breakthroughRate;
+  return r[metric];
 }
 
 /** 指標 metric における行 r の表示用ラベル。 */
 function metricLabel(r: MetricRow, metric: SortKey): string {
-  return metric === "ppn"
-    ? r.battles > 0 || r.sorties > 0
-      ? r.ppn.toFixed(3)
-      : "—"
-    : metric === "pontaPoint"
-      ? r.battles > 0
-        ? formatPontaPoint(r.pontaPoint)
-        : "—"
-      : metric === "winRate"
-        ? formatWinRate(r.winRate, r.battles)
-        : metric === "breakthrough"
-          ? r.breakthrough.toLocaleString("ja-JP")
-          : r.sorties > 0
-            ? r.breakthroughRate.toFixed(3)
-            : "—";
+  switch (metric) {
+    case "ppn":
+      return r.battles > 0 || r.sorties > 0 ? r.ppn.toFixed(3) : "—";
+    case "pontaPoint":
+      return r.battles > 0 ? formatPontaPoint(r.pontaPoint) : "—";
+    case "winRate":
+      return formatWinRate(r.winRate, r.battles);
+    case "breakthrough":
+      return r.breakthrough.toLocaleString("ja-JP");
+    case "breakthroughRate":
+      return r.sorties > 0 ? r.breakthroughRate.toFixed(3) : "—";
+    case "attackWinRate":
+      return formatWinRate(r.attackWinRate, r.attackRounds);
+    case "defenseWinRate":
+      return formatWinRate(r.defenseWinRate, r.defenseRounds);
+    case "avgBreakthrough":
+      return r.attackSorties > 0 ? `${r.avgBreakthrough.toFixed(2)}枚` : "—";
+    case "defenseEfficiency":
+      return r.defenseSorties > 0
+        ? `${r.defenseEfficiency.toFixed(2)}枚`
+        : "—";
+    case "assists":
+      return r.assists.toLocaleString("ja-JP");
+  }
+}
+
+/** 指標ごとの最低回数フィルターに使う母数。 */
+function metricContactCount(r: MetricRow, metric: SortKey): number {
+  switch (metric) {
+    case "attackWinRate":
+      return r.attackRounds;
+    case "defenseWinRate":
+      return r.defenseRounds;
+    case "avgBreakthrough":
+      return r.attackSorties;
+    case "defenseEfficiency":
+      return r.defenseSorties;
+    case "assists":
+      return r.attackSorties + r.defenseSorties;
+    default:
+      return r.battles;
+  }
+}
+
+/** 詳細フィルターに表示する回数の名称。 */
+function metricContactLabel(metric: SortKey): string {
+  switch (metric) {
+    case "attackWinRate":
+    case "avgBreakthrough":
+      return "最低出兵数";
+    case "defenseWinRate":
+    case "defenseEfficiency":
+      return "最低守備数";
+    default:
+      return "最低戦闘数";
+  }
 }
 
 /** 指標 metric で降順に並べ替えた新しい配列を返す。 */
 function sortByMetric(rows: MetricRow[], metric: SortKey): MetricRow[] {
   return [...rows].sort((a, b) => {
-    if (metric === "ppn") {
-      if (b.ppn !== a.ppn) return b.ppn - a.ppn;
-      return b.battles - a.battles;
-    }
-    if (metric === "breakthrough") {
-      if (b.breakthrough !== a.breakthrough)
-        return b.breakthrough - a.breakthrough;
-      return b.sorties - a.sorties;
-    }
-    if (metric === "breakthroughRate") {
-      if (b.breakthroughRate !== a.breakthroughRate)
-        return b.breakthroughRate - a.breakthroughRate;
-      return b.breakthrough - a.breakthrough;
-    }
-    if (metric === "winRate") {
-      if (b.winRate !== a.winRate) return b.winRate - a.winRate;
-      return b.battles - a.battles;
-    }
-    // pontaPoint
-    if (b.pontaPoint !== a.pontaPoint) return b.pontaPoint - a.pontaPoint;
-    return b.battles - a.battles;
+    const valueDifference = metricValue(b, metric) - metricValue(a, metric);
+    if (valueDifference !== 0) return valueDifference;
+    return metricContactCount(b, metric) - metricContactCount(a, metric);
   });
 }
 
@@ -211,6 +328,30 @@ function MetricRowItem({
               抜き数 {r.breakthrough.toLocaleString("ja-JP")} ／ 出兵{" "}
               {r.sorties.toLocaleString("ja-JP")}
             </span>
+          ) : metric === "attackWinRate" ? (
+            <span className="rank-side-active">
+              出兵 {r.attackWinRounds.toLocaleString("ja-JP")}勝 ／{" "}
+              {(r.attackRounds - r.attackWinRounds).toLocaleString("ja-JP")}敗
+            </span>
+          ) : metric === "defenseWinRate" ? (
+            <span className="rank-side-active">
+              守備 {r.defenseWinRounds.toLocaleString("ja-JP")}勝 ／{" "}
+              {(r.defenseRounds - r.defenseWinRounds).toLocaleString("ja-JP")}敗
+            </span>
+          ) : metric === "avgBreakthrough" ? (
+            <span className="rank-side-active">
+              出兵側勝利 {r.attackWinRounds.toLocaleString("ja-JP")} ／ 出兵{" "}
+              {r.attackSorties.toLocaleString("ja-JP")}回
+            </span>
+          ) : metric === "defenseEfficiency" ? (
+            <span className="rank-side-active">
+              守備側勝利 {r.defenseWinRounds.toLocaleString("ja-JP")} ／ 守備{" "}
+              {r.defenseSorties.toLocaleString("ja-JP")}回
+            </span>
+          ) : metric === "assists" ? (
+            <span className="rank-side-active">
+              アシスト {r.assists.toLocaleString("ja-JP")}（40分以内追撃）
+            </span>
           ) : (
             <span className="rank-side-active">
               出兵 {r.attackWins.toLocaleString("ja-JP")}勝 ／ 守備{" "}
@@ -225,7 +366,7 @@ function MetricRowItem({
 }
 
 /**
- * 指標タブ。武将ごとの PPN・PontaPoint・抜き数・抜き率を表示する。
+ * 武将ランキング。武将ごとの総合指標・勝率・効率・アシストを表示する。
  *
  * PPN＝PontaPoint＋抜き率。PontaPoint＝勝率の分子で守備の1勝を1.4勝として評価した率。
  * 抜き数・抜き率は出兵側の枚抜き（突破）を集計したもの。いずれも「対象の期」で
@@ -234,56 +375,61 @@ function MetricRowItem({
 export function MetricsTab({ log, db, onSelectWarlord }: Props) {
   // null = サマリー（各指標TOP3）、非null = その指標の詳細ランキング。
   const [activeMetric, setActiveMetric] = useState<SortKey | null>(null);
-  const [minContacts, setMinContacts] = useState(1);
+  const [minContacts, setMinContacts] = useState(DEFAULT_MIN_CONTACTS);
   const [query, setQuery] = useState("");
   const [branch, setBranch] = useState("");
+  const [warlordType, setWarlordType] = useState("");
   const [showFilter, setShowFilter] = useState(true);
+  const [periodKey, setPeriodKey] = useState<string>(DEFAULT_PERIOD_KEY);
+  const periods = useMemo(() => rankingPeriods(log), [log]);
+  const range = useMemo(
+    () => periods.find((period) => period.key === periodKey),
+    [periodKey, periods]
+  );
 
-  // PontaPoint と枚抜き（抜き数・抜き率）を武将ごとに統合する。
+  // PontaPoint・枚抜き・旧武将ランキングの各指標を武将ごとに統合する。
   const ranking = useMemo<MetricRow[]>(() => {
     const byName = new Map<string, MetricRow>();
-    for (const p of pontaPointRanking(log, db)) {
-      byName.set(p.name, {
-        name: p.name,
-        faction: p.faction,
-        branch: p.branch,
-        ppn: 0,
-        pontaPoint: p.pontaPoint,
-        attackWins: p.attackWins,
-        defenseWins: p.defenseWins,
-        battles: p.battles,
-        winRate: 0,
-        breakthrough: 0,
-        breakthroughRate: 0,
-        sorties: 0,
-        sweepCounts: [],
-      });
+    for (const p of pontaPointRanking(log, db, range)) {
+      const row = createMetricRow(p.name, p.faction, p.branch);
+      row.pontaPoint = p.pontaPoint;
+      row.attackWins = p.attackWins;
+      row.defenseWins = p.defenseWins;
+      row.battles = p.battles;
+      byName.set(p.name, row);
     }
-    for (const b of breakthroughRanking(log, db)) {
-      const row = byName.get(b.name);
-      if (row) {
-        row.breakthrough = b.score;
-        row.sorties = b.sorties;
-        row.sweepCounts = b.sweepCounts;
-        row.faction = row.faction ?? b.faction;
-        row.branch = row.branch ?? b.branch;
-      } else {
-        byName.set(b.name, {
-          name: b.name,
-          faction: b.faction,
-          branch: b.branch,
-          ppn: 0,
-          pontaPoint: 0,
-          attackWins: 0,
-          defenseWins: 0,
-          battles: 0,
-          winRate: 0,
-          breakthrough: b.score,
-          breakthroughRate: 0,
-          sorties: b.sorties,
-          sweepCounts: b.sweepCounts,
-        });
-      }
+    for (const b of breakthroughRanking(log, db, range)) {
+      const row =
+        byName.get(b.name) ?? createMetricRow(b.name, b.faction, b.branch);
+      row.breakthrough = b.score;
+      row.sorties = b.sorties;
+      row.sweepCounts = b.sweepCounts;
+      row.faction = row.faction ?? b.faction;
+      row.branch = row.branch ?? b.branch;
+      byName.set(b.name, row);
+    }
+    for (const oldRanking of warlordRanking(log, db, range)) {
+      const row =
+        byName.get(oldRanking.name) ??
+        createMetricRow(
+          oldRanking.name,
+          oldRanking.faction,
+          oldRanking.branch
+        );
+      row.faction = row.faction ?? oldRanking.faction;
+      row.branch = row.branch ?? oldRanking.branch;
+      row.attackWinRate = oldRanking.attackWinRate;
+      row.defenseWinRate = oldRanking.defenseWinRate;
+      row.avgBreakthrough = oldRanking.avgBreakthrough;
+      row.defenseEfficiency = oldRanking.defenseEfficiency;
+      row.attackRounds = oldRanking.attackRounds;
+      row.attackWinRounds = oldRanking.attackWinRounds;
+      row.defenseRounds = oldRanking.defenseRounds;
+      row.defenseWinRounds = oldRanking.defenseWinRounds;
+      row.attackSorties = oldRanking.attackSorties;
+      row.defenseSorties = oldRanking.defenseSorties;
+      row.assists = oldRanking.assists;
+      byName.set(oldRanking.name, row);
     }
     const rows = Array.from(byName.values());
     // 抜き率 = 抜き数 ÷ 出兵数（出兵数 0 は 0）。PPN = PontaPoint + 抜き率。
@@ -292,12 +438,12 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
       r.ppn = r.pontaPoint + r.breakthroughRate;
       r.winRate =
         r.battles > 0 ? (r.attackWins + r.defenseWins) / r.battles : 0;
+      r.warlordType = db?.[r.name]?.type?.trim() || undefined;
     }
-    // 10戦未満（戦闘数が MIN_BATTLES 未満）の武将は指標の対象外。
-    return rows.filter((r) => r.battles >= MIN_BATTLES);
-  }, [log, db]);
+    return rows;
+  }, [log, db, range]);
 
-  // 兵科の選択肢（集計対象から収集）。
+  // 兵種の選択肢（集計対象から収集）。
   const branchOptions = useMemo(
     () =>
       Array.from(
@@ -310,14 +456,40 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
     [ranking]
   );
 
-  // サマリー：指標ごとに上位 TOP_N を切り出す（絞り込みなしの全体ランキング）。
-  const summaries = useMemo(
+  // 武将タイプの選択肢（集計対象から収集）。
+  const warlordTypeOptions = useMemo(
     () =>
-      SORT_OPTIONS.map((opt) => ({
-        opt,
-        rows: sortByMetric(ranking, opt.key).slice(0, TOP_N),
-      })),
+      Array.from(
+        new Set(
+          ranking
+            .map((row) => row.warlordType)
+            .filter((value): value is string => !!value)
+        )
+      ).sort((a, b) => a.localeCompare(b, "ja")),
     [ranking]
+  );
+
+  // サマリー：共通フィルターを適用してから、指標ごとの上位 TOP_N を切り出す。
+  const summaries = useMemo(
+    () => {
+      const q = query.trim();
+      const filteredBySharedConditions = ranking.filter(
+        (row) =>
+          (branch ? row.branch === branch : true) &&
+          (warlordType ? row.warlordType === warlordType : true) &&
+          (q ? row.name.includes(q) : true)
+      );
+      return SORT_OPTIONS.map((opt) => ({
+        opt,
+        rows: sortByMetric(
+          filteredBySharedConditions.filter(
+            (row) => metricContactCount(row, opt.key) >= minContacts
+          ),
+          opt.key
+        ).slice(0, TOP_N),
+      }));
+    },
+    [ranking, query, branch, warlordType, minContacts]
   );
 
   // 詳細：選択中の指標で絞り込み・並べ替えた全ランキング。
@@ -326,12 +498,13 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
     const q = query.trim();
     const filtered = ranking.filter(
       (r) =>
-        r.battles >= minContacts &&
+        metricContactCount(r, activeMetric) >= minContacts &&
         (branch ? r.branch === branch : true) &&
+        (warlordType ? r.warlordType === warlordType : true) &&
         (q ? r.name.includes(q) : true)
     );
     return sortByMetric(filtered, activeMetric);
-  }, [ranking, activeMetric, query, branch, minContacts]);
+  }, [ranking, activeMetric, query, branch, warlordType, minContacts]);
 
   // バー幅の基準となる最大値（詳細表示の最大）。
   const detailMax =
@@ -346,81 +519,182 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
   const activeLabel = activeOption?.label ?? "";
   const activeDesc = activeOption?.desc ?? "";
 
-  // 詳細ビューを開く（絞り込みは初期化して先頭へ）。
+  // 詳細ビューを開く（一覧で指定した絞り込みは引き継ぐ）。
   const openDetail = useCallback((metric: SortKey) => {
     setActiveMetric(metric);
-    setShowFilter(false);
-    setQuery("");
-    setBranch("");
-    setMinContacts(1);
     if (typeof window !== "undefined") window.scrollTo(0, 0);
   }, []);
 
-  // サマリーへ戻る。
+  // サマリーへ戻る（絞り込み状態は維持する）。
   const backToSummary = useCallback(() => {
     setActiveMetric(null);
-    setShowFilter(false);
-    setQuery("");
-    setBranch("");
     if (typeof window !== "undefined") window.scrollTo(0, 0);
   }, []);
 
   // 検索ボックスとは別にトグルするドロップダウン系の絞り込み。
-  const hasDropdownFilter = !!branch || minContacts !== 1;
-  const hasFilter = !!(query || branch);
+  const hasDropdownFilter = !!(branch || warlordType || minContacts !== 1);
+  const hasFilter = !!(query || branch || warlordType || minContacts !== 1);
   const clearFilters = () => {
     setQuery("");
     setBranch("");
+    setWarlordType("");
+    setMinContacts(1);
   };
 
   return (
-    <section className="panel">
-      <h2>指標</h2>
+    <section className="panel ranking-panel">
+      <h2>武将ランキング</h2>
       <p className="metric-note muted">
-        ※戦闘数（撤退を除く）が10戦未満の武将は集計対象外です。
+        ※初期設定では、各指標の集計対象回数が10回未満の武将を除外します。
       </p>
+
+      <div className="tmx-periods" role="tablist" aria-label="集計期間">
+        {periods.map((period) => (
+          <button
+            key={period.key}
+            type="button"
+            role="tab"
+            aria-selected={periodKey === period.key}
+            className={
+              "tmx-period" + (periodKey === period.key ? " active" : "")
+            }
+            onClick={() => setPeriodKey(period.key)}
+          >
+            {period.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="search-row">
+        <SearchBox
+          value={query}
+          onChange={setQuery}
+          placeholder="武将名で検索"
+        />
+        <button
+          type="button"
+          className={
+            "btn filter-toggle" +
+            (showFilter || hasDropdownFilter ? " active" : "")
+          }
+          onClick={() => setShowFilter((v) => !v)}
+          aria-expanded={showFilter}
+        >
+          <FilterIcon />
+          <span>フィルター</span>
+        </button>
+        {hasFilter && (
+          <button
+            type="button"
+            className="btn clear-filters"
+            onClick={clearFilters}
+            title="絞り込み条件をすべて解除"
+          >
+            <CloseIcon />
+            <span>解除</span>
+          </button>
+        )}
+      </div>
+
+      {showFilter && (
+        <div className="filter-grid">
+          <label className="filter">
+            <span>
+              {activeMetric
+                ? metricContactLabel(activeMetric)
+                : "最低戦闘数"}
+            </span>
+            <select
+              className="select"
+              value={minContacts}
+              onChange={(e) => setMinContacts(Number(e.target.value))}
+            >
+              {MIN_CONTACT_OPTIONS.map((v) => (
+                <option key={v} value={v}>
+                  {v}回以上
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="filter">
+            <span>兵種タイプ</span>
+            <select
+              className="select"
+              value={branch}
+              onChange={(e) => setBranch(e.target.value)}
+            >
+              <option value="">すべて</option>
+              {branchOptions.map((v) => (
+                <option key={v} value={v}>
+                  {v}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="filter">
+            <span>武将タイプ</span>
+            <select
+              className="select"
+              value={warlordType}
+              onChange={(e) => setWarlordType(e.target.value)}
+            >
+              <option value="">すべて</option>
+              {warlordTypeOptions.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
 
       {activeMetric === null ? (
         // サマリー：指標ごとの上位 TOP3 を並べ、詳細へ誘導する。
-        summaries.map(({ opt, rows }) => {
-          const max = rows.reduce(
-            (m, r) => Math.max(m, metricValue(r, opt.key)),
-            0
-          );
-          return (
-            <div className="metric-section" key={opt.key}>
-              <div className="metric-section-head">
-                <h3>{opt.label}</h3>
-                <button
-                  type="button"
-                  className="link-like"
-                  onClick={() => openDetail(opt.key)}
-                >
-                  詳細を見る →
-                </button>
+        <div className="ranking-metric-grid">
+          {summaries.map(({ opt, rows }) => {
+            const max = rows.reduce(
+              (m, r) => Math.max(m, metricValue(r, opt.key)),
+              0
+            );
+            return (
+              <div className="metric-section" key={opt.key}>
+                <div className="metric-section-head">
+                  <h3>{opt.label}</h3>
+                  <button
+                    type="button"
+                    className="link-like"
+                    onClick={() => openDetail(opt.key)}
+                  >
+                    詳細を見る →
+                  </button>
+                </div>
+                <details className="metric-description">
+                  <summary>算出方法</summary>
+                  <p>{opt.desc}</p>
+                </details>
+                {rows.length === 0 ? (
+                  <p className="metric-section-empty muted">
+                    条件を満たす武将がいません。
+                  </p>
+                ) : (
+                  <ol className="swi-list">
+                    {rows.map((r, i) => (
+                      <MetricRowItem
+                        key={r.name}
+                        r={r}
+                        rank={i + 1}
+                        metric={opt.key}
+                        maxValue={max}
+                        onSelectWarlord={onSelectWarlord}
+                      />
+                    ))}
+                  </ol>
+                )}
               </div>
-              <p className="metric-section-desc muted">{opt.desc}</p>
-              {rows.length === 0 ? (
-                <p className="metric-section-empty muted">
-                  条件を満たす武将がいません。
-                </p>
-              ) : (
-                <ol className="swi-list">
-                  {rows.map((r, i) => (
-                    <MetricRowItem
-                      key={r.name}
-                      r={r}
-                      rank={i + 1}
-                      metric={opt.key}
-                      maxValue={max}
-                      onSelectWarlord={onSelectWarlord}
-                    />
-                  ))}
-                </ol>
-              )}
-            </div>
-          );
-        })
+            );
+          })}
+        </div>
       ) : (
         // 詳細：パンくず＋絞り込み＋その指標の全ランキング。
         <>
@@ -430,7 +704,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
               className="link-like"
               onClick={backToSummary}
             >
-              指標
+              武将ランキング
             </button>
             <span className="metric-crumb-sep" aria-hidden="true">
               ›
@@ -438,71 +712,6 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
             <span className="metric-crumb-current">{activeLabel}</span>
           </nav>
           <p className="metric-section-desc muted">{activeDesc}</p>
-
-          <div className="search-row">
-            <SearchBox
-              value={query}
-              onChange={setQuery}
-              placeholder="武将名で検索"
-            />
-            <button
-              type="button"
-              className={
-                "btn filter-toggle" +
-                (showFilter || hasDropdownFilter ? " active" : "")
-              }
-              onClick={() => setShowFilter((v) => !v)}
-              aria-expanded={showFilter}
-            >
-              <FilterIcon />
-              <span>フィルター</span>
-            </button>
-            {hasFilter && (
-              <button
-                type="button"
-                className="btn clear-filters"
-                onClick={clearFilters}
-                title="絞り込み条件をすべて解除"
-              >
-                <CloseIcon />
-                <span>解除</span>
-              </button>
-            )}
-          </div>
-
-          {showFilter && (
-            <div className="filter-grid">
-              <label className="filter">
-                <span>最低戦闘数</span>
-                <select
-                  className="select"
-                  value={minContacts}
-                  onChange={(e) => setMinContacts(Number(e.target.value))}
-                >
-                  {MIN_CONTACT_OPTIONS.map((v) => (
-                    <option key={v} value={v}>
-                      {v}回以上
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="filter">
-                <span>兵種</span>
-                <select
-                  className="select"
-                  value={branch}
-                  onChange={(e) => setBranch(e.target.value)}
-                >
-                  <option value="">すべて</option>
-                  {branchOptions.map((v) => (
-                    <option key={v} value={v}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          )}
 
           <p className="sr-only" role="status" aria-live="polite">
             該当 {detailRows.length.toLocaleString("ja-JP")}件

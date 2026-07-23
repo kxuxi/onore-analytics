@@ -114,7 +114,13 @@ export function ScoutTab({ db, colors, onSelectWarlord }: Props) {
 
   const handleCopy = async () => {
     if (visibleRows.length === 0) return;
-    const header = ["国", "武将名", "タイプ", "兵科", "兵種"].join("\t");
+    const header = [
+      "国",
+      "武将名",
+      "タイプ",
+      "兵種タイプ",
+      "兵種名",
+    ].join("\t");
     const body = visibleRows
       .map((r) =>
         r.found
@@ -134,7 +140,7 @@ export function ScoutTab({ db, colors, onSelectWarlord }: Props) {
   };
 
   // 国へ敵の守備の並びを報告するためのテキスト。
-  // 兵種を含める場合は「名前［タイプ｜兵種］」、外す場合は「名前［タイプ］」を入力順に連結する。
+  // 兵種名を含める場合は「名前［タイプ｜兵種名］」、外す場合は「名前［タイプ］」を入力順に連結する。
   // 全角150文字（300 Byte）以内に収まる要素だけを含める。
   const reportParts = useMemo(() => {
     const SEP = ", ";
@@ -171,7 +177,7 @@ export function ScoutTab({ db, colors, onSelectWarlord }: Props) {
       <h2>偵察検索</h2>
       <p className="muted" style={{ margin: 0, fontSize: 13 }}>
         偵察結果の武将名をスペース・改行・カンマ区切りで貼り付けてください。
-        DBに登録済みの武将はタイプ・兵科・兵種を表示し、「名前［タイプ｜兵種］」形式の報告用テキストも生成します。
+        DBに登録済みの武将はタイプ・兵種名・兵種タイプを表示し、「名前［タイプ｜兵種名］」形式の報告用テキストも生成します。
       </p>
       <textarea
         value={text}
@@ -212,7 +218,7 @@ export function ScoutTab({ db, colors, onSelectWarlord }: Props) {
           <div className="scout-report">
             <div className="scout-report-head">
               <span className="scout-report-title">
-                報告用テキスト（{includeUnit ? "タイプ｜兵種" : "タイプのみ"}）
+                報告用テキスト（{includeUnit ? "タイプ｜兵種名" : "タイプのみ"}）
                 <span className="scout-report-count">
                   {reportParts.length < rows.length
                     ? `${reportParts.length}/${rows.length}件`
@@ -225,7 +231,7 @@ export function ScoutTab({ db, colors, onSelectWarlord }: Props) {
                   checked={includeUnit}
                   onChange={(e) => setIncludeUnit(e.target.checked)}
                 />
-                <span>兵種を含める</span>
+                <span>兵種名を含める</span>
               </label>
               <button
                 type="button"
@@ -285,8 +291,8 @@ export function ScoutTab({ db, colors, onSelectWarlord }: Props) {
                     <th>国</th>
                     <th>武将名</th>
                     <th>タイプ</th>
-                    <th>兵科</th>
-                    <th>兵種</th>
+                    <th>兵種タイプ</th>
+                    <th>兵種名</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -321,14 +327,14 @@ export function ScoutTab({ db, colors, onSelectWarlord }: Props) {
                           <span className="tag warn">データなし</span>
                         )}
                       </td>
-                      <td data-label="兵科">
+                      <td data-label="兵種タイプ">
                         {r.found ? (
                           <span className="tag branch">{r.branch}</span>
                         ) : (
                           <span className="muted">-</span>
                         )}
                       </td>
-                      <td data-label="兵種">
+                      <td data-label="兵種名">
                         {r.found && r.unit ? (
                           <span className="tag unit">{r.unit}</span>
                         ) : (

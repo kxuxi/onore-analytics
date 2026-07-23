@@ -38,7 +38,7 @@ export function normalizeWidth(s: string): string {
  * 装備と勝敗の境界がここで切れる）。
  *
  * スマホ等でコピーするとリンク記法が失われ、プレーンテキストとして
- *   【N戦目】年月MM/DD HH:mm場所勢力名 … V.S. … 装備2勝敗Nターン
+ *   【N戦目】年月MM/DD HH:mm場所勢力名 … V.S. … 武将の持つ武器勝敗Nターン
  * のように詰まって貼られる。この場合でも解析できるよう、リンクの有無に
  * 関わらずメタ部（【N戦目】/年月/月日 時刻）と勝敗・ターン数の境界を
  * 区切り直す。従来のタブ区切り形式は空白がもともと入っているため影響を受けない。
@@ -105,7 +105,7 @@ function tokenizeBattleLine(raw: string): string[] {
  * 実データはタブと半角スペースが混在しており、戦闘部分は 1 つのフィールド内で
  * スペース区切りになっている:
  *   【N戦目】<TAB>年月<TAB>月日 時刻<TAB>場所<TAB>
- *   勢力名 武将名 家名 タイプ 兵種名 兵科 装備1 装備2 V.S. 勢力名 武将名 家名 タイプ 兵種名 兵科 装備1 装備2<TAB>
+ *   勢力名 武将名 家名 タイプ 兵種名 兵種 武将の持つ品物 武将の持つ武器 V.S. 勢力名 武将名 家名 タイプ 兵種名 兵種 武将の持つ品物 武将の持つ武器<TAB>
  *   勝敗<TAB>ターン数
  *
  * そのため区切りの種類に依存せず、行全体を空白（タブ/半角/全角）でまとめて分割し、
@@ -129,7 +129,7 @@ export function parseBattleLine(line: string): Warlord[] {
   if (vsIndex < 0) return [];
 
   // 出兵側: V.S. の直前 8 トークン
-  //   = 勢力名 武将名 家名 タイプ 兵種名 兵科 装備1 装備2
+  //   = 勢力名 武将名 家名 タイプ 兵種名 兵種 武将の持つ品物 武将の持つ武器
   if (vsIndex < 8) return [];
   const attacker = sliceWarlord(tokens.slice(vsIndex - 8, vsIndex));
 
@@ -186,7 +186,7 @@ function splitMeta(meta: string[]): { place?: string; battleAt: string } {
 }
 
 /**
- * 末尾 8 トークン: [勢力名, 武将名, 家名, タイプ, 兵種名, 兵科, 装備1, 装備2]
+ * 末尾 8 トークン: [勢力名, 武将名, 家名, タイプ, 兵種名, 兵種, 武将の持つ品物, 武将の持つ武器]
  */
 function sliceWarlord(
   block: string[]
@@ -273,7 +273,7 @@ function battleNoOf(seg: string): string | undefined {
 
 /**
  * 戦闘エントリの体裁だが取り込めなかった理由を、項目（トークン）数から判定する。
- * 出兵側・守備側はそれぞれ 8 項目（勢力名 武将名 家名 タイプ 兵種名 兵科 装備1 装備2）
+ * 出兵側・守備側はそれぞれ 8 項目（勢力名 武将名 家名 タイプ 兵種名 兵種 武将の持つ品物 武将の持つ武器）
  * が必要で、これに過不足があると登録できない。
  */
 function battleRejectReason(seg: string): string {
@@ -283,7 +283,7 @@ function battleRejectReason(seg: string): string {
   if (vsIndex < 0) return "「V.S.」の区切りが見つかりません";
   if (vsIndex < 8) return "出兵側の項目数が不足しています";
   if (tokens.length < vsIndex + 9) return "守備側の項目数が不足しています";
-  return "必須項目（武将名・タイプ・兵科）が空です";
+  return "必須項目（武将名・タイプ・兵種）が空です";
 }
 
 /**
@@ -337,11 +337,11 @@ export interface BattleSide {
   /** 兵種名（`*` 付きの特殊兵種を含む生テキスト） */
   unit?: string;
   branch: string;
-  /** 装備（空・プレースホルダーは除去済み。[装備1, 装備2] の順） */
+  /** 装備（空・プレースホルダーは除去済み。[武将の持つ品物, 武将の持つ武器] の順） */
   equips: string[];
-  /** 装備1（ゲームの装備1列）。空・プレースホルダーは undefined。 */
+  /** 武将の持つ品物（ゲームの武将の持つ品物列）。空・プレースホルダーは undefined。 */
   equip1?: string;
-  /** 装備2（ゲームの装備2列）。空・プレースホルダーは undefined。 */
+  /** 武将の持つ武器（ゲームの武将の持つ武器列）。空・プレースホルダーは undefined。 */
   equip2?: string;
 }
 
@@ -353,14 +353,14 @@ export const KNOWN_WARLORD_TYPES = new Set([
   "政治家", "謎", "戦闘狂",
 ]);
 
-/** 既知の兵科。これ以外が branch に入っていたらトークンずれの疑い。 */
+/** 既知の兵種。これ以外が branch に入っていたらトークンずれの疑い。 */
 export const KNOWN_BRANCHES = new Set([
   "万能", "騎兵", "歩兵", "弓兵", "妖怪", "壁", "小型船", "特殊船", "軍艦",
 ]);
 
 /**
  * 戦闘カードの片側がトークンずれ（項目ずれ）を起こしているか判定する。
- * type が既知タイプでない、または branch が既知兵科でない場合にずれと見なす。
+ * type が既知タイプでない、または branch が既知兵種でない場合にずれと見なす。
  * オリジナル兵名や装備名にスペースが混じると項目が 1 つずれ、type に兵種名・
  * branch に装備名が入り込む（例: type="イェニチェリ" / branch="銀の腕輪"）。
  */
@@ -415,7 +415,7 @@ function cleanToken(s: string | undefined): string | undefined {
 
 function sideFromBlock(block: string[]): BattleSide {
   const [faction, name, family, type, unit, branch, e1, e2] = block;
-  // 装備1 / 装備2 は枠の位置を保持したいので個別に取り出す。
+  // 武将の持つ品物 / 武将の持つ武器 は枠の位置を保持したいので個別に取り出す。
   // （どちらが武器/品物かは集計・表示側で振り分ける。）
   const equip1 = cleanToken(e1);
   const equip2 = cleanToken(e2);
@@ -426,7 +426,7 @@ function sideFromBlock(block: string[]): BattleSide {
     type: type?.trim() ?? "",
     unit: unit?.trim() || undefined,
     branch: branch?.trim() ?? "",
-    // 既存利用箇所のため、空枠を除いた配列表現も維持する（[装備1, 装備2] の順）。
+    // 既存利用箇所のため、空枠を除いた配列表現も維持する（[武将の持つ品物, 武将の持つ武器] の順）。
     equips: [equip1, equip2].filter((e): e is string => !!e),
     equip1,
     equip2,
@@ -434,8 +434,8 @@ function sideFromBlock(block: string[]): BattleSide {
 }
 
 /**
- * 守備側ブロックの装備2と勝敗が連結している場合（スマホ等でリンクが失われ
- * 「…装備2◯◯の勝利」のように詰まったケース）に、既知の武将名を手掛かりに
+ * 守備側ブロックの武将の持つ武器と勝敗が連結している場合（スマホ等でリンクが失われ
+ * 「…武将の持つ武器◯◯の勝利」のように詰まったケース）に、既知の武将名を手掛かりに
  * 切り離す。連結が無ければ素直に従来通り（resultRaw=次トークン）を返す。
  */
 function splitGluedResult(
@@ -513,7 +513,7 @@ function computeBattleCard(line: string): BattleCard | null {
   const rightBlockRaw = tokens.slice(vsIndex + 1, vsIndex + 9);
   const leftName = leftBlock[1]?.trim() ?? "";
   const rightName = rightBlockRaw[1]?.trim() ?? "";
-  // 守備側の装備2に勝敗が連結している場合は切り離す（スマホ貼り付け対策）。
+  // 守備側の武将の持つ武器に勝敗が連結している場合は切り離す（スマホ貼り付け対策）。
   const { rightBlock, resultRaw, turns } = splitGluedResult(
     tokens,
     vsIndex,
