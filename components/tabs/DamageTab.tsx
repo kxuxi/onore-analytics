@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Warlord, WarlordMap } from "@/lib/types";
 import { FilterIcon, CloseIcon } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
 import { normalizationMap, householdAliases } from "@/lib/storage";
 import { displayWarlordType } from "@/lib/warlordType";
@@ -165,12 +166,16 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
 
   return (
     <section className="panel">
-      <h2>被弾表（行動状況）</h2>
-      <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-        出兵・守備のどちらで登場した武将も行動時刻から行動状況を判定します。
-        40分以内={ACTION_LABEL.done} / 40分〜1時間20分={ACTION_LABEL.ready} /
-        1時間20分以上={ACTION_LABEL.unknown}。
-      </p>
+      <PageHeader
+        title="被弾表（行動状況）"
+        description={
+          <>
+            出兵・守備のどちらで登場した武将も行動時刻から行動状況を判定します。
+            40分以内={ACTION_LABEL.done} / 40分〜1時間20分=
+            {ACTION_LABEL.ready} / 1時間20分以上={ACTION_LABEL.unknown}。
+          </>
+        }
+      />
       <p className="muted" style={{ margin: 0, fontSize: 12 }}>
         最終更新{" "}
         {now ? now.toLocaleTimeString("ja-JP", { hour12: false }) : "--:--:--"}
