@@ -124,7 +124,14 @@ describe("詳細画面の推移グラフ要約", () => {
     const markup = renderToStaticMarkup(
       <WinHeatmapSection heatmap={heatmap} />
     );
-    expect(markup).toContain(`role="img" aria-label="${description}"`);
+    expect(markup).toContain(`role="group" aria-label="${description}"`);
+    expect(markup).toContain(
+      'role="img" aria-label="日 0時台・2勝0敗（勝率 100.0% / 3戦）"'
+    );
+    expect(markup).toContain(
+      'role="img" aria-label="月 3時台・0勝2敗（勝率 0.0% / 2戦）"'
+    );
+    expect(markup).toContain('aria-hidden="true"');
     expect(markup).not.toContain('role="row"');
   });
 });

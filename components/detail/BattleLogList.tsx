@@ -66,11 +66,7 @@ function LogRowActions({ url, context }: { url: string; context: string }) {
         type="button"
         className={"dl-link dl-copy" + (copied ? " copied" : "")}
         onClick={copy}
-        aria-label={
-          copied
-            ? `戦闘ログのリンクをコピーしました：${context}`
-            : `戦闘ログのリンクをコピー：${context}`
-        }
+        aria-label={`戦闘ログのリンクをコピー：${context}`}
         title={copied ? "コピーしました" : "リンクをコピー"}
       >
         {copied ? <CheckIcon /> : <CopyIcon />}

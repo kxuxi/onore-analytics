@@ -250,7 +250,7 @@ export function WinHeatmapSection({ heatmap }: { heatmap: WinHeatmap }) {
     <Section title="時間帯・曜日別の勝率" mobileCollapsed>
       <div
         className="heatmap-wrap"
-        role="img"
+        role="group"
         aria-label={describeWinHeatmap(heatmap)}
       >
         <div className="heatmap">
@@ -263,18 +263,24 @@ export function WinHeatmapSection({ heatmap }: { heatmap: WinHeatmap }) {
           {heatmap.cells.map((row, day) => (
             <div key={day} className="heat-row">
               <div className="heat-row-label">{DAY_LABELS[day]}</div>
-              {row.map((cell, b) => (
-                <div
-                  key={b}
-                  className="heat-cell"
-                  style={heatStyle(cell)}
-                  title={heatTitle(
-                    DAY_LABELS[day],
-                    heatmap.bucketLabels[b],
-                    cell
-                  )}
-                />
-              ))}
+              {row.map((cell, b) => {
+                const cellLabel = heatTitle(
+                  DAY_LABELS[day],
+                  heatmap.bucketLabels[b],
+                  cell
+                );
+                return (
+                  <div
+                    key={b}
+                    className="heat-cell"
+                    style={heatStyle(cell)}
+                    role={cell.battles > 0 ? "img" : undefined}
+                    aria-label={cell.battles > 0 ? cellLabel : undefined}
+                    aria-hidden={cell.battles === 0 ? true : undefined}
+                    title={cellLabel}
+                  />
+                );
+              })}
             </div>
           ))}
         </div>
