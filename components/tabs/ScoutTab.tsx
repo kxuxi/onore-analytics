@@ -8,6 +8,7 @@ import { shortUnit } from "@/lib/unitShortNames";
 import { copyText } from "@/lib/clipboard";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
 import { displayWarlordType } from "@/lib/warlordType";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 interface Props {
   db: WarlordMap;
@@ -174,11 +175,10 @@ export function ScoutTab({ db, colors, onSelectWarlord }: Props) {
 
   return (
     <section className="panel">
-      <h2>偵察検索</h2>
-      <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-        偵察結果の武将名をスペース・改行・カンマ区切りで貼り付けてください。
-        DBに登録済みの武将はタイプ・兵種名・兵種タイプを表示し、「名前［タイプ｜兵種名］」形式の報告用テキストも生成します。
-      </p>
+      <PageHeader
+        title="偵察検索"
+        description="偵察結果の武将名をスペース・改行・カンマ区切りで貼り付けてください。DBに登録済みの武将はタイプ・兵種名・兵種タイプを表示し、「名前［タイプ｜兵種名］」形式の報告用テキストも生成します。"
+      />
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}

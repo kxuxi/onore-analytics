@@ -34,6 +34,7 @@ import {
   TrashIcon,
 } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { BATTLE_LOG_PAGE_SIZE as PAGE_SIZE } from "@/lib/stats";
 import { useAntiIndex } from "@/lib/useAntiIndex";
 import { AntiArrows } from "@/components/AntiArrows";
@@ -388,7 +389,11 @@ export function HistoryTab({
     <>
       {canRegister && (
       <section className="panel">
-        <h2>戦闘履歴を登録</h2>
+        <PageHeader
+          title="戦闘履歴"
+          description="戦闘結果の登録と、保存済み履歴の検索・確認を行います。"
+        />
+        <h3 className="section-title">戦闘履歴を登録</h3>
         <p className="muted" style={{ margin: 0, fontSize: 13 }}>
           ゲームの戦闘履歴をブラウザからコピーして貼り付け、「登録する」を押してください。
           リンク付き（各戦の詳細ページ URL）も自動で保持されます。
@@ -483,8 +488,14 @@ export function HistoryTab({
       )}
 
       <section className="panel">
+        {!canRegister && (
+          <PageHeader
+            title="戦闘履歴"
+            description="登録済みの戦闘結果を期間・国・武将名などで検索できます。"
+          />
+        )}
         <div className="history-head" ref={listTopRef}>
-          <h2>登録済み戦闘履歴</h2>
+          <h3 className="section-title">登録済み戦闘履歴</h3>
           <span className="count-badge" role="status" aria-live="polite">
             {hasActiveFilter
               ? `全${cards.length.toLocaleString("ja-JP")}件中 ${visibleLog.length.toLocaleString("ja-JP")}件`

@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import type { BattleRecord, WarlordMap } from "@/lib/types";
 import { FilterIcon, CloseIcon } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
+import { PageHeader } from "@/components/layout/PageHeader";
 import {
   breakthroughRanking,
   formatWinRate,
@@ -11,6 +12,12 @@ import {
   rankingPeriods,
   warlordRanking,
 } from "@/lib/stats";
+import {
+  DEFAULT_RANKING_FILTERS_OPEN,
+  DEFAULT_RANKING_MIN_COUNT,
+  DEFAULT_RANKING_PERIOD_KEY,
+  WARLORD_RANKING_MIN_COUNT_OPTIONS,
+} from "@/lib/rankingDefaults";
 
 interface Props {
   log: BattleRecord[];
@@ -32,16 +39,16 @@ type SortKey =
   | "assists";
 
 /** ノイズ除去用の最低戦闘数の選択肢。 */
-const MIN_CONTACT_OPTIONS = [1, 5, 10, 20, 30];
+const MIN_CONTACT_OPTIONS = WARLORD_RANKING_MIN_COUNT_OPTIONS;
 
 /** サマリーで各指標を上位何位まで出すか。 */
 const TOP_N = 3;
 
 /** 初期表示では最低戦闘数を10回以上にする。 */
-const DEFAULT_MIN_CONTACTS = 10;
+const DEFAULT_MIN_CONTACTS = DEFAULT_RANKING_MIN_COUNT;
 
 /** 武将ランキングを開いたときに選択する集計期間。 */
-const DEFAULT_PERIOD_KEY = "all";
+const DEFAULT_PERIOD_KEY = DEFAULT_RANKING_PERIOD_KEY;
 
 const SORT_OPTIONS: { key: SortKey; label: string; desc: string }[] = [
   {
@@ -379,7 +386,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
   const [query, setQuery] = useState("");
   const [branch, setBranch] = useState("");
   const [warlordType, setWarlordType] = useState("");
-  const [showFilter, setShowFilter] = useState(true);
+  const [showFilter, setShowFilter] = useState(DEFAULT_RANKING_FILTERS_OPEN);
   const [periodKey, setPeriodKey] = useState<string>(DEFAULT_PERIOD_KEY);
   const periods = useMemo(() => rankingPeriods(log), [log]);
   const range = useMemo(
@@ -543,10 +550,10 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
 
   return (
     <section className="panel ranking-panel">
-      <h2>武将ランキング</h2>
-      <p className="metric-note muted">
-        ※初期設定では、各指標の集計対象回数が10回未満の武将を除外します。
-      </p>
+      <PageHeader
+        title="武将ランキング"
+        description="※初期設定では、各指標の集計対象回数が10回未満の武将を除外します。"
+      />
 
       <div className="tmx-periods" role="tablist" aria-label="集計期間">
         {periods.map((period) => (
@@ -711,6 +718,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
             </span>
             <span className="metric-crumb-current">{activeLabel}</span>
           </nav>
+          <h3 className="sr-only">{activeLabel}ランキング</h3>
           <p className="metric-section-desc muted">{activeDesc}</p>
 
           <p className="sr-only" role="status" aria-live="polite">

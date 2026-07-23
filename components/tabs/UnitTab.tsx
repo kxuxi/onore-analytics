@@ -14,6 +14,7 @@ import {
 } from "@/lib/unitTypeForm";
 import { FilterIcon, CloseIcon } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 type SortKey =
   | "name"
@@ -221,16 +222,18 @@ export function UnitTab({
 
   return (
     <section className="panel">
-      <div className="history-head">
-        <h2>兵種図鑑</h2>
-        {!loading && (
-          <span className="count-badge">
-            {hasFilter
-              ? `全${baseUnits.length.toLocaleString("ja-JP")}件中 ${filtered.length.toLocaleString("ja-JP")}件`
-              : `全${baseUnits.length.toLocaleString("ja-JP")}件`}
-          </span>
-        )}
-      </div>
+      <PageHeader
+        title="兵種図鑑"
+        meta={
+          !loading && (
+            <span className="count-badge">
+              {hasFilter
+                ? `全${baseUnits.length.toLocaleString("ja-JP")}件中 ${filtered.length.toLocaleString("ja-JP")}件`
+                : `全${baseUnits.length.toLocaleString("ja-JP")}件`}
+            </span>
+          )
+        }
+      />
 
       {isAdmin && (
         <>

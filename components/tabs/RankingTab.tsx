@@ -8,8 +8,15 @@ import {
   rankingPeriods,
   type AssetMetricStat,
 } from "@/lib/stats";
+import {
+  ASSET_RANKING_MIN_COUNT_OPTIONS,
+  DEFAULT_RANKING_FILTERS_OPEN,
+  DEFAULT_RANKING_MIN_COUNT,
+  DEFAULT_RANKING_PERIOD_KEY,
+} from "@/lib/rankingDefaults";
 import { FilterIcon, CloseIcon } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 /** ランキングの対象。unit=兵種 / weapon=武器(武将の持つ武器) / item=品物(武将の持つ品物)。 */
 export type RankVariant = "unit" | "weapon" | "item";
@@ -68,14 +75,14 @@ const METRIC_OPTIONS: MetricOption[] = [
   },
 ];
 
-const MIN_USE_OPTIONS = [1, 10, 30, 50, 100];
+const MIN_USE_OPTIONS = ASSET_RANKING_MIN_COUNT_OPTIONS;
 const SUMMARY_TOP_N = 3;
 
 /** 初期表示では最低使用回数を10回以上にする。 */
-const DEFAULT_MIN_USES = 10;
+const DEFAULT_MIN_USES = DEFAULT_RANKING_MIN_COUNT;
 
 /** ランキングを開いたときに選択する集計期間。 */
-const DEFAULT_PERIOD_KEY = "all";
+const DEFAULT_PERIOD_KEY = DEFAULT_RANKING_PERIOD_KEY;
 
 const VARIANT_COPY: Record<
   RankVariant,
@@ -270,7 +277,7 @@ export function RankingTab({
   const [keyword, setKeyword] = useState("");
   const [minUses, setMinUses] = useState(DEFAULT_MIN_USES);
   const [unitType, setUnitType] = useState("");
-  const [showFilter, setShowFilter] = useState(true);
+  const [showFilter, setShowFilter] = useState(DEFAULT_RANKING_FILTERS_OPEN);
   const [periodKey, setPeriodKey] = useState<string>(DEFAULT_PERIOD_KEY);
 
   const periods = useMemo(() => rankingPeriods(log), [log]);
@@ -360,8 +367,7 @@ export function RankingTab({
 
   return (
     <section className="panel ranking-panel">
-      <h2>{copy.title}</h2>
-      <p className="metric-note muted">{copy.description}</p>
+      <PageHeader title={copy.title} description={copy.description} />
 
       <div className="tmx-periods" role="tablist" aria-label="集計期間">
         {periods.map((period) => (
@@ -531,6 +537,7 @@ export function RankingTab({
               {activeOption?.label}
             </span>
           </nav>
+          <h3 className="sr-only">{activeOption?.label}ランキング</h3>
           <p className="metric-section-desc muted">
             {activeOption?.description}
           </p>
