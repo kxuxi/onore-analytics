@@ -5,6 +5,7 @@ import type { BattleRecord, WarlordMap } from "@/lib/types";
 import { factionSummaries, formatWinRate } from "@/lib/stats";
 import { factionNameStyle, type FactionColorMap } from "@/lib/factionColors";
 import { SearchBox } from "@/components/SearchBox";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 interface Props {
   db: WarlordMap;
@@ -69,11 +70,10 @@ export function NationTab({ db, log, colors, onSelectFaction }: Props) {
 
   return (
     <section className="panel">
-      <h2>国</h2>
-      <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-        登録された国（勢力）の一覧です。所属人数・戦闘数・勝率を確認でき、国名を選ぶと
-        その国の成績ページ（所属武将や現在の主力兵種）を開けます。
-      </p>
+      <PageHeader
+        title="国"
+        description="登録された国（勢力）の一覧です。所属人数・戦闘数・勝率を確認でき、国名を選ぶとその国の成績ページ（所属武将や現在の主力兵種）を開けます。"
+      />
 
       <div className="search-row">
         <SearchBox

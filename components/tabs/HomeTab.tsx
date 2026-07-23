@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { BattleRecord, WarlordMap } from "@/lib/types";
 import { lookup } from "@/lib/storage";
@@ -18,8 +18,9 @@ import {
   type BattleOutcome,
   type YearlyWinRate,
 } from "@/lib/stats";
-import { SearchBox } from "@/components/SearchBox";
 import { WinRateBar } from "@/components/detail/DetailParts";
+import { HomeActivation, HomeWarlordSearch } from "./HomeActivation";
+import { filterHomeWarlordSuggestions } from "./homeSearch";
 
 interface Props {
   log: BattleRecord[];
@@ -34,6 +35,10 @@ interface Props {
   onSelectWarlord: (name: string) => void;
   onSelectUnit: (name: string) => void;
   onSelectFaction: (name: string) => void;
+  /** 未選択時に武将ランキングを開く。未指定時は導線を表示しない。 */
+  onSelectRanking?: () => void;
+  /** 未選択時に戦闘履歴を開く。未指定時は導線を表示しない。 */
+  onSelectHistory?: () => void;
 }
 
 /** グラフに表示できる系列（勝利数=緑・敗北数=赤）。 */
@@ -306,6 +311,8 @@ export function HomeTab({
   onSelectWarlord,
   onSelectUnit,
   onSelectFaction,
+  onSelectRanking,
+  onSelectHistory,
 }: Props) {
   // 自分の武将名（クッキー由来）。詳細はハイドレーション後にマウントされるため
   // 初期化子で同期的にクッキーを読んでも SSR 不整合は起きない。
@@ -317,6 +324,12 @@ export function HomeTab({
     "wins",
     "losses",
   ]);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const dashboardHeadingRef = useRef<HTMLHeadingElement>(null);
+  const changeButtonRef = useRef<HTMLButtonElement>(null);
+  const pendingFocusRef = useRef<"dashboard" | "search" | "change" | null>(
+    null
+  );
 
   // 武将選択の候補は「対象の期に登場した武将」に絞る（log は対象の期でフィルタ済み）。
   const allNames = useMemo(() => {
@@ -324,11 +337,10 @@ export function HomeTab({
     return Array.from(set).sort((a, b) => a.localeCompare(b, "ja"));
   }, [log, db]);
 
-  const suggestions = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    return allNames.filter((n) => n.toLowerCase().includes(q)).slice(0, 12);
-  }, [allNames, query]);
+  const suggestions = useMemo(
+    () => filterHomeWarlordSuggestions(allNames, query),
+    [allNames, query]
+  );
 
   // 自分の武将の戦績（household 別名を統合して集計）。
   const outcomes = useMemo(
@@ -397,14 +409,44 @@ export function HomeTab({
   const branch = dbInfo?.branch ?? profile?.branch;
 
   const choose = (n: string) => {
+    pendingFocusRef.current = "dashboard";
     setMyWarlord(n);
     setName(n);
     setEditing(false);
     setQuery("");
   };
 
-  // 武将選択画面（未設定 or 変更時）。
-  if (!name || editing) {
+  useEffect(() => {
+    const pendingFocus = pendingFocusRef.current;
+    if (pendingFocus === "dashboard" && name && !editing) {
+      dashboardHeadingRef.current?.focus();
+      pendingFocusRef.current = null;
+    } else if (pendingFocus === "search" && editing) {
+      searchInputRef.current?.focus();
+      pendingFocusRef.current = null;
+    } else if (pendingFocus === "change" && name && !editing) {
+      changeButtonRef.current?.focus();
+      pendingFocusRef.current = null;
+    }
+  }, [editing, name]);
+
+  // 初回の未選択状態だけに、サービスの価値と補助導線を表示する。
+  if (!name) {
+    return (
+      <HomeActivation
+        query={query}
+        suggestions={suggestions}
+        inputRef={searchInputRef}
+        onQueryChange={setQuery}
+        onChoose={choose}
+        onSelectRanking={onSelectRanking}
+        onSelectHistory={onSelectHistory}
+      />
+    );
+  }
+
+  // 選択済み武将を変更するときは、従来どおり検索とキャンセルだけを表示する。
+  if (editing) {
     return (
       <section className="panel home-panel">
         <div className="home-picker">
@@ -412,45 +454,24 @@ export function HomeTab({
           <p className="muted">
             ホームに成績サマリを表示する武将を選びます。選択はこのブラウザ（クッキー）に保存されます。
           </p>
-          <SearchBox
-            value={query}
-            onChange={setQuery}
-            placeholder="武将名で検索"
-            ariaLabel="自分の武将を検索"
+          <HomeWarlordSearch
+            inputRef={searchInputRef}
+            query={query}
+            suggestions={suggestions}
+            onQueryChange={setQuery}
+            onChoose={choose}
           />
-          {query.trim() !== "" && (
-            <ul className="home-suggest">
-              {suggestions.length === 0 ? (
-                <li className="home-suggest-empty muted">
-                  「{query}」に一致する武将が見つかりません。
-                </li>
-              ) : (
-                suggestions.map((n) => (
-                  <li key={n}>
-                    <button
-                      type="button"
-                      className="home-suggest-item"
-                      onClick={() => choose(n)}
-                    >
-                      {n}
-                    </button>
-                  </li>
-                ))
-              )}
-            </ul>
-          )}
-          {name && (
-            <button
-              type="button"
-              className="btn home-picker-cancel"
-              onClick={() => {
-                setEditing(false);
-                setQuery("");
-              }}
-            >
-              キャンセル
-            </button>
-          )}
+          <button
+            type="button"
+            className="btn home-picker-cancel"
+            onClick={() => {
+              pendingFocusRef.current = "change";
+              setEditing(false);
+              setQuery("");
+            }}
+          >
+            キャンセル
+          </button>
         </div>
       </section>
     );
@@ -484,7 +505,11 @@ export function HomeTab({
               <div className="home-hero-eyebrow">
                 📊 あなたの成績（通算）
               </div>
-              <h2 className="home-hero-name">
+              <h2
+                ref={dashboardHeadingRef}
+                className="home-hero-name"
+                tabIndex={-1}
+              >
                 <button
                   type="button"
                   className="link-btn"
@@ -497,9 +522,11 @@ export function HomeTab({
               <div className="home-hero-tags">{tags}</div>
             </div>
             <button
+              ref={changeButtonRef}
               type="button"
               className="btn home-change"
               onClick={() => {
+                pendingFocusRef.current = "search";
                 setEditing(true);
                 setQuery("");
               }}
