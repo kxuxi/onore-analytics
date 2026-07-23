@@ -8,6 +8,7 @@ import { displayWarlordType } from "@/lib/warlordType";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
 import { FilterIcon, CloseIcon } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 interface Props {
   db: WarlordMap;
@@ -222,7 +223,10 @@ export function DbTab({ db, colors, onSelectWarlord, onSelectFaction, onImportSt
 
   return (
     <section className="panel">
-      <h2>DB確認</h2>
+      <PageHeader
+        title="DB確認"
+        description="登録済みの武将を検索・並べ替えし、能力値の取り込みやTSVコピーを行います。"
+      />
 
       <div className="import-block">
         <button
