@@ -652,6 +652,8 @@ export default function HomePage() {
             onSelectWarlord={selectWarlordNormalized}
             onSelectUnit={selectUnit}
             onSelectFaction={selectFaction}
+            onSelectRanking={() => selectTab("metrics")}
+            onSelectHistory={() => selectTab("history")}
           />
         );
       case "history":
@@ -822,6 +824,7 @@ export default function HomePage() {
     handleChangePastLogMode,
     watchlist,
     handleToggleWatch,
+    selectTab,
     selectWarlord,
     selectWarlordNormalized,
     selectUnit,
