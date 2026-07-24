@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-24T03:52:30Z",
+  "sourceHead": "81e23db",
+  "environment": {
+    "browser": "Google Chrome 150.0.7871.184",
+    "lighthouse": "13.4.1",
+    "node": "22.22.3",
+    "next": "14.2.35",
+    "server": "isolated local production",
+    "term": 146,
+    "profile": "fresh",
+    "lighthouseThrottling": "simulate"
+  },
+  "build": {
+    "rootRouteSizeReportedKb": 29.7,
+    "rootFirstLoadJsReportedKb": 121,
+    "sharedFirstLoadJsReportedKb": 87.8,
+    "pageChunk": {
+      "rawBytes": 80579,
+      "gzipBytes": 24781
+    },
+    "globalCss": {
+      "assetCount": 1,
+      "rawBytes": 95340,
+      "gzipBytes": 17426
+    },
+    "allClientJsAndCss": {
+      "assetCount": 41,
+      "rawBytes": 1193316,
+      "gzipBytes": 367183
+    },
+    "turndownChunk": {
+      "rawBytes": 13165,
+      "gzipBytes": 4954,
+      "homeTransferBytes": 5351
+    }
+  },
+  "dataResponse": {
+    "url": "/api/state?term=146",
+    "bodyBytes": 9304903,
+    "warlords": 1203,
+    "warlordDbBytes": 750209,
+    "warlordActions": 18509,
+    "battleRecords": 15060,
+    "battleLogBytes": 8554680,
+    "lighthouseTransferBytes": 9304925
+  },
+  "home": {
+    "runsPerFormFactor": 3,
+    "mobile": {
+      "performanceScore": {
+        "runs": [61, 64, 65],
+        "median": 64
+      },
+      "simulatedFcpMs": {
+        "runs": [906.8942, 903.2914, 903.7512],
+        "median": 903.7512
+      },
+      "simulatedLcpMs": {
+        "runs": [48105.3413, 48030.9371, 48036.6268],
+        "median": 48036.6268
+      },
+      "observedLcpMs": {
+        "runs": [4641, 1420, 1266],
+        "median": 1420
+      },
+      "totalBlockingTimeMs": {
+        "runs": [488, 444, 424],
+        "median": 444
+      },
+      "maxPotentialFidMs": {
+        "runs": [529, 494, 474],
+        "median": 494
+      },
+      "cumulativeLayoutShift": {
+        "runs": [0.0190513491, 0.0190513491, 0.0190513491],
+        "median": 0.0190513491
+      },
+      "speedIndexMs": {
+        "runs": [3962.7608, 1474.1383, 1357.573],
+        "median": 1474.1383
+      },
+      "transferBytes": 9486939
+    },
+    "desktop": {
+      "performanceScore": {
+        "runs": [75, 75, 75],
+        "median": 75
+      },
+      "simulatedFcpMs": {
+        "runs": [242.8034, 243.7281, 243.6103],
+        "median": 243.6103
+      },
+      "simulatedLcpMs": {
+        "runs": [7852.6068, 7853.4562, 7853.2206],
+        "median": 7853.2206
+      },
+      "observedLcpMs": {
+        "runs": [3749, 1578, 1240],
+        "median": 1578
+      },
+      "totalBlockingTimeMs": {
+        "runs": [72, 75, 71],
+        "median": 72
+      },
+      "maxPotentialFidMs": {
+        "runs": [122, 125, 121],
+        "median": 122
+      },
+      "cumulativeLayoutShift": {
+        "runs": [0.0210992411, 0.0298529983, 0.0301411268],
+        "median": 0.0298529983
+      },
+      "speedIndexMs": {
+        "runs": [603.9907, 345.8301, 307.6799],
+        "median": 345.8301
+      },
+      "transferBytes": 9486939
+    }
+  },
+  "representativeMobileRoutes": {
+    "ranking": {
+      "performanceScore": 57,
+      "simulatedLcpMs": 48088.0511,
+      "observedLcpMs": 2255,
+      "totalBlockingTimeMs": 744,
+      "cumulativeLayoutShift": 0.0522478736,
+      "transferBytes": 9481310
+    },
+    "history": {
+      "performanceScore": 59,
+      "simulatedLcpMs": 48034.2255,
+      "observedLcpMs": 1767,
+      "totalBlockingTimeMs": 621.9249,
+      "cumulativeLayoutShift": 0.0522478736,
+      "transferBytes": 9556067
+    }
+  },
+  "requestWaterfall": {
+    "sample": "home-mobile-run-2",
+    "navigationStartMs": 0,
+    "terms": {
+      "requestMs": 85.341,
+      "endMs": 694.03,
+      "transferBytes": 264
+    },
+    "homeDynamicChunks": {
+      "requestMs": 696.488,
+      "endMs": 699.247,
+      "transferBytes": 11715
+    },
+    "state": {
+      "requestMs": 697.951,
+      "endMs": 1228.918,
+      "transferBytes": 9304925
+    }
+  },
+  "knownLayoutShiftSources": {
+    "desktopSidebarRestore": 0.0082125325,
+    "mobileHomeFooter": 0.0190513491,
+    "mobileRankingTotal": 0.0522478736,
+    "mobileHistoryTotal": 0.0522478736
+  }
+}

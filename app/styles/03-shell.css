@@ -83,6 +83,9 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+.header-fetched.is-pending {
+  visibility: hidden;
+}
 .header-theme {
   flex: 0 0 auto;
   display: inline-flex;
@@ -469,6 +472,23 @@
 /* デスクトップ: 閉じているときは横にしまう */
 .app:not(.sidebar-open) .sidebar {
   margin-left: calc(-1 * (var(--sidebar-width) + 1px));
+}
+
+/*
+ * Desktopの初回paintでは保存済みの幅だけを先に予約する。
+ * ReactのARIA / inertが確定するまでは内容を見せず、通常操作のtransitionも始めない。
+ */
+@media (min-width: 768px) {
+  .app:not(.sidebar-layout-ready) .sidebar {
+    visibility: hidden;
+    transition: none;
+  }
+
+  html[data-sidebar-initial="open"]
+    .app:not(.sidebar-layout-ready)
+    .sidebar {
+    margin-left: 0;
+  }
 }
 
 /* ---------- Main ---------- */

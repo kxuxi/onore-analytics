@@ -21,7 +21,7 @@ import {
   resolveFactionColor,
   type FactionColorMap,
 } from "@/lib/factionColors";
-import { copyText } from "@/lib/clipboard";
+import { copyText } from "@/lib/copyText";
 import { AntiArrows } from "@/components/AntiArrows";
 import {
   CheckIcon,

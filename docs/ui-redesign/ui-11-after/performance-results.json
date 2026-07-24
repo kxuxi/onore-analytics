@@ -1,0 +1,241 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-24T04:54:20Z",
+  "sourceHead": "3ceee7e",
+  "environment": {
+    "browser": "Google Chrome 150.0.7871.184",
+    "lighthouse": "13.4.1",
+    "node": "22.22.3",
+    "next": "14.2.35",
+    "server": "isolated local production",
+    "term": 146,
+    "profile": "fresh",
+    "lighthouseThrottling": "simulate"
+  },
+  "build": {
+    "rootRouteSizeReportedKb": 25.9,
+    "rootFirstLoadJsReportedKb": 117,
+    "sharedFirstLoadJsReportedKb": 87.8,
+    "pageChunk": {
+      "rawBytes": 84069,
+      "gzipBytes": 25932
+    },
+    "globalCss": {
+      "assetCount": 1,
+      "rawBytes": 95738,
+      "gzipBytes": 17547
+    },
+    "allClientJs": {
+      "assetCount": 43,
+      "rawBytes": 1099821,
+      "gzipBytes": 350661
+    },
+    "allClientJsAndCss": {
+      "assetCount": 44,
+      "rawBytes": 1195559,
+      "gzipBytes": 368208
+    },
+    "warlordInitialChunks": {
+      "assetCount": 3,
+      "rawBytes": 33264,
+      "gzipBytes": 11993,
+      "containsCanvasImplementation": false
+    },
+    "warlordCardActionChunk": {
+      "assetCount": 1,
+      "rawBytes": 2922,
+      "gzipBytes": 1360,
+      "containsCanvasImplementation": true
+    },
+    "markerChecks": {
+      "initialAndHomeContainTurndown": false,
+      "historyContainsTurndown": true,
+      "warlordInitialContainsCanvas": false,
+      "warlordActionContainsCanvas": true
+    }
+  },
+  "dataResponse": {
+    "selectedTerm": {
+      "url": "/api/state?term=146",
+      "bodyBytes": 9304690
+    },
+    "allTerms": {
+      "url": "/api/state",
+      "bodyBytes": 63187611,
+      "trigger": "first warlord detail view"
+    }
+  },
+  "home": {
+    "runsPerFormFactor": 3,
+    "mobile": {
+      "performanceScore": {
+        "runs": [62, 62, 64],
+        "median": 62
+      },
+      "simulatedFcpMs": {
+        "runs": [907.2608, 904.8946, 904.9126],
+        "median": 904.9126
+      },
+      "simulatedLcpMs": {
+        "runs": [47997.8912, 48040.3419, 48040.3689],
+        "median": 48040.3419
+      },
+      "observedLcpMs": {
+        "runs": [1476, 4285, 1771],
+        "median": 1771
+      },
+      "totalBlockingTimeMs": {
+        "runs": [524.3696, 478, 442],
+        "median": 478
+      },
+      "maxPotentialFidMs": {
+        "runs": [537, 528, 492],
+        "median": 528
+      },
+      "cumulativeLayoutShift": {
+        "runs": [0, 0, 0],
+        "median": 0
+      },
+      "speedIndexMs": {
+        "runs": [1570.7323, 3728.0351, 1835.92],
+        "median": 1835.92
+      },
+      "transferBytes": 9483503
+    },
+    "desktop": {
+      "performanceScore": {
+        "runs": [75, 75, 74],
+        "median": 75
+      },
+      "simulatedFcpMs": {
+        "runs": [244.0469, 244.6623, 244.5404],
+        "median": 244.5404
+      },
+      "simulatedLcpMs": {
+        "runs": [7855.0938, 7857.3246, 7867.0808],
+        "median": 7857.3246
+      },
+      "observedLcpMs": {
+        "runs": [1224, 1267, 3722],
+        "median": 1267
+      },
+      "totalBlockingTimeMs": {
+        "runs": [71, 72, 76],
+        "median": 72
+      },
+      "maxPotentialFidMs": {
+        "runs": [121, 122, 126],
+        "median": 122
+      },
+      "cumulativeLayoutShift": {
+        "runs": [
+          0.0082125325,
+          0.0082125325,
+          0.0082125325
+        ],
+        "median": 0.0082125325
+      },
+      "speedIndexMs": {
+        "runs": [482.6188, 493.1746, 1184.5111],
+        "median": 493.1746
+      },
+      "transferBytes": 9483503
+    }
+  },
+  "representativeMobileRoutes": {
+    "ranking": {
+      "performanceScore": 57,
+      "simulatedFcpMs": 904.9131,
+      "simulatedLcpMs": 48040.3697,
+      "observedLcpMs": 1335,
+      "totalBlockingTimeMs": 758,
+      "maxPotentialFidMs": 808,
+      "cumulativeLayoutShift": 0,
+      "speedIndexMs": 1233.2011,
+      "transferBytes": 9477881
+    },
+    "history": {
+      "performanceScore": 58,
+      "simulatedFcpMs": 904.0276,
+      "simulatedLcpMs": 48188.0414,
+      "observedLcpMs": 1673,
+      "totalBlockingTimeMs": 695,
+      "maxPotentialFidMs": 726,
+      "cumulativeLayoutShift": 0,
+      "speedIndexMs": 1727.9304,
+      "transferBytes": 9557176
+    }
+  },
+  "warlordDetail": {
+    "sourceRoute": "/ranking",
+    "url": "/ranking/warlord/リシア・ド・ノーヴァス・ユーリ",
+    "transitionCumulativeLayoutShift": 0,
+    "initialChunkRawBytes": 33264,
+    "initialChunkGzipBytes": 11993,
+    "cardActionChunkRequestedOnView": false,
+    "fullStateBodyBytes": 63187611
+  },
+  "knownLayoutShiftSources": {
+    "mobileHomeFooter": 0,
+    "mobileRankingTotal": 0,
+    "mobileHistoryTotal": 0,
+    "desktopSidebarRestore": 0,
+    "desktopHeaderSlot": 0,
+    "desktopAsyncTermNavigation": {
+      "lighthouseClusterScore": 0.0082125325,
+      "performanceObserverDelayedScore": 0.004592978,
+      "node": "nav.nav",
+      "positions": [
+        {
+          "state": "initial",
+          "y": 173.5,
+          "height": 743.5
+        },
+        {
+          "state": "selected term only",
+          "y": 214.5,
+          "height": 659.5
+        },
+        {
+          "state": "seven terms",
+          "y": 274.5,
+          "height": 599.5
+        }
+      ]
+    }
+  },
+  "comparison": {
+    "homeTransferBytesDelta": -3436,
+    "rootRouteSizeReportedKbDelta": -3.8,
+    "rootFirstLoadJsReportedKbDelta": -4,
+    "cssGzipBytesDelta": 121,
+    "mobileObservedLcpMsDelta": 351,
+    "desktopObservedLcpMsDelta": -311,
+    "mobileTotalBlockingTimeMsDelta": 34,
+    "desktopTotalBlockingTimeMsDelta": 0,
+    "mobileCumulativeLayoutShiftReductionPercent": 100,
+    "desktopCumulativeLayoutShiftReductionPercent": 72.5
+  },
+  "verification": {
+    "testFiles": 52,
+    "tests": 477,
+    "testsPassed": true,
+    "lintPassed": true,
+    "typecheckPassed": true,
+    "productionBuildPassed": true,
+    "diffCheckPassed": true,
+    "npmAuditHigh": 7
+  },
+  "acceptance": {
+    "publicInterfacesUnchanged": true,
+    "turndownRemovedFromInitialHome": true,
+    "clipboardAndMarkdownContractsPreserved": true,
+    "dynamicViewsHaveLoadingFallback": true,
+    "cumulativeLayoutShiftBelowPointOne": true,
+    "observedLcpMedianBelow2500Ms": true,
+    "desktopTotalBlockingTimeNotWorse": true,
+    "mobileTotalBlockingTimeNotWorse": false,
+    "initialFirstLoadJsNotWorse": true,
+    "cssPayloadNotWorse": false
+  }
+}

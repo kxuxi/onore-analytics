@@ -69,7 +69,7 @@ export function MetaTab({ log, onSelectUnit }: Props) {
     <section className="panel">
       <PageHeader
         title="環境ダッシュボード"
-        description="期間内に登場した兵種の採用率ランキングと特性別の勝率、環境警告をまとめて表示します。武将タイプで採用率ランキングを絞り込めます。兵種名をクリックすると詳細を確認できます。"
+        description="期間内に登場した兵種の採用率ランキングと勝率を表示します。"
       />
 
       <div className="tmx-periods" role="group" aria-label="集計期間">

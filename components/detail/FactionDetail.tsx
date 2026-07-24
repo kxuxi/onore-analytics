@@ -17,7 +17,7 @@ import {
   factionNameStyle,
   type FactionColorMap,
 } from "@/lib/factionColors";
-import { copyText } from "@/lib/clipboard";
+import { copyText } from "@/lib/copyText";
 import { Section } from "@/components/detail/Section";
 import {
   DetailBattleLogSection,

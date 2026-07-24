@@ -5,7 +5,7 @@ import type { WarlordMap } from "@/lib/types";
 import { lookup } from "@/lib/storage";
 import { normalizeDisplayToken } from "@/lib/parser";
 import { shortUnit } from "@/lib/unitShortNames";
-import { copyText } from "@/lib/clipboard";
+import { copyText } from "@/lib/copyText";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
 import { displayWarlordType } from "@/lib/warlordType";
 import { PageHeader } from "@/components/layout/PageHeader";

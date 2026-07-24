@@ -2,7 +2,7 @@
 
 import { useId, useMemo, useState } from "react";
 import type { WarlordMap } from "@/lib/types";
-import { copyText } from "@/lib/clipboard";
+import { copyText } from "@/lib/copyText";
 import { parseWarlordStats } from "@/lib/warlordStats";
 import { displayWarlordType } from "@/lib/warlordType";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";

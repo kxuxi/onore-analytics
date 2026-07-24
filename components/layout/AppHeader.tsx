@@ -47,6 +47,7 @@ export function AppHeader({
     resolvedTheme === "dark"
       ? "ライトモードに切り替え"
       : "ダークモードに切り替え";
+  const fetchTimePending = lastFetchedAt == null;
 
   return (
     <header className="header">
@@ -75,14 +76,18 @@ export function AppHeader({
         </h1>
       </div>
       <div className="header-actions">
-        {lastFetchedAt != null && (
-          <span
-            className="header-fetched muted"
-            title="共有DBを最後に取得した時刻"
-          >
-            最終取得 {formatFetchTime(lastFetchedAt)}
-          </span>
-        )}
+        <span
+          className={
+            "header-fetched muted" + (fetchTimePending ? " is-pending" : "")
+          }
+          aria-hidden={fetchTimePending ? true : undefined}
+          title={
+            fetchTimePending ? undefined : "共有DBを最後に取得した時刻"
+          }
+        >
+          最終取得{" "}
+          {fetchTimePending ? "00:00" : formatFetchTime(lastFetchedAt)}
+        </span>
         <button
           type="button"
           className="btn header-theme"
