@@ -72,6 +72,7 @@ describe("BattleHistoryCard", () => {
     const matchupIndex = html.indexOf('class="bh-matchup"');
     const primaryHtml = html.slice(primaryIndex, matchupIndex);
 
+    expect(html).not.toContain("bh-card--subdued");
     expect(primaryHtml.indexOf("出兵側の勝利")).toBeLessThan(
       primaryHtml.indexOf("1600年4月")
     );
@@ -226,7 +227,7 @@ describe("BattleHistoryCard", () => {
         `aria-label="${sideLabel}：${name}、このページの対象、${resultLabel}"`
       );
       expect(html).toContain(
-        `<span class="bh-perspective bh-perspective--${result}">対象・${resultLabel}</span>`
+        `<span class="bh-perspective bh-perspective--${result}">${resultLabel}</span>`
       );
     }
   );

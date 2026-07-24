@@ -52,6 +52,8 @@ export interface BattleHistoryCardProps {
   onSelectEquip?: (name: string, slot: "weapon" | "item") => void;
   onDelete?: (id: number) => Promise<void>;
   canDelete?: boolean;
+  /** 一覧内で国色の面積と強調色を抑えた表示にする。 */
+  subdued?: boolean;
   /** 詳細ページで、このページの集計対象になった側と対象視点の結果を示す。 */
   perspective?: {
     side: SideKey;
@@ -205,6 +207,7 @@ export function BattleHistoryCard({
   onSelectEquip,
   onDelete,
   canDelete = false,
+  subdued = false,
   perspective,
 }: BattleHistoryCardProps) {
   const [copied, setCopied] = useState(false);
@@ -238,6 +241,12 @@ export function BattleHistoryCard({
     DEFAULT_WIN_RIGHT,
     resolvedFactionColors
   );
+  const leftEdgeColor = subdued
+    ? `color-mix(in srgb, ${leftColor} 38%, var(--border))`
+    : leftColor;
+  const rightEdgeColor = subdued
+    ? `color-mix(in srgb, ${rightColor} 38%, var(--border))`
+    : rightColor;
   const resultLabel =
     card.winner === "left"
       ? "出兵側の勝利"
@@ -340,6 +349,15 @@ export function BattleHistoryCard({
           : sideOutcome === "loser"
             ? "、敗者"
             : "";
+    const sideBorderStrength = subdued ? 26 : 48;
+    const sideBackgroundStrength = subdued
+      ? isWinner
+        ? 4
+        : 2
+      : isWinner
+        ? 12
+        : 6;
+    const participantTintStrength = subdued ? 20 : 32;
 
     return (
       <div
@@ -354,10 +372,8 @@ export function BattleHistoryCard({
         role="group"
         aria-label={`${sideLabel}：${side.name}${accessibilityStatus}`}
         style={{
-          borderColor: `color-mix(in srgb, ${color} 48%, var(--border))`,
-          background: `color-mix(in srgb, ${color} ${
-            isWinner ? 12 : 6
-          }%, var(--surface-raised))`,
+          borderColor: `color-mix(in srgb, ${color} ${sideBorderStrength}%, var(--border))`,
+          background: `color-mix(in srgb, ${color} ${sideBackgroundStrength}%, var(--surface-raised))`,
         }}
       >
         <div className="bh-side-head">
@@ -384,7 +400,7 @@ export function BattleHistoryCard({
             <span
               className={`bh-perspective bh-perspective--${perspective?.result ?? "other"}`}
             >
-              対象・{perspectiveResultLabel}
+              {perspectiveResultLabel}
             </span>
           )}
         </div>
@@ -394,7 +410,7 @@ export function BattleHistoryCard({
             isWinner ? " bh-participant--winner" : ""
           }`}
           style={{
-            color: `color-mix(in srgb, ${color} 32%, var(--text))`,
+            color: `color-mix(in srgb, ${color} ${participantTintStrength}%, var(--text))`,
           }}
           onClick={(event) => {
             event.stopPropagation();
@@ -498,14 +514,20 @@ export function BattleHistoryCard({
 
   return (
     <li
-      className={`bh-card${card.url ? " bh-card--link" : ""}`}
+      className={[
+        "bh-card",
+        card.url ? "bh-card--link" : "",
+        subdued ? "bh-card--subdued" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       style={{
         borderLeftWidth: 2,
         borderLeftStyle: "solid",
-        borderLeftColor: leftColor,
+        borderLeftColor: leftEdgeColor,
         borderRightWidth: 2,
         borderRightStyle: "solid",
-        borderRightColor: rightColor,
+        borderRightColor: rightEdgeColor,
       }}
       onClick={card.url ? handleCardClick : undefined}
     >

@@ -99,6 +99,7 @@ export function BattleLogList({
                 onSelectWarlord={onSelectWarlord}
                 onSelectUnit={onSelectUnit}
                 onSelectEquip={onSelectEquip}
+                subdued
                 perspective={{ side: o.side, result: o.result }}
               />
             ))}

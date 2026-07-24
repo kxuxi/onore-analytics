@@ -320,6 +320,81 @@
   border-color: var(--color-border-default);
 }
 
+.bh-card--subdued .bh-side--winner {
+  box-shadow: inset 2px 0 0
+    color-mix(in srgb, var(--medal-gold-border) 48%, var(--color-border-default));
+}
+
+.bh-card--subdued:hover {
+  background: color-mix(in srgb, var(--accent) 2%, var(--surface-subtle));
+  border-top-color: color-mix(in srgb, var(--accent) 18%, var(--border));
+  border-bottom-color: color-mix(in srgb, var(--accent) 18%, var(--border));
+}
+
+.bh-card--subdued.bh-card--link:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.bh-card--subdued .bh-result--left,
+.bh-card--subdued .bh-result--right,
+.bh-card--subdued .bh-side-status--winner {
+  color: color-mix(
+    in srgb,
+    var(--medal-gold-fg) 58%,
+    var(--color-text-secondary)
+  );
+  background: color-mix(
+    in srgb,
+    var(--medal-gold-bg) 42%,
+    var(--surface-raised)
+  );
+  border-color: color-mix(
+    in srgb,
+    var(--medal-gold-border) 48%,
+    var(--color-border-default)
+  );
+}
+
+.bh-card--subdued .bh-winner-icon {
+  color: color-mix(
+    in srgb,
+    var(--medal-gold-fg) 58%,
+    var(--color-text-secondary)
+  );
+}
+
+.bh-card--subdued .bh-side--focused {
+  outline-width: 1px;
+  outline-color: color-mix(
+    in srgb,
+    var(--color-text-secondary) 24%,
+    var(--color-border-default)
+  );
+  outline-offset: -1px;
+}
+
+.bh-card--subdued .bh-perspective {
+  color: var(--color-text-secondary);
+  background: var(--surface-subtle);
+  border-color: var(--color-border-default);
+}
+
+.bh-card--subdued .bh-perspective--win {
+  border-left-color: color-mix(
+    in srgb,
+    var(--outcome-win-fill) 34%,
+    var(--color-border-default)
+  );
+}
+
+.bh-card--subdued .bh-perspective--loss {
+  border-left-color: color-mix(
+    in srgb,
+    var(--outcome-loss-fill) 34%,
+    var(--color-border-default)
+  );
+}
+
 .bh-side-status {
   display: inline-flex;
   align-items: center;

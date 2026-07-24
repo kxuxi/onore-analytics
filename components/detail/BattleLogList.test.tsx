@@ -67,6 +67,7 @@ describe("BattleLogList", () => {
     );
 
     expect(html.match(/<li class="bh-card\b/g)).toHaveLength(20);
+    expect(html.match(/bh-card--subdued/g)).toHaveLength(20);
     expect(html).toContain("武将-001");
     expect(html).toContain("武将-020");
     expect(html).not.toContain("武将-021");

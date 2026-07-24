@@ -213,6 +213,9 @@ describe("DetailBattleLogSection", () => {
     expect(html).toContain("2件");
     expect(html).toMatch(/<ul class="[^"]*\bbattle-list\b[^"]*">/);
     expect(html.match(/<li class="bh-card\b/g)).toHaveLength(1);
+    expect(html).toContain(
+      'class="bh-card bh-card--link bh-card--subdued"'
+    );
     expect(html).toContain("武将甲");
     expect(html).not.toContain("表示しない武将");
     expect(html).not.toContain("表示する年");
@@ -221,7 +224,7 @@ describe("DetailBattleLogSection", () => {
       'aria-label="出兵側：武将甲、このページの対象、勝利"'
     );
     expect(html).toContain(
-      '<span class="bh-perspective bh-perspective--win">対象・勝利</span>'
+      '<span class="bh-perspective bh-perspective--win">勝利</span>'
     );
     expect(html).toContain(
       'aria-label="戦闘ログのリンクをコピー：武将甲 対 武将乙"'
@@ -240,6 +243,15 @@ describe("DetailBattleLogSection", () => {
     );
     expect(html).toContain(
       "color:color-mix(in srgb, #116611 32%, var(--text))"
+    );
+    expect(html).toContain(
+      "border-left-color:color-mix(in srgb, #116611 38%, var(--border))"
+    );
+    expect(html).toContain(
+      "border-color:color-mix(in srgb, #116611 26%, var(--border))"
+    );
+    expect(html).toContain(
+      "background:color-mix(in srgb, #116611 4%, var(--surface-raised))"
     );
     expect(html).not.toContain("bh-action--delete");
     expect(html).not.toContain("戦闘履歴を削除");
@@ -269,12 +281,12 @@ describe("DetailBattleLogSection", () => {
     expect(cards).toHaveLength(2);
     expect(
       html.match(
-        /<span class="bh-perspective bh-perspective--win">対象・勝利<\/span>/g
+        /<span class="bh-perspective bh-perspective--win">勝利<\/span>/g
       )
     ).toHaveLength(1);
     expect(
       html.match(
-        /<span class="bh-perspective bh-perspective--loss">対象・敗北<\/span>/g
+        /<span class="bh-perspective bh-perspective--loss">敗北<\/span>/g
       )
     ).toHaveLength(1);
     expect(html).toContain(
