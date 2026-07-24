@@ -1,0 +1,1223 @@
+{
+  "generatedAt": "2026-07-24T00:59:05.087Z",
+  "sourceHead": "6d19872",
+  "browser": "Chrome Headless",
+  "axeCore": "4.12.1",
+  "cases": [
+    {
+      "name": "home-desktop-1440-light",
+      "path": "/",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "nodeCount": 2,
+          "targets": [
+            "aside",
+            "#main-panel"
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "html"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "#main-panel"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 2
+        }
+      ],
+      "title": "ホーム｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".app-footer-link",
+          "width": 63.5,
+          "height": 16
+        }
+      ]
+    },
+    {
+      "name": "home-desktop-1440-dark",
+      "path": "/",
+      "width": 1440,
+      "height": 1000,
+      "theme": "dark",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "nodeCount": 2,
+          "targets": [
+            "aside",
+            "#main-panel"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 2,
+          "targets": [
+            ".active.term-chip.term-chip-sm",
+            "#group-home > .nav-item-label"
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "html"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "#main-panel"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 6
+        }
+      ],
+      "title": "ホーム｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".app-footer-link",
+          "width": 63.5,
+          "height": 16
+        }
+      ]
+    },
+    {
+      "name": "home-mobile-390-light",
+      "path": "/",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "nodeCount": 1,
+          "targets": [
+            "#main-panel"
+          ]
+        },
+        {
+          "id": "aria-hidden-focus",
+          "impact": "serious",
+          "nodeCount": 1,
+          "targets": [
+            "aside"
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "html"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodeCount": 8,
+          "targets": [
+            ".home-activation-intro",
+            ".home-picker-card-title",
+            ".home-picker-card-description",
+            ".home-search-label",
+            "#home-warlord-search",
+            "#home-warlord-search-hint",
+            ".home-picker-privacy",
+            ".home-explore > div:nth-child(1)"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 5
+        }
+      ],
+      "title": "ホーム｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 15,
+      "undersizedTargets": [
+        {
+          "target": ".brand-btn",
+          "width": 144.9,
+          "height": 22.5
+        },
+        {
+          "target": ".app-footer-link",
+          "width": 59.2,
+          "height": 15
+        }
+      ]
+    },
+    {
+      "name": "history-desktop-1440-light",
+      "path": "/history",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "nodeCount": 2,
+          "targets": [
+            "aside",
+            "#main-panel"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 23,
+          "targets": [
+            ".filter-toggle > span",
+            "#battle-history-details-\\:r0\\: > .bh-context > .bh-battle-number",
+            "#battle-history-details-\\:r1\\: > .bh-context > .bh-battle-number",
+            "#battle-history-details-\\:r2\\: > .bh-context > .bh-battle-number",
+            "#battle-history-details-\\:r3\\: > .bh-context > .bh-battle-number",
+            "#battle-history-details-\\:r4\\: > .bh-context > .bh-battle-number",
+            "#battle-history-details-\\:r5\\: > .bh-context > .bh-battle-number",
+            "#battle-history-details-\\:r6\\: > .bh-context > .bh-battle-number",
+            "#battle-history-details-\\:r7\\: > .bh-context > .bh-battle-number",
+            "#battle-history-details-\\:r8\\: > .bh-context > .bh-battle-number",
+            "#battle-history-details-\\:r9\\: > .bh-context > .bh-battle-number",
+            "#battle-history-details-\\:ra\\: > .bh-context > .bh-battle-number"
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "html"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "#main-panel"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "nodeCount": 22
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 27
+        }
+      ],
+      "title": "戦闘履歴｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".app-footer-link",
+          "width": 63.5,
+          "height": 16
+        }
+      ]
+    },
+    {
+      "name": "history-mobile-390-light",
+      "path": "/history",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "nodeCount": 1,
+          "targets": [
+            "#main-panel"
+          ]
+        },
+        {
+          "id": "aria-hidden-focus",
+          "impact": "serious",
+          "nodeCount": 1,
+          "targets": [
+            "aside"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 2,
+          "targets": [
+            "li:nth-child(14) > .bh-primary > .bh-outcome > .bh-result--retreat.bh-result",
+            "li:nth-child(17) > .bh-primary > .bh-outcome > .bh-result--retreat.bh-result"
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "html"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodeCount": 83,
+          "targets": [
+            ".page-header",
+            ".history-head",
+            "li:nth-child(1) > .bh-card-overlay[title=\"戦闘ログを開く\"][target=\"_blank\"]",
+            "li:nth-child(1) > .bh-primary > .bh-outcome",
+            "li:nth-child(1) > .bh-primary > .bh-primary-meta > time",
+            "a[aria-label=\"戦闘ログの詳細を開く：アホな放尿犯 対 秦谷美鈴\"]",
+            "li:nth-child(2) > .bh-card-overlay[title=\"戦闘ログを開く\"][target=\"_blank\"]",
+            "li:nth-child(2) > .bh-primary > .bh-outcome",
+            "li:nth-child(2) > .bh-primary > .bh-primary-meta > time",
+            "a[aria-label=\"戦闘ログの詳細を開く：ランダム仕官君 対 秦谷美鈴\"]",
+            "li:nth-child(3) > .bh-card-overlay[title=\"戦闘ログを開く\"][target=\"_blank\"]",
+            "li:nth-child(3) > .bh-primary > .bh-outcome"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 3
+        }
+      ],
+      "title": "戦闘履歴｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 15,
+      "undersizedTargets": [
+        {
+          "target": ".brand-btn",
+          "width": 144.9,
+          "height": 22.5
+        },
+        {
+          "target": ".app-footer-link",
+          "width": 59.2,
+          "height": 15
+        }
+      ]
+    },
+    {
+      "name": "ranking-desktop-1440-light",
+      "path": "/ranking",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "nodeCount": 2,
+          "targets": [
+            "aside",
+            "#main-panel"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 70,
+          "targets": [
+            ".filter-toggle > span",
+            ".clear-filters > span",
+            ".metric-section:nth-child(1) > .metric-section-head > .link-like",
+            ".metric-section:nth-child(1) > ol > li:nth-child(1) > .swi-main > .swi-head > .swi-name.link-like[title=\"リシア・ド・ノーヴァス・ユーリ の戦績を見る\"]",
+            ".metric-section:nth-child(1) > ol > li:nth-child(1) > .swi-main > .swi-head > .swi-value",
+            ".metric-section:nth-child(1) > ol > li:nth-child(2) > .swi-main > .swi-head > .swi-name.link-like[title=\"名無しネコ の戦績を見る\"]",
+            ".metric-section:nth-child(1) > ol > li:nth-child(2) > .swi-main > .swi-head > .swi-value",
+            ".metric-section:nth-child(1) > ol > li:nth-child(3) > .swi-main > .swi-head > .swi-name.link-like[title=\"ジークフリード・グラード の戦績を見る\"]",
+            ".metric-section:nth-child(1) > ol > li:nth-child(3) > .swi-main > .swi-head > .swi-value",
+            ".metric-section:nth-child(2) > .metric-section-head > .link-like",
+            ".metric-section:nth-child(2) > ol > li:nth-child(1) > .swi-main > .swi-head > .swi-name.link-like[title=\"リシア・ド・ノーヴァス・ユーリ の戦績を見る\"]",
+            ".metric-section:nth-child(2) > ol > li:nth-child(1) > .swi-main > .swi-head > .swi-value"
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "html"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "#main-panel"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 37
+        }
+      ],
+      "title": "ランキング 武将ランキング｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": "summary",
+          "width": 60.7,
+          "height": 18
+        },
+        {
+          "target": ".swi-name.link-like",
+          "width": 102,
+          "height": 21
+        },
+        {
+          "target": ".app-footer-link",
+          "width": 63.5,
+          "height": 16
+        }
+      ]
+    },
+    {
+      "name": "ranking-desktop-1440-dark",
+      "path": "/ranking",
+      "width": 1440,
+      "height": 1000,
+      "theme": "dark",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "nodeCount": 2,
+          "targets": [
+            "aside",
+            "#main-panel"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 2,
+          "targets": [
+            ".active.term-chip.term-chip-sm",
+            "#group-ranking > .nav-item-label"
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "html"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "#main-panel"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 4
+        }
+      ],
+      "title": "ランキング 武将ランキング｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": "summary",
+          "width": 60.7,
+          "height": 18
+        },
+        {
+          "target": ".swi-name.link-like",
+          "width": 102,
+          "height": 21
+        },
+        {
+          "target": ".app-footer-link",
+          "width": 63.5,
+          "height": 16
+        }
+      ]
+    },
+    {
+      "name": "ranking-mobile-390-light",
+      "path": "/ranking",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "nodeCount": 1,
+          "targets": [
+            "#main-panel"
+          ]
+        },
+        {
+          "id": "aria-hidden-focus",
+          "impact": "serious",
+          "nodeCount": 1,
+          "targets": [
+            "aside"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 68,
+          "targets": [
+            ".metric-section:nth-child(1) > .metric-section-head > .link-like",
+            ".metric-section:nth-child(1) > ol > li:nth-child(1) > .swi-main > .swi-head > .swi-name.link-like[title=\"リシア・ド・ノーヴァス・ユーリ の戦績を見る\"]",
+            ".metric-section:nth-child(1) > ol > li:nth-child(1) > .swi-main > .swi-head > .swi-value",
+            ".metric-section:nth-child(1) > ol > li:nth-child(2) > .swi-main > .swi-head > .swi-name.link-like[title=\"名無しネコ の戦績を見る\"]",
+            ".metric-section:nth-child(1) > ol > li:nth-child(2) > .swi-main > .swi-head > .swi-value",
+            ".metric-section:nth-child(1) > ol > li:nth-child(3) > .swi-main > .swi-head > .swi-name.link-like[title=\"ジークフリード・グラード の戦績を見る\"]",
+            ".metric-section:nth-child(1) > ol > li:nth-child(3) > .swi-main > .swi-head > .swi-value",
+            ".metric-section:nth-child(2) > .metric-section-head > .link-like",
+            ".metric-section:nth-child(2) > ol > li:nth-child(1) > .swi-main > .swi-head > .swi-name.link-like[title=\"リシア・ド・ノーヴァス・ユーリ の戦績を見る\"]",
+            ".metric-section:nth-child(2) > ol > li:nth-child(1) > .swi-main > .swi-head > .swi-value",
+            ".metric-section:nth-child(2) > ol > li:nth-child(2) > .swi-main > .swi-head > .swi-name.link-like[title=\"竹刀巫女 の戦績を見る\"]",
+            ".metric-section:nth-child(2) > ol > li:nth-child(2) > .swi-main > .swi-head > .swi-value"
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "html"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "#main-panel"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 35
+        }
+      ],
+      "title": "ランキング 武将ランキング｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 15,
+      "undersizedTargets": [
+        {
+          "target": ".brand-btn",
+          "width": 144.9,
+          "height": 22.5
+        },
+        {
+          "target": "summary",
+          "width": 60.7,
+          "height": 18
+        },
+        {
+          "target": ".swi-name.link-like",
+          "width": 102,
+          "height": 21
+        },
+        {
+          "target": ".app-footer-link",
+          "width": 59.2,
+          "height": 15
+        }
+      ]
+    },
+    {
+      "name": "unit-ranking-mobile-390-light",
+      "path": "/ranking/units",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "nodeCount": 1,
+          "targets": [
+            "#main-panel"
+          ]
+        },
+        {
+          "id": "aria-hidden-focus",
+          "impact": "serious",
+          "nodeCount": 1,
+          "targets": [
+            "aside"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 35,
+          "targets": [
+            ".metric-section:nth-child(1) > .metric-section-head > .link-like",
+            ".metric-section:nth-child(1) > ol > li:nth-child(1) > .swi-main > .swi-head > .swi-name.link-like[title=\"武田騎馬軍団 の詳細を見る\"]",
+            ".metric-section:nth-child(1) > ol > li:nth-child(1) > .swi-main > .swi-head > .swi-value",
+            "li:nth-child(2) > .swi-main > .swi-head > .swi-name.link-like[title=\"夜叉騎兵 の詳細を見る\"]",
+            ".metric-section:nth-child(1) > ol > li:nth-child(2) > .swi-main > .swi-head > .swi-value",
+            "li:nth-child(3) > .swi-main > .swi-head > .swi-name.link-like[title=\"おやぶんこぶん の詳細を見る\"]",
+            ".metric-section:nth-child(1) > ol > li:nth-child(3) > .swi-main > .swi-head > .swi-value",
+            ".metric-section:nth-child(2) > .metric-section-head > .link-like",
+            ".metric-section:nth-child(2) > ol > li:nth-child(1) > .swi-main > .swi-head > .swi-name.link-like[title=\"偵察船 の詳細を見る\"]",
+            ".metric-section:nth-child(2) > ol > li:nth-child(1) > .swi-main > .swi-head > .swi-value",
+            "button[title=\"黄金の不沈艦 の詳細を見る\"]",
+            ".metric-section:nth-child(2) > ol > li:nth-child(2) > .swi-main > .swi-head > .swi-value"
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "html"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "#main-panel"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 17
+        }
+      ],
+      "title": "ランキング 兵種ランキング｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 15,
+      "undersizedTargets": [
+        {
+          "target": ".brand-btn",
+          "width": 144.9,
+          "height": 22.5
+        },
+        {
+          "target": "summary",
+          "width": 60.7,
+          "height": 18
+        },
+        {
+          "target": ".swi-name.link-like",
+          "width": 56,
+          "height": 21
+        },
+        {
+          "target": ".app-footer-link",
+          "width": 59.2,
+          "height": 15
+        }
+      ]
+    },
+    {
+      "name": "catalog-desktop-1440-light",
+      "path": "/encyclopedia/units",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "nodeCount": 2,
+          "targets": [
+            "aside",
+            "#main-panel"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 1,
+          "targets": [
+            ".filter-toggle > span"
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "html"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "#main-panel"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 641
+        }
+      ],
+      "title": "図鑑 兵種｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".link-like.catalog-name-button",
+          "width": 16,
+          "height": 44
+        },
+        {
+          "target": ".app-footer-link",
+          "width": 63.5,
+          "height": 16
+        }
+      ]
+    },
+    {
+      "name": "catalog-mobile-390-light",
+      "path": "/encyclopedia/units",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "nodeCount": 1,
+          "targets": [
+            "#main-panel"
+          ]
+        },
+        {
+          "id": "aria-hidden-focus",
+          "impact": "serious",
+          "nodeCount": 1,
+          "targets": [
+            "aside"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 121,
+          "targets": [
+            ".catalog-card-header > .link-like.catalog-name-button[title=\"アサシン の詳細を見る\"]",
+            ".catalog-card-header > .link-like.catalog-name-button[title=\"イェーガー の詳細を見る\"]",
+            ".catalog-card-header > .link-like.catalog-name-button[title=\"イェニチェリ の詳細を見る\"]",
+            ".catalog-card-header > .link-like.catalog-name-button[title=\"エージェント の詳細を見る\"]",
+            ".catalog-card-header > .link-like.catalog-name-button[title=\"おやぶんこぶん の詳細を見る\"]",
+            ".catalog-card-header > .link-like.catalog-name-button[title=\"カービン騎兵 の詳細を見る\"]",
+            ".catalog-card-header > .link-like.catalog-name-button[title=\"カープ女子 の詳細を見る\"]",
+            ".catalog-card-header > .link-like.catalog-name-button[title=\"カノン砲 の詳細を見る\"]",
+            ".catalog-card-header > .link-like.catalog-name-button[title=\"クイズマン の詳細を見る\"]",
+            ".catalog-card-header > .link-like.catalog-name-button[title=\"グレネーダー の詳細を見る\"]",
+            ".catalog-card-header > .link-like.catalog-name-button[title=\"コサック の詳細を見る\"]",
+            ".catalog-card-header > .link-like.catalog-name-button[title=\"スイス傭兵 の詳細を見る\"]"
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "html"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "#main-panel"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "nodeCount": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 5
+        }
+      ],
+      "title": "図鑑 兵種｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 15,
+      "undersizedTargets": [
+        {
+          "target": ".brand-btn",
+          "width": 144.9,
+          "height": 22.5
+        },
+        {
+          "target": ".link-like.catalog-name-button",
+          "width": 16,
+          "height": 44
+        },
+        {
+          "target": ".app-footer-link",
+          "width": 59.2,
+          "height": 15
+        }
+      ]
+    },
+    {
+      "name": "warlord-detail-desktop-1440-dark",
+      "path": "/warlord/%E5%9B%A0%E5%B9%A1%E6%9C%88%E5%A4%9C",
+      "width": 1440,
+      "height": 1000,
+      "theme": "dark",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "nodeCount": 2,
+          "targets": [
+            "aside",
+            "#main-panel"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 4,
+          "targets": [
+            ".term-chip.term-chip-sm.active",
+            "#group-home > .nav-item-label",
+            ".detail-rank-col:nth-child(1) > .detail-rank-list > .detail-rank-row:nth-child(2) > .detail-rank-name > .detail-rank-faction",
+            ".detail-rank-col:nth-child(2) > .detail-rank-list > .detail-rank-row:nth-child(3) > .detail-rank-name > .detail-rank-faction"
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "html"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "#main-panel"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "nodeCount": 30
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 35
+        }
+      ],
+      "title": "因幡月夜｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".section-toggle",
+          "width": 902,
+          "height": 22.5
+        },
+        {
+          "target": ".link-like",
+          "width": 193.6,
+          "height": 19.5
+        },
+        {
+          "target": ".pie-legend-name.link-like",
+          "width": 52,
+          "height": 19.5
+        },
+        {
+          "target": ".dl-unit",
+          "width": 73,
+          "height": 21
+        },
+        {
+          "target": ".app-footer-link",
+          "width": 63.5,
+          "height": 16
+        }
+      ]
+    },
+    {
+      "name": "unit-detail-desktop-1440-light",
+      "path": "/unit/%E5%89%9B%E5%BC%93%E5%83%A7%E5%85%B5",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "nodeCount": 2,
+          "targets": [
+            "aside",
+            "#main-panel"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 6,
+          "targets": [
+            ".link-like[title=\"カノン砲 の戦績を見る\"]",
+            "button[title=\"大筒 の戦績を見る\"]",
+            "button[title=\"北条五色備 の戦績を見る\"]",
+            "button[title=\"カービン騎兵 の戦績を見る\"]",
+            "button[title=\"ランセロ の戦績を見る\"]",
+            "button[title=\"宮島シカ軍団 の戦績を見る\"]"
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "html"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "#main-panel"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "impact": "serious",
+          "nodeCount": 34
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 55
+        }
+      ],
+      "title": "剛弓僧兵｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".section-toggle",
+          "width": 902,
+          "height": 22.5
+        },
+        {
+          "target": ".link-like",
+          "width": 78,
+          "height": 19.5
+        },
+        {
+          "target": ".user-winrate-name.link-like",
+          "width": 151,
+          "height": 19.5
+        },
+        {
+          "target": ".dl-unit.active",
+          "width": 62,
+          "height": 21
+        },
+        {
+          "target": ".dl-unit",
+          "width": 71.4,
+          "height": 21
+        },
+        {
+          "target": ".app-footer-link",
+          "width": 63.5,
+          "height": 16
+        }
+      ]
+    },
+    {
+      "name": "matrix-desktop-1440-light",
+      "path": "/meta",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "nodeCount": 2,
+          "targets": [
+            "aside",
+            "#main-panel"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 2,
+          "targets": [
+            "button[aria-label=\"武特 対 戦闘狂：勝率 36.7%（22勝 38敗）\"] > .tmx-count",
+            "button[aria-label=\"戦闘狂 対 統知：勝率 21.4%（3勝 11敗）\"] > .tmx-count"
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "html"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "#main-panel"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 2
+        }
+      ],
+      "title": "メタ分析 相性表｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".app-footer-link",
+          "width": 63.5,
+          "height": 16
+        }
+      ]
+    },
+    {
+      "name": "nations-desktop-1440-light",
+      "path": "/nations",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "nodeCount": 2,
+          "targets": [
+            "aside",
+            "#main-panel"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 22,
+          "targets": [
+            ".count-badge",
+            "li:nth-child(1) > .nation-main > .nation-head > .nation-rate",
+            "li:nth-child(2) > .nation-main > .nation-head > .nation-rate",
+            "li:nth-child(3) > .nation-main > .nation-head > .nation-rate",
+            "li:nth-child(4) > .nation-main > .nation-head > .nation-rate",
+            "button[title=\"ケロロ軍曹☆ の成績を見る\"]",
+            "li:nth-child(5) > .nation-main > .nation-head > .nation-rate",
+            "li:nth-child(6) > .nation-main > .nation-head > .nation-rate",
+            "li:nth-child(7) > .nation-main > .nation-head > .nation-rate",
+            "li:nth-child(8) > .nation-main > .nation-head > .nation-rate",
+            "li:nth-child(9) > .nation-main > .nation-head > .nation-rate",
+            "li:nth-child(10) > .nation-main > .nation-head > .nation-rate"
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "html"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "nodeCount": 1,
+          "targets": [
+            "#main-panel"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 6
+        }
+      ],
+      "title": "国｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".nation-name.link-like",
+          "width": 141.9,
+          "height": 22.5
+        },
+        {
+          "target": ".app-footer-link",
+          "width": 63.5,
+          "height": 16
+        }
+      ]
+    },
+    {
+      "name": "login-desktop-1440-light",
+      "path": "/login",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 4
+        }
+      ],
+      "title": "ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": []
+    },
+    {
+      "name": "login-mobile-390-light",
+      "path": "/login",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 4
+        }
+      ],
+      "title": "ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": []
+    }
+  ],
+  "summary": {
+    "cases": 17,
+    "violationNodesByRule": {
+      "aria-allowed-role": 25,
+      "landmark-one-main": 15,
+      "region": 104,
+      "color-contrast": 358,
+      "aria-hidden-focus": 5
+    },
+    "hiddenFocusableCount": 75,
+    "horizontalOverflowCases": 0
+  }
+}
