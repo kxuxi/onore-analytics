@@ -5,6 +5,7 @@ import type { BattleRecord } from "@/lib/types";
 import { weaponStats, itemStats, formatWinRate } from "@/lib/stats";
 import { FilterIcon, CloseIcon } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 /** 集計する装備枠。weapon=武将の持つ武器 / item=武将の持つ品物。 */
 export type EquipVariant = "weapon" | "item";
@@ -105,10 +106,7 @@ export function EquipTab({ log, onSelectWarlord, onSelectEquip, variant }: Props
 
   return (
     <section className="panel">
-      <h2>{copy.title}</h2>
-      <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-        {copy.description}
-      </p>
+      <PageHeader title={copy.title} description={copy.description} />
 
       <div className="stat-grid">
         <div className="stat">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import type { BattleRecord } from "@/lib/types";
 import {
   traitMatchupMatrix,
@@ -77,10 +78,10 @@ export function TraitMatrixTab({ log, onSelectWarlord, onSelectUnit }: Props) {
 
   return (
     <section className="panel">
-      <h2>相性マトリックス</h2>
-      <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-        出兵側が、守備側にどれだけ勝てるかを示します。
-      </p>
+      <PageHeader
+        title="相性マトリックス"
+        description="出兵側が、守備側にどれだけ勝てるかを示します。"
+      />
 
       <div className="tmx-periods" role="tablist" aria-label="集計期間">
         {META_PERIODS.map((p) => (
