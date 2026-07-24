@@ -2,7 +2,7 @@
 
 ## 状態
 
-実装中（作業単位2 / 4完了）
+実装中（作業単位3 / 4完了）
 
 ## 依存関係
 
@@ -301,6 +301,47 @@ copyしか使わない初期画面が、HTML→Markdown変換とTurndownを同�
 - 初回のカード保存だけは1,360 B gzip相当のchunk取得が先に入る
 - 認証済み実ブラウザーでのcanvas downloadとClipboard権限許可時のE2Eは最終手動確認に残る
 - Safari / Firefoxの画像clipboard fallbackは既存実装のままで、今回の対象外
+
+## 作業単位3: 共通Loadingと寸法予約
+
+### 変更内容
+
+- `components/layout/PageLoading.tsx`: データ待機とdynamic view待機で共用するSkeletonを追加した
+- `app/page.tsx`: 18個すべてのdynamic viewへ共通loading fallbackを設定し、既存のデータ待機Skeletonも共通部品へ置き換えた
+- `app/styles/14-system.css`: Loading panelへviewport基準の最小高さを設定し、初期状態からfooterをviewport外へ予約した
+- `components/layout/PageLoading.test.tsx`: 読み上げ、装飾の非表示、全dynamic viewのfallback、寸法予約、reduced motionの契約を固定した
+
+### 変更理由
+
+データ取得後にdynamic chunkを待つ場合の空白を防ぎ、待機理由によらず一貫した
+フィードバックを表示するため。また、従来は390×844でfooterの43px全体が初期viewport内に
+残り、実データへの置換時に画面外へ移動してCLSが発生していたため。
+
+### 互換性
+
+- 変更対象は読み込み中の表示と内部dynamic import設定だけで、各画面のprops、データ、URL、選択、フィルター状態を変更していない
+- データ待機は従来どおり`aria-live="polite"`で通知し、dynamic fallbackは重複通知を避ける
+- Skeletonの8要素、reduced motion、既存のブレークポイントを維持した
+- API、DB、環境変数、レスポンス形、一覧件数、並び順を変更していない
+
+### 検証結果
+
+- 対象テスト: 1ファイル、5テスト成功
+- `npm run lint`: 成功
+- `npm run typecheck`: 成功
+- 隔離production build: 成功
+- `/`のroute size: 25.4 kB → 25.5 kB、First Load JS: 116 kB → 117 kB
+- CSS: raw 95,340 B → 95,505 B、gzip 17,426 B → 17,482 B
+- Mobile Lighthouse CLS（各1回）: Home 0.0191 → 0、武将ランキング 0.0522 → 0、戦闘履歴 0.0522 → 0
+- 390×844の初期footer: top 801px → 857pxとなり、viewport底844pxより13px下へ移動
+- state request停止中もLoadingが1つ表示され、空白frame、layout-shift entry、document横overflowがないことを確認
+- `git diff --check`: 成功
+
+### 残っているリスク
+
+- Homeの単発observed LCPは1,947 ms → 3,689 msと分散した一方、転送量とsimulated LCPは不変だった。最終3回中央値で回帰を判定する
+- 画面固有の実コンテンツ形状まではSkeletonで再現しないため、初期viewport外の描画量変化は残る
+- dynamic fallbackは構造とrequest停止で確認したが、ローカルDBではchunkがstate本文より先に完了し、実paintは発生しなかった
 
 ## 受入条件
 

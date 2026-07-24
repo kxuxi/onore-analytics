@@ -19,6 +19,7 @@ import { useTermSelection } from "@/lib/useTermSelection";
 import type { SelectedTerm } from "@/lib/termSelection";
 import { ToastStack } from "@/components/Toasts";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { PageLoading } from "@/components/layout/PageLoading";
 import { TermSelector } from "@/components/layout/TermSelector";
 import {
   ChevronUp,
@@ -52,57 +53,81 @@ import {
   isWatched,
 } from "@/lib/watchlist";
 
+function renderPageLoading() {
+  return <PageLoading announce={false} />;
+}
+
 const HomeTab = dynamic(
-  () => import("@/components/tabs/HomeTab").then((m) => m.HomeTab)
+  () => import("@/components/tabs/HomeTab").then((m) => m.HomeTab),
+  { loading: renderPageLoading }
 );
 const HistoryTab = dynamic(
-  () => import("@/components/tabs/HistoryTab").then((m) => m.HistoryTab)
+  () => import("@/components/tabs/HistoryTab").then((m) => m.HistoryTab),
+  { loading: renderPageLoading }
 );
 const ScoutTab = dynamic(
-  () => import("@/components/tabs/ScoutTab").then((m) => m.ScoutTab)
+  () => import("@/components/tabs/ScoutTab").then((m) => m.ScoutTab),
+  { loading: renderPageLoading }
 );
-const DbTab = dynamic(() => import("@/components/tabs/DbTab").then((m) => m.DbTab));
+const DbTab = dynamic(
+  () => import("@/components/tabs/DbTab").then((m) => m.DbTab),
+  { loading: renderPageLoading }
+);
 const DamageTab = dynamic(
-  () => import("@/components/tabs/DamageTab").then((m) => m.DamageTab)
+  () => import("@/components/tabs/DamageTab").then((m) => m.DamageTab),
+  { loading: renderPageLoading }
 );
 const UnitTab = dynamic(
-  () => import("@/components/tabs/UnitTab").then((m) => m.UnitTab)
+  () => import("@/components/tabs/UnitTab").then((m) => m.UnitTab),
+  { loading: renderPageLoading }
 );
 const EquipTab = dynamic(
-  () => import("@/components/tabs/EquipTab").then((m) => m.EquipTab)
+  () => import("@/components/tabs/EquipTab").then((m) => m.EquipTab),
+  { loading: renderPageLoading }
 );
 const NationTab = dynamic(
-  () => import("@/components/tabs/NationTab").then((m) => m.NationTab)
+  () => import("@/components/tabs/NationTab").then((m) => m.NationTab),
+  { loading: renderPageLoading }
 );
 const SettingsTab = dynamic(
-  () => import("@/components/tabs/SettingsTab").then((m) => m.SettingsTab)
+  () => import("@/components/tabs/SettingsTab").then((m) => m.SettingsTab),
+  { loading: renderPageLoading }
 );
 const RankingTab = dynamic(
-  () => import("@/components/tabs/RankingTab").then((m) => m.RankingTab)
+  () => import("@/components/tabs/RankingTab").then((m) => m.RankingTab),
+  { loading: renderPageLoading }
 );
 const EquipSynergyTab = dynamic(
-  () => import("@/components/tabs/EquipSynergyTab").then((m) => m.EquipSynergyTab)
+  () => import("@/components/tabs/EquipSynergyTab").then((m) => m.EquipSynergyTab),
+  { loading: renderPageLoading }
 );
 const TraitMatrixTab = dynamic(
-  () => import("@/components/tabs/TraitMatrixTab").then((m) => m.TraitMatrixTab)
+  () => import("@/components/tabs/TraitMatrixTab").then((m) => m.TraitMatrixTab),
+  { loading: renderPageLoading }
 );
 const MetaTab = dynamic(
-  () => import("@/components/tabs/MetaTab").then((m) => m.MetaTab)
+  () => import("@/components/tabs/MetaTab").then((m) => m.MetaTab),
+  { loading: renderPageLoading }
 );
 const MetricsTab = dynamic(
-  () => import("@/components/tabs/MetricsTab").then((m) => m.MetricsTab)
+  () => import("@/components/tabs/MetricsTab").then((m) => m.MetricsTab),
+  { loading: renderPageLoading }
 );
 const WarlordDetail = dynamic(
-  () => import("@/components/detail/WarlordDetail").then((m) => m.WarlordDetail)
+  () => import("@/components/detail/WarlordDetail").then((m) => m.WarlordDetail),
+  { loading: renderPageLoading }
 );
 const UnitDetail = dynamic(
-  () => import("@/components/detail/UnitDetail").then((m) => m.UnitDetail)
+  () => import("@/components/detail/UnitDetail").then((m) => m.UnitDetail),
+  { loading: renderPageLoading }
 );
 const EquipDetail = dynamic(
-  () => import("@/components/detail/EquipDetail").then((m) => m.EquipDetail)
+  () => import("@/components/detail/EquipDetail").then((m) => m.EquipDetail),
+  { loading: renderPageLoading }
 );
 const FactionDetail = dynamic(
-  () => import("@/components/detail/FactionDetail").then((m) => m.FactionDetail)
+  () => import("@/components/detail/FactionDetail").then((m) => m.FactionDetail),
+  { loading: renderPageLoading }
 );
 
 /** タブ（リーフ）ごとのアイコン。サイドバーのグループ単独表示とページ内サブタブで共用。 */
@@ -1071,19 +1096,7 @@ export default function HomePage() {
           >
           {!hydrated ||
           (!loadError && (selectedTerm == null || logLoading)) ? (
-            <div className="panel" aria-busy="true" aria-live="polite">
-              <span className="sr-only">読み込み中…</span>
-              <div className="skeleton skeleton-title" />
-              <div className="skeleton-grid" aria-hidden="true">
-                <div className="skeleton skeleton-stat" />
-                <div className="skeleton skeleton-stat" />
-                <div className="skeleton skeleton-stat" />
-                <div className="skeleton skeleton-stat" />
-              </div>
-              <div className="skeleton skeleton-line" />
-              <div className="skeleton skeleton-line skeleton-line--80" />
-              <div className="skeleton skeleton-line skeleton-line--60" />
-            </div>
+            <PageLoading />
           ) : loadError ? (
             <div className="panel">
               <h2 style={{ marginTop: 0 }}>データを読み込めませんでした</h2>
