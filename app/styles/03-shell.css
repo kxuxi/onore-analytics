@@ -1,0 +1,535 @@
+/* ---------- Header ---------- */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  /* ノッチ端末（viewport-fit=cover）でもヘッダーが隠れないよう safe-area を加算。 */
+  padding-top: calc(10px + env(safe-area-inset-top, 0px));
+  padding-left: calc(14px + env(safe-area-inset-left, 0px));
+  padding-right: calc(14px + env(safe-area-inset-right, 0px));
+  background: rgba(15, 17, 21, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+
+.header h1 {
+  margin: 0;
+  /* タイトルが長くて入りきらないときは省略記号で切り詰める（アクションに重ねない）。 */
+  min-width: 0;
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ロゴ（ホームへ戻るボタン）。見出し風に見せつつボタンとして機能させる。 */
+.brand-btn {
+  display: block;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.brand-btn:hover {
+  color: var(--accent);
+}
+.brand-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* ヘッダーの共有（リンクコピー）ボタン */
+.header-share {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+}
+.header-share.copied {
+  color: var(--success, #4caf50);
+  border-color: var(--success, #4caf50);
+}
+
+/* ヘッダー右側のアクション群（更新・共有）。 */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.header-fetched {
+  font-size: 12px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.header-theme {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  width: 34px;
+  height: 34px;
+}
+.header-refresh {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+}
+.header-refresh.is-refreshing .icon {
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ヘッダーのログイン / ログアウトボタン（共有・更新と同じ見た目。リンクの下線は消す）。 */
+.header-auth {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  text-decoration: none;
+}
+
+.header h1 .sub {
+  color: var(--muted);
+  font-weight: 400;
+  margin-left: 6px;
+  font-size: 12px;
+}
+
+/* ---------- Hamburger ---------- */
+.hamburger {
+  /* 狭幅でヘッダーが詰まっても、ハンバーガーは潰さず 40px を維持する。 */
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0;
+}
+
+.hamburger:hover {
+  background: var(--panel-2);
+}
+
+.hamburger span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: var(--text);
+  border-radius: 2px;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ---------- Body layout (sidebar + main) ---------- */
+.body {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  position: relative;
+}
+
+/* ---------- Sidebar ---------- */
+.sidebar {
+  flex: 0 0 auto;
+  width: var(--sidebar-width);
+  align-self: stretch;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  padding: 14px 10px;
+  position: sticky;
+  top: var(--sticky-header-offset);
+  height: calc(100vh - var(--sticky-header-offset));
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  transition:
+    margin-left var(--duration-normal) var(--ease-standard),
+    transform var(--duration-normal) var(--ease-standard);
+}
+
+/* ---------- サイドバー内の期セレクター ---------- */
+.sidebar-term {
+  padding: 10px 4px 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+
+.sidebar-term-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.sidebar-term-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.sidebar-term-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 14px;
+}
+
+.sidebar-term-new-btn {
+  flex: 0 0 auto;
+  font-size: 12px;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+.sidebar-term-new-btn.active {
+  border-color: color-mix(in srgb, var(--accent) 36%, var(--border));
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.sidebar-term-terms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+
+.term-chip {
+  flex: 0 0 auto;
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.term-chip:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.term-chip.active {
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+  color: #fff;
+  font-weight: 600;
+}
+
+.term-chip-sm {
+  padding: 5px 9px;
+}
+
+.term-chip-latest {
+  margin-left: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+.sidebar-new-term {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+
+.sidebar-new-term-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sidebar-new-term-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 14px;
+  padding: 6px 8px;
+}
+
+.sidebar-new-term-unit {
+  font-size: 12px;
+  color: var(--muted);
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 5px 8px;
+  background: var(--panel);
+}
+
+.sidebar-new-term-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sidebar-new-term-ok {
+  font-size: 12px;
+  padding: 5px 10px;
+  flex: 1 1 0;
+}
+
+.sidebar-new-term-cancel {
+  font-size: 12px;
+  padding: 5px 10px;
+  flex: 1 1 0;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 auto;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  width: 100%;
+}
+
+.nav-item-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.nav-item:hover .nav-item-icon,
+.nav-item.active .nav-item-icon {
+  color: inherit;
+}
+
+.nav-item-label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.nav-item:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.nav-item.active {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  color: #fff;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.sidebar-auth {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ---------- ページ内サブタブ（セグメント切替） ---------- */
+.subtabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 16px;
+  padding: 4px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.subtabs::-webkit-scrollbar {
+  display: none;
+}
+
+.subtab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  padding: 7px 13px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.subtab:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.subtab.active {
+  background: var(--panel);
+  color: var(--text);
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.subtab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.subtab-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.subtab:hover .subtab-icon,
+.subtab.active .subtab-icon {
+  color: var(--accent);
+}
+
+.subtab-icon .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  top: var(--sticky-header-offset);
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 24;
+  animation: fade-in 0.15s ease;
+}
+
+/* デスクトップ: 閉じているときは横にしまう */
+.app:not(.sidebar-open) .sidebar {
+  margin-left: calc(-1 * (var(--sidebar-width) + 1px));
+}
+
+/* ---------- Main ---------- */
+.main {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 16px 14px 80px;
+  max-width: var(--content-width-reading);
+  width: 100%;
+  margin: 0 auto;
+}
+
+.main--wide {
+  max-width: var(--content-width-data);
+}
+
+.app-footer {
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  padding: 14px;
+}
+
+.app-footer-text {
+  margin: 0;
+  max-width: var(--content-width-reading);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.app-footer-link {
+  margin: 0 4px;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.app-footer-link:hover,
+.app-footer-link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.panel + .panel {
+  margin-top: 14px;
+}
+
+.panel h2 {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  text-transform: uppercase;
+}

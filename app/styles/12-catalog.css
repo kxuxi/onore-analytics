@@ -1,0 +1,332 @@
+/* 兵種・武器・品物図鑑 */
+.catalog-results {
+  container: catalog-results / inline-size;
+  min-width: 0;
+}
+
+.catalog-card-list,
+.catalog-compact-sort {
+  display: none;
+}
+
+.catalog-panel .select,
+.catalog-panel .text-input,
+.catalog-panel .search-input {
+  min-height: var(--touch-target);
+}
+
+.catalog-clickable-row {
+  cursor: pointer;
+}
+
+.catalog-secondary-text {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  overflow-wrap: anywhere;
+}
+
+.catalog-full-table .unit-table {
+  min-width: 900px;
+  table-layout: fixed;
+}
+
+.catalog-full-table .unit-table th:nth-child(1) { width: 16%; }
+.catalog-full-table .unit-table th:nth-child(2) { width: 9%; }
+.catalog-full-table .unit-table th:nth-child(3) { width: 14%; }
+.catalog-full-table .unit-table th:nth-child(4),
+.catalog-full-table .unit-table th:nth-child(5) { width: 6%; }
+.catalog-full-table .unit-table th:nth-child(6) { width: 10%; }
+.catalog-full-table .unit-table th:nth-child(7) { width: 12%; }
+
+.catalog-full-table .unit-table th,
+.catalog-full-table .unit-table td,
+.catalog-full-table .equip-catalog-table th,
+.catalog-full-table .equip-catalog-table td {
+  overflow-wrap: anywhere;
+}
+
+.catalog-full-table .unit-table .th-sort {
+  min-height: var(--touch-target);
+  padding: var(--space-2) var(--space-3);
+}
+
+.catalog-full-table .equip-catalog-table {
+  min-width: 720px;
+}
+
+.catalog-card-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: var(--space-3);
+}
+
+.catalog-card {
+  min-width: 0;
+  overflow: hidden;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.catalog-card > article {
+  min-width: 0;
+  padding: var(--space-3);
+}
+
+.catalog-unit-card-action {
+  cursor: pointer;
+}
+
+.catalog-card-header {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.catalog-name-button,
+.catalog-equip-button {
+  min-width: 0;
+  min-height: var(--touch-target);
+  overflow-wrap: anywhere;
+}
+
+.catalog-name-button {
+  padding: var(--space-2) 0;
+  font-size: var(--font-size-body);
+  font-weight: 700;
+  text-align: left;
+}
+
+.catalog-equip-button {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-control);
+  text-align: left;
+}
+
+.catalog-primary-stats,
+.catalog-detail-list {
+  margin: 0;
+}
+
+.catalog-primary-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: var(--space-2);
+  overflow: hidden;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.catalog-primary-stats > div {
+  min-width: 0;
+  padding: var(--space-2);
+  background: var(--panel);
+}
+
+.catalog-primary-stats dt,
+.catalog-detail-list dt {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.catalog-primary-stats dd,
+.catalog-detail-list dd {
+  min-width: 0;
+  margin: var(--space-1) 0 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.catalog-primary-stats dd {
+  font-size: var(--font-size-control);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.catalog-primary-stats.equip-catalog-primary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.catalog-card-details {
+  margin-top: var(--space-2);
+  border-top: 1px solid var(--border);
+}
+
+.catalog-card-details > summary {
+  display: flex;
+  min-height: var(--touch-target);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  list-style: none;
+}
+
+.catalog-card-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.catalog-card-details > summary::after {
+  content: "＋";
+  color: var(--accent);
+  font-size: var(--font-size-body);
+}
+
+.catalog-card-details[open] > summary::after {
+  content: "−";
+}
+
+.catalog-details-open {
+  display: none;
+}
+
+.catalog-card-details[open] .catalog-details-closed {
+  display: none;
+}
+
+.catalog-card-details[open] .catalog-details-open {
+  display: inline;
+}
+
+.catalog-detail-list {
+  display: grid;
+  gap: 1px;
+  padding-top: var(--space-1);
+  overflow: hidden;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.catalog-detail-list > div {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(88px, 0.4fr) minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-2);
+  background: var(--panel);
+}
+
+.catalog-detail-list dd {
+  margin-top: 0;
+}
+
+.catalog-card .tag-list,
+.catalog-card .equip-users {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.catalog-card .equip-users .link-like {
+  min-height: var(--touch-target);
+  padding: var(--space-2) 0;
+}
+
+.catalog-card .equip-decided {
+  display: block;
+  margin: var(--space-1) 0 0;
+  white-space: nowrap;
+}
+
+.catalog-compact-sort {
+  align-items: flex-end;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.catalog-compact-sort .filter {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.catalog-sort-direction {
+  flex: 0 0 auto;
+  min-height: var(--touch-target);
+  white-space: nowrap;
+}
+
+@container catalog-results (max-width: 959px) {
+  .catalog-full-table {
+    display: none;
+  }
+
+  .catalog-card-list,
+  .catalog-compact-sort {
+    display: grid;
+  }
+
+  .catalog-compact-sort {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+@container catalog-results (min-width: 620px) and (max-width: 959px) {
+  .catalog-card-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .catalog-results .catalog-full-table {
+    display: none;
+  }
+
+  .catalog-results .catalog-card-list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .catalog-results .catalog-compact-sort {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .catalog-panel .filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.equip-decided {
+  font-size: 11px;
+  margin-left: 4px;
+}
+.equip-split {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.equip-users {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.equip-users .link-like {
+  font-size: 12px;
+}
+.equip-users .link-like .muted {
+  margin-left: 2px;
+  font-size: 11px;
+}
+
+/* 装備シナジーの組み合わせ（武器 × 品物） */
+.synergy-combo {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+}
+.synergy-plus {
+  color: var(--muted);
+  font-size: 12px;
+  opacity: 0.8;
+}
+

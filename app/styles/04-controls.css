@@ -1,0 +1,365 @@
+/* ---------- Shared page header ---------- */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.page-header-copy {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.page-header-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.panel .page-header-title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-title);
+  font-weight: 800;
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+.section-title {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-control);
+  font-weight: 700;
+  line-height: var(--line-height-tight);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.page-header-description {
+  max-width: 76ch;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
+  overflow-wrap: anywhere;
+}
+
+.page-header-description > :first-child {
+  margin-top: 0;
+}
+
+.page-header-description > :last-child {
+  margin-bottom: 0;
+}
+
+.page-header-meta,
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.page-header-actions {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  padding: 10px 14px;
+  font-size: var(--font-size-control);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  min-height: var(--control-min-height);
+}
+
+.btn:hover {
+  background: #252a35;
+}
+
+/* \u30ad\u30fc\u30dc\u30fc\u30c9\u64cd\u4f5c\u6642\u306e\u53ef\u8996\u30d5\u30a9\u30fc\u30ab\u30b9\uff08\u30dc\u30bf\u30f3\u30fb\u30bb\u30ec\u30af\u30c8\u7b49\u3001\u6a19\u6e96\u306e\u67a0\u304c\u898b\u3048\u306b\u304f\u3044\u8981\u7d20\u3092\u88dc\u5b8c\uff09\u3002 */
+.btn:focus-visible,
+.select:focus-visible,
+.color-trigger:focus-visible,
+.hamburger:focus-visible,
+.toast-close:focus-visible,
+.detail-back:focus-visible,
+.palette-swatch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.scout-toggle:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.btn-primary {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.btn-danger {
+  background: var(--danger-strong);
+  border-color: var(--danger-strong);
+  color: #fff;
+}
+
+.btn-danger:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+/* ---------- Inputs ---------- */
+.text-input {
+  flex: 1 1 200px;
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  min-height: 40px;
+}
+
+/* ---------- Filters ---------- */
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+/* 偵察検索のコントロール（未登録のみ表示・コピー） */
+.scout-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 4px 0 8px;
+}
+
+/* 偵察検索の入力下: クリアと件数サマリー */
+.scout-input-row {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.scout-summary {
+  font-size: 13px;
+  color: var(--muted);
+}
+.scout-summary strong {
+  color: var(--text);
+  font-weight: 700;
+}
+.scout-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+.scout-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent, #1d9e75);
+  cursor: pointer;
+}
+
+/* 偵察検索の報告用テキスト（名前［タイプ｜兵種］） */
+.scout-report {
+  margin: 8px 0 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: rgba(106, 169, 255, 0.06);
+}
+.scout-report-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.scout-report-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.scout-input-label {
+  display: inline-block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+.scout-report-count {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.scout-report-text {
+  width: 100%;
+  resize: vertical;
+  min-height: 64px;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.unit-edit-form {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.unit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 8px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.unit-form-section {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.unit-form-section + .unit-form-section {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.unit-form-section > legend {
+  margin-bottom: 10px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.unit-form-section-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.unit-form-section:last-child .unit-form-section-fields {
+  grid-template-columns: 1fr;
+}
+
+.unit-form textarea.text-input {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.unit-edit-form .text-input[aria-invalid="true"] {
+  border-color: var(--outcome-loss-text);
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--outcome-loss-text) 18%, transparent);
+}
+
+.filter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filter > span {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* .text-input は本来 横並び(.row)用に flex:1 1 200px を持つ。
+   縦並びの .filter 内ではこの flex-basis が高さ 200px として効いてしまうため打ち消す。 */
+.filter .text-input {
+  flex: 0 0 auto;
+  width: 100%;
+}
+
+/* 複合フィールド（雇用=金/米セレクタ+金額 / 年数=数値+「年」 / 必要能力値=種類+数値）。
+   セレクタは内容幅・数値入力は伸縮にして、セレクタが幅100%で入力欄に重なる不具合を防ぐ。
+   .filter .text-input より後ろに置いて同詳細度の打ち消しに勝たせる。 */
+.field-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.field-inline .inline-select {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 88px;
+  max-width: 55%;
+}
+
+.field-inline .text-input {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+}
+
+.field-inline .field-suffix {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.select {
+  appearance: none;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  min-height: 40px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 16px) calc(50% - 2px),
+    calc(100% - 11px) calc(50% - 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 30px;
+}

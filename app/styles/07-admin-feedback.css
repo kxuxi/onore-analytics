@@ -1,0 +1,616 @@
+/* ---------- Faction color settings ---------- */
+.faction-color-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.faction-color-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel-2);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.faction-delete {
+  color: var(--danger, #e5484d);
+  border-color: color-mix(in srgb, var(--danger, #e5484d) 40%, var(--border));
+}
+.faction-delete:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger, #e5484d) 12%, transparent);
+  border-color: var(--danger, #e5484d);
+}
+.faction-delete:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.faction-picker {
+  position: relative;
+  margin-left: auto;
+}
+
+.color-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  min-height: 36px;
+}
+
+.color-trigger:hover {
+  border-color: var(--accent-strong);
+}
+
+.swatch-lg {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  flex: 0 0 auto;
+}
+
+.palette-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+}
+
+.palette-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 46;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+
+.palette-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0;
+  cursor: pointer;
+}
+
+.palette-swatch:hover {
+  transform: scale(1.08);
+}
+
+.palette-swatch.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* カスタムHEX入力（パレットの下段） */
+.palette-custom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.palette-custom-label {
+  font-size: 12px;
+  flex: 0 0 auto;
+}
+
+.custom-color {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.custom-hex {
+  width: 96px;
+  flex: 0 0 auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-transform: uppercase;
+}
+
+.palette-apply {
+  flex: 0 0 auto;
+}
+
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin: 0 3px;
+  vertical-align: middle;
+}
+
+/* ---------- Tags ---------- */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.tag.type { color: var(--label-type-fg); border-color: var(--label-type-border); background: var(--label-type-bg); }
+.tag.branch { color: var(--label-branch-fg); border-color: var(--label-branch-border); background: var(--label-branch-bg); }
+.tag.unit { color: var(--label-unit-fg); border-color: var(--label-unit-border); background: var(--label-unit-bg); }
+.tag.faction { color: var(--label-faction-fg); border-color: var(--label-faction-border); background: var(--label-faction-bg); }
+.tag.warn { color: var(--label-warn-fg); border-color: var(--label-warn-border); background: var(--label-warn-bg); }
+.tag.danger {
+  color: #fff;
+  border-color: var(--danger-strong);
+  background: var(--danger-strong);
+}
+
+/* 年代別勝率ランキングの入賞タグ。順位で金/銀/銅に色分けする。 */
+.tag.year-rank { gap: 3px; }
+.tag.year-rank.rank-1 { color: var(--medal-gold-fg); background: var(--medal-gold-bg); border-color: var(--medal-gold-border); }
+.tag.year-rank.rank-2 { color: var(--medal-silver-fg); background: var(--medal-silver-bg); border-color: var(--medal-silver-border); }
+.tag.year-rank.rank-3 { color: var(--medal-bronze-fg); background: var(--medal-bronze-bg); border-color: var(--medal-bronze-border); }
+
+/* クリック可能な国タグ（ボタン）。色は .tag.faction を継承する。 */
+button.tag.faction-link {
+  font-family: inherit;
+  cursor: pointer;
+}
+button.tag.faction-link:hover,
+button.tag.faction-link:focus-visible {
+  filter: brightness(1.18);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* クリックできるタグ（図鑑から個別ページへ遷移）。見た目は tag のまま。 */
+.tag-btn {
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.tag-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tag-list {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* 装備ページ：よく使う兵種のピル一覧 */
+.equip-units {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.equip-units .pill-btn .muted {
+  margin-left: 4px;
+}
+
+/* 武将ページ：能力値（ランキング取り込み） */
+.ability-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.ability-cell {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.ability-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.ability-value {
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ability-pr {
+  margin-top: 12px;
+}
+
+.ability-pr-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.ability-pr-text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.55;
+}
+
+@media (max-width: 520px) {
+  .ability-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* DB確認：ステータス取り込み */
+.import-block {
+  margin-bottom: 16px;
+}
+
+.import-toggle.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.import-body {
+  min-inline-size: 0;
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.import-legend {
+  padding: 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.import-hint {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.import-label {
+  display: inline-block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.import-box {
+  min-height: 120px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  white-space: pre;
+}
+
+.import-preview {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--outcome-win-text);
+}
+
+.import-preview.invalid {
+  color: var(--outcome-loss-text);
+}
+
+.import-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.import-msg {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.import-msg.ok {
+  color: var(--outcome-win-text);
+}
+
+.import-msg.error {
+  color: var(--outcome-loss-text);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+
+/* ---------- Status badges (被弾表) ---------- */
+.status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.status.ready {
+  color: #fff;
+  background: #2e9e57;
+  border-color: #2e9e57;
+}
+.status.done {
+  color: var(--muted);
+  background: var(--panel-2);
+  border-color: var(--border);
+}
+.status.unknown {
+  color: var(--label-type-fg);
+  background: var(--label-type-bg);
+  border-color: var(--label-type-border);
+}
+.status.none {
+  color: var(--muted);
+  background: transparent;
+  border-color: var(--border);
+}
+/* 状況列のメインステータスは等幅にして開始位置を揃える */
+.status.ready,
+.status.done,
+.status.unknown,
+.status.none {
+  min-width: 64px;
+}
+.status.no-rest {
+  color: #fff;
+  background: var(--danger-strong);
+  border-color: var(--danger-strong);
+  margin-left: 4px;
+}
+
+/* 末尾固定（分の1の位が固定・最も軽い） */
+.status.no-rest--loose {
+  background: var(--label-type-bg);
+  border-color: var(--label-type-border);
+  color: var(--label-type-fg);
+}
+
+/* 休養なし（ちょうど60分間隔） */
+.status.no-rest--strict {
+  background: var(--danger-strong);
+  border-color: var(--danger-strong);
+  color: #fff;
+}
+
+/* 5戦連続以上の末尾固定で進化した表示（固定分） */
+.status.no-rest--evolved {
+  background: #7a1020;
+  border-color: #ff5a1f;
+  color: #ffd9a3;
+  box-shadow: 0 0 6px rgba(255, 90, 31, 0.45);
+  letter-spacing: 0.02em;
+}
+
+/* 守備でのみ観測された武将に付くバッジ（出兵履歴なし）。 */
+.status.defense-only {
+  color: var(--label-branch-fg);
+  background: var(--label-branch-bg);
+  border-color: var(--label-branch-border);
+  border-style: dashed;
+  margin-left: 4px;
+}
+
+/* 被弾表の状況セル。メインの行動状況と固定バッジ（末尾固定／休養なし／固定分）を
+   縦に積み、バッジ幅をそろえて左右端をきれいに整列する。内側ラッパーに flex を当て、
+   セル自体は通常のテーブルセルのまま（列幅計算を壊さない）。 */
+.status-stack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.status-stack .status {
+  min-width: 72px;
+  margin-left: 0;
+}
+
+/* ---------- 固定バッジ凡例 ---------- */
+.badge-legend {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+.badge-legend > summary {
+  cursor: pointer;
+  color: var(--muted);
+  user-select: none;
+}
+.badge-legend > summary:hover {
+  color: var(--text);
+}
+.badge-legend-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.badge-legend-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.badge-legend-list .muted {
+  font-size: 12px;
+}
+
+/* ---------- Toast ---------- */
+.toast-stack {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 50;
+  max-width: min(92vw, 560px);
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--toast-bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 12px 10px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  animation: fade-in 0.15s ease;
+  pointer-events: auto;
+}
+
+.toast.success { border-color: var(--toast-success-border); background: var(--toast-success-bg); }
+.toast.error { border-color: var(--toast-error-border); background: var(--toast-error-bg); }
+
+.toast-close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.toast-close:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* ---------- 先頭へ戻る FAB ---------- */
+.back-to-top {
+  position: fixed;
+  right: 16px;
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  bottom: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  animation: fade-in 0.15s ease;
+}
+.back-to-top:hover {
+  background: var(--hover-surface);
+  color: var(--accent);
+}
+.back-to-top:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---------- Modal ---------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fade-in 0.12s ease;
+}
+
+.modal {
+  width: 100%;
+  max-width: 360px;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.modal h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.modal p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.modal .row {
+  justify-content: flex-end;
+}
+
+/* 兵種フォームは項目数が多く 2 カラムで表示するため、削除確認等の小モーダルより広くする。 */
+.unit-modal {
+  max-width: 560px;
+}
+
+.modal .form-error {
+  margin: 0;
+  color: var(--outcome-loss-text);
+  font-size: 13px;
+  font-weight: 600;
+}
