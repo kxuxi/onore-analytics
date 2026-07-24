@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useId,
-  useState,
-  type MouseEvent,
-  type ReactNode,
-} from "react";
+import { useState, type MouseEvent, type ReactNode } from "react";
 import type { BattleRecord } from "@/lib/types";
 import {
   extractBattleUrl,
@@ -31,8 +25,6 @@ import type { OutcomeResult, SideKey } from "@/lib/stats";
 import { AntiArrows } from "@/components/AntiArrows";
 import {
   CheckIcon,
-  ChevronDown,
-  ChevronUp,
   CopyIcon,
   ExternalLinkIcon,
   TrashIcon,
@@ -161,14 +153,6 @@ function splitDisplayBattleTime(
   };
 }
 
-function sideTagsMatchQuery(tags: readonly SideTag[], query: string): boolean {
-  const normalizedQuery = normalizeDisplayToken(query).toLowerCase();
-  return (
-    normalizedQuery !== "" &&
-    tags.some((tag) => tag.text.toLowerCase().includes(normalizedQuery))
-  );
-}
-
 function RawBattleHistoryCard({
   record,
   highlight,
@@ -212,19 +196,8 @@ export function BattleHistoryCard({
 }: BattleHistoryCardProps) {
   const [copied, setCopied] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [detailsExpanded, setDetailsExpanded] = useState(false);
-  const detailsId = `battle-history-details-${useId()}`;
   const leftTags = card ? buildSideTags(card.left) : [];
   const rightTags = card ? buildSideTags(card.right) : [];
-  const detailsMatchQuery =
-    sideTagsMatchQuery(leftTags, highlight) ||
-    sideTagsMatchQuery(rightTags, highlight);
-
-  useEffect(() => {
-    if (detailsMatchQuery) {
-      setDetailsExpanded(true);
-    }
-  }, [detailsMatchQuery, highlight]);
 
   if (!card) {
     return <RawBattleHistoryCard record={record} highlight={highlight} />;
@@ -671,54 +644,22 @@ export function BattleHistoryCard({
       </div>
 
       {hasTeamDetails && (
-        <>
-          <button
-            type="button"
-            className="bh-disclosure"
-            aria-expanded={detailsExpanded}
-            aria-controls={detailsId}
-            onClick={(event) => {
-              event.stopPropagation();
-              setDetailsExpanded((expanded) => !expanded);
-            }}
-          >
-            {detailsExpanded ? <ChevronUp /> : <ChevronDown />}
-            <span>
-              {detailsExpanded
-                ? "兵種・装備を閉じる"
-                : "兵種・装備を表示"}
-            </span>
-            {detailsMatchQuery && (
-              <span className="bh-disclosure-match">検索一致</span>
+        <div className="bh-secondary">
+          <div className="bh-team-details-grid">
+            {renderTeamDetails(
+              card.left,
+              card.right,
+              "出兵側",
+              leftTags
             )}
-            <span className="sr-only">
-              ：{card.left.name} 対 {card.right.name}
-            </span>
-          </button>
-
-          <div
-            id={detailsId}
-            className={`bh-secondary${
-              detailsExpanded ? " bh-secondary--expanded" : ""
-            }`}
-            data-expanded={detailsExpanded ? "true" : "false"}
-          >
-            <div className="bh-team-details-grid">
-              {renderTeamDetails(
-                card.left,
-                card.right,
-                "出兵側",
-                leftTags
-              )}
-              {renderTeamDetails(
-                card.right,
-                card.left,
-                "守備側",
-                rightTags
-              )}
-            </div>
+            {renderTeamDetails(
+              card.right,
+              card.left,
+              "守備側",
+              rightTags
+            )}
           </div>
-        </>
+        </div>
       )}
     </li>
   );
