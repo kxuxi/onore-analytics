@@ -7,6 +7,8 @@ export type FactionColorMap = Record<string, string>;
 export const DEFAULT_WIN_LEFT = "#1D9E75";
 /** 右チーム（防衛側）勝利時の既定色 */
 export const DEFAULT_WIN_RIGHT = "#D85A30";
+/** 国名の文字へ残す国色の割合。可読性を保つため残りはテーマ文字色と混ぜる。 */
+const FACTION_NAME_COLOR_WEIGHT = 32;
 
 /** 国に割り当てられる色見本（名前付き固定パレット） */
 export interface PaletteColor {
@@ -67,19 +69,24 @@ export function resolveFactionColor(
   return (faction && colors[faction]) || fallback;
 }
 
-/** `#RGB` / `#RRGGBB` を 0-255 の RGB に分解する（不正な値は null）。 */
-function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
-  let h = hex.trim().replace(/^#/, "");
-  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
-  if (h.length !== 6) return null;
-  const n = Number.parseInt(h, 16);
-  if (Number.isNaN(n)) return null;
-  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+/** `#RGB` / `#RRGGBB` 形式の色かを判定する。 */
+function isValidHexColor(hex: string): boolean {
+  return /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex.trim());
+}
+
+/**
+ * 国色を識別でき、かつ Light / Dark のどちらでも読みやすい文字色を返す。
+ * 原色をそのまま使うと白・黄・黒などでコントラストが不足するため、
+ * テーマの本文色を基準に国色を混ぜる。
+ */
+function factionTextColor(hex: string | undefined): string | undefined {
+  if (!hex || !isValidHexColor(hex)) return undefined;
+  return `color-mix(in srgb, ${hex} ${FACTION_NAME_COLOR_WEIGHT}%, var(--text))`;
 }
 
 /**
  * 国名をテキストとして表示する箇所用の色スタイル。
- * その国に色が設定されているときだけテーマの本文色を返し、
+ * その国に有効な色が設定されているときだけ国色由来の文字色を返し、
  * 未設定なら undefined（既定色のまま）。
  */
 export function factionNameStyle(
@@ -87,14 +94,13 @@ export function factionNameStyle(
   colors: FactionColorMap
 ): CSSProperties | undefined {
   const hex = faction ? colors[faction] : undefined;
-  if (!hex) return undefined;
-  // 任意の国色では文字コントラストを保証できないため、文字はテーマ色へ固定する。
-  return { color: "var(--text)" };
+  const color = factionTextColor(hex);
+  return color ? { color } : undefined;
 }
 
 /**
  * 国名をバッジ（`.tag.faction` などのピル）で表示する箇所用の色スタイル。
- * 文字はテーマの本文色、枠線・背景はその国色の半透明でチントする。
+ * 文字は可読性を保った国色、枠線・背景はその国色の半透明でチントする。
  * 未設定なら undefined（既定のピンクピルのまま）。
  */
 export function factionBadgeStyle(
@@ -102,11 +108,10 @@ export function factionBadgeStyle(
   colors: FactionColorMap
 ): CSSProperties | undefined {
   const hex = faction ? colors[faction] : undefined;
-  if (!hex) return undefined;
-  if (!hexToRgb(hex)) return undefined;
-  // 任意の国色は枠線・背景だけに使い、文字はテーマ色でコントラストを保つ。
+  const color = factionTextColor(hex);
+  if (!hex || !color) return undefined;
   return {
-    color: "var(--text)",
+    color,
     borderColor: `color-mix(in srgb, ${hex} 50%, transparent)`,
     background: `color-mix(in srgb, ${hex} 18%, transparent)`,
   };
