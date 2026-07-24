@@ -24,6 +24,15 @@ afterEach(() => {
 });
 
 describe("warlordCard の非ブラウザ環境", () => {
+  it("日本語を含む戦績カードで過剰なウェイトを使わない", () => {
+    const source = readFileSync(
+      join(process.cwd(), "lib/warlordCard.ts"),
+      "utf8"
+    );
+
+    expect(source).not.toMatch(/ctx\.font\s*=\s*`(?:800|900)\s/);
+  });
+
   it("document がない環境では描画とダウンロードを安全にスキップする", async () => {
     expect(await renderWarlordCardBlob(CARD_DATA)).toBeNull();
     expect(() =>

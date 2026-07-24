@@ -215,7 +215,7 @@
     flex: 0 0 auto;
     color: var(--muted);
     font-size: 12px;
-    font-weight: 700;
+    font-weight: var(--font-weight-medium);
     letter-spacing: 0.04em;
     text-align: left;
     text-transform: none;
@@ -238,7 +238,7 @@
   }
   table.table-card td.cell-title .link-like {
     font-size: 16px;
-    font-weight: 700;
+    font-weight: var(--font-weight-semibold);
   }
 
   /* 値が大きい / 複数あるセルは縦積み（ラベル上・内容下） */

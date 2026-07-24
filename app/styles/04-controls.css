@@ -27,8 +27,8 @@
   margin: 0;
   color: var(--color-text-primary);
   font-size: var(--font-size-title);
-  font-weight: 800;
-  line-height: var(--line-height-tight);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-heading);
   letter-spacing: -0.01em;
   text-transform: none;
 }
@@ -47,8 +47,8 @@
   margin: 0;
   color: var(--color-text-secondary);
   font-size: var(--font-size-control);
-  font-weight: 700;
-  line-height: var(--line-height-tight);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-heading);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -56,8 +56,8 @@
 .page-header-description {
   max-width: 76ch;
   color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-body);
+  font-size: var(--font-size-control);
+  line-height: var(--line-height-caption);
   overflow-wrap: anywhere;
 }
 
@@ -98,8 +98,12 @@
   padding: 10px 14px;
   font-size: var(--font-size-control);
   border-radius: var(--radius-md);
-  font-weight: 600;
+  font-weight: var(--font-weight-medium);
   min-height: var(--control-min-height);
+}
+
+.btn.active {
+  font-weight: var(--font-weight-semibold);
 }
 
 .btn:hover {
@@ -186,7 +190,7 @@
 }
 .scout-summary strong {
   color: var(--text);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 .scout-toggle {
   display: inline-flex;
@@ -222,7 +226,7 @@
 }
 .scout-report-title {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   color: var(--text);
 }
 
@@ -230,13 +234,13 @@
   display: inline-block;
   margin-bottom: 6px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
   color: var(--text);
 }
 .scout-report-count {
   margin-left: 8px;
   font-size: 12px;
-  font-weight: 400;
+  font-weight: var(--font-weight-regular);
   color: var(--muted);
 }
 .scout-report-text {
@@ -281,7 +285,7 @@
   margin-bottom: 10px;
   padding: 0;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
   color: var(--text);
 }
 
@@ -313,7 +317,9 @@
 }
 
 .filter > span {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-caption);
   color: var(--muted);
   letter-spacing: 0.06em;
   text-transform: uppercase;

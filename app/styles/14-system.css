@@ -1,7 +1,7 @@
 /* ---------- 戦闘履歴 貼り付けプレビュー ---------- */
 .paste-preview-warn {
   color: var(--color-warning-text);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 /* ---------- 読み込み中スケルトン ---------- */
@@ -85,7 +85,7 @@
   font-size: 14px;
   color: var(--muted);
   letter-spacing: 0.08em;
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
 }
 
@@ -130,7 +130,7 @@
   background: transparent;
   color: var(--muted);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: var(--font-weight-medium);
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
@@ -141,6 +141,7 @@
 .theme-seg-btn.active {
   background: var(--accent);
   color: var(--color-on-accent);
+  font-weight: var(--font-weight-semibold);
 }
 
 .theme-seg-btn:focus-visible {
@@ -155,5 +156,5 @@
 
 .theme-current strong {
   color: var(--text);
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
 }

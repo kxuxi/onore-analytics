@@ -22,7 +22,7 @@
   background: transparent;
   color: var(--muted);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
@@ -33,6 +33,7 @@
 .tmx-period.active {
   background: var(--panel);
   color: var(--text);
+  font-weight: var(--font-weight-semibold);
   border-color: var(--border);
   box-shadow: var(--shadow-sm);
 }
@@ -54,9 +55,9 @@
   position: relative;
   min-width: 56px;
   height: 38px;
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   color: var(--muted);
-  font-weight: 600;
+  font-weight: var(--font-weight-medium);
 }
 .tmx-corner-atk {
   position: absolute;
@@ -71,7 +72,7 @@
 .tmx-colhead,
 .tmx-rowhead {
   font-size: 13px;
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
   color: var(--label-type-fg);
   white-space: nowrap;
   padding: 2px 4px;
@@ -128,11 +129,12 @@
 }
 .tmx-rate {
   font-size: 14px;
-  font-weight: 800;
+  font-weight: var(--font-weight-bold);
   line-height: 1.1;
 }
 .tmx-count {
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-regular);
   color: var(--text);
   line-height: 1;
 }
@@ -211,7 +213,7 @@
 }
 .tmx-drill-head strong {
   color: var(--label-type-fg);
-  font-weight: 800;
+  font-weight: var(--font-weight-semibold);
 }
 .tmx-drill-close {
   min-height: 34px;
@@ -273,7 +275,7 @@
 }
 .meta-filter-label {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: var(--font-weight-medium);
   color: var(--muted);
 }
 .meta-filter .meta-filter-select {
@@ -321,16 +323,18 @@
   align-items: baseline;
   gap: 8px;
   margin: 0 0 10px;
-  font-size: 15px;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-heading);
 }
 .meta-h3-sub {
   font-size: 12px;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   color: var(--muted);
 }
 .meta-h3-tag {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--font-weight-medium);
   color: var(--label-type-fg);
   background: color-mix(in srgb, var(--label-type-fg) 12%, var(--panel));
   border: 1px solid color-mix(in srgb, var(--label-type-fg) 28%, transparent);
@@ -359,7 +363,7 @@
   flex: 0 0 auto;
   width: 24px;
   text-align: center;
-  font-weight: 800;
+  font-weight: var(--font-weight-bold);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -367,7 +371,7 @@
   flex: 1 1 auto;
   min-width: 0;
   text-align: left;
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
   font-size: 14px;
 }
 .meta-pick {
@@ -379,10 +383,12 @@
 .meta-pick strong {
   color: var(--text);
   font-size: 14px;
+  font-weight: var(--font-weight-bold);
 }
 .meta-sub {
   color: var(--muted);
   font-size: 12px;
+  font-weight: var(--font-weight-regular);
 }
 
 .meta-traits {
@@ -401,7 +407,7 @@
   font-size: 13px;
 }
 .meta-trait-name {
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
   color: var(--label-type-fg);
 }
 .meta-trait-pick {
@@ -422,7 +428,7 @@
 }
 .meta-trait-rate {
   text-align: right;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 @media (max-width: 560px) {
   .meta-trait-row {
@@ -452,7 +458,7 @@
 }
 
 .heat-col-label {
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   color: var(--muted);
   text-align: center;
 }
@@ -462,7 +468,7 @@
 }
 
 .heat-row-label {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: var(--muted);
   display: flex;
   align-items: center;
@@ -482,7 +488,7 @@
   align-items: center;
   gap: 8px;
   margin-top: 10px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 
 .heat-legend-scale {
@@ -544,7 +550,7 @@
 }
 
 .faction-stint-name {
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
 }
 
 .faction-stint-years {
@@ -553,12 +559,13 @@
 }
 
 .faction-stint-battles {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
 }
 
 .faction-return-badge {
-  font-size: 10px;
-  font-weight: 700;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
   padding: 1px 7px;
   border-radius: 999px;
   color: var(--label-type-fg);
@@ -568,7 +575,7 @@
 
 .faction-return-note {
   margin: 4px 0 0;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: var(--muted);
 }
 
@@ -580,8 +587,8 @@
 }
 
 .comment-saved {
-  font-size: 11px;
-  font-weight: 500;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
   color: var(--color-success-text);
 }
 
@@ -614,7 +621,7 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
 }
 .trend-legend-dot {
   width: 10px;
@@ -624,5 +631,5 @@
 }
 .trend-note {
   margin: 0 0 10px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }

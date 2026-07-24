@@ -89,12 +89,22 @@
   --space-6: 32px;
   --space-7: 48px;
 
+  --font-size-2xs: 11px;
   --font-size-xs: 12px;
   --font-size-sm: 13px;
   --font-size-control: 14px;
+  --font-size-compact: 15px;
   --font-size-body: 16px;
+  --font-size-heading: 18px;
   --font-size-title: 20px;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
   --line-height-tight: 1.25;
+  --line-height-heading: 1.3;
+  --line-height-control: 1.4;
+  --line-height-caption: 1.5;
   --line-height-body: 1.5;
 
   --radius-sm: 6px;

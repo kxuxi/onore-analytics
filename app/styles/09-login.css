@@ -50,7 +50,7 @@
   background: color-mix(in srgb, var(--accent) 14%, transparent);
   color: var(--text);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -75,7 +75,7 @@
 .login-card-kicker {
   color: var(--color-interactive-text);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
