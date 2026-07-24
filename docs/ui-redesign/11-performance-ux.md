@@ -2,7 +2,7 @@
 
 ## 状態
 
-実装完了（作業単位4 / 4完了、最終比較中）
+完了（作業単位4 / 4、最終比較・全自動検証済み）
 
 ## 依存関係
 
@@ -390,6 +390,58 @@ copyしか使わない初期画面が、HTML→Markdown変換とTurndownを同�
 - Desktopに残るCLS 0.00821のsourceは`NAV.nav`で、期一覧の非同期挿入による縦移動。sidebar幅とheader slot由来のshiftは除去できている
 - head scriptとhookは同じテスト表で固定したが、判定ロジックが2箇所に出力されるため将来変更時は両方の契約更新が必要
 - head scriptは既存theme scriptと同じinline script方針を使う。より厳格なCSPへ移行する場合はnonce等を両scriptへ同時導入する必要がある
+
+## 最終比較
+
+### 変更内容
+
+- `docs/ui-redesign/ui-11-after/README.md`: 計測条件、主要差分、残存リスクを記録した
+- `docs/ui-redesign/ui-11-after/performance-results.json`: 全run、bundle、代表ルート、受入結果を機械可読形式で記録した
+
+### 変更理由
+
+単発値や体感で効果を断定せず、変更前と同じ条件の中央値と全自動検証で
+回帰の有無を判断できるようにするため。
+
+### 互換性
+
+計測と証跡追加だけで、runtime、API、DB、URL、環境変数、依存関係を変更していない。
+生のLighthouse reportは環境依存情報と大容量traceを含むためcommitしていない。
+
+### 検証結果
+
+同じChrome 150、Lighthouse 13.4.1、146期、隔離production serverで
+HomeをMobile / Desktop各3回測定した。
+
+| 指標 | Before Mobile | After Mobile | Before Desktop | After Desktop |
+| --- | ---: | ---: | ---: | ---: |
+| Performance score | 64 | 62 | 75 | 75 |
+| simulated FCP | 904 ms | 905 ms | 244 ms | 245 ms |
+| simulated LCP | 48,037 ms | 48,040 ms | 7,853 ms | 7,857 ms |
+| observed LCP | 1,420 ms | 1,771 ms | 1,578 ms | 1,267 ms |
+| TBT | 444 ms | 478 ms | 72 ms | 72 ms |
+| Max Potential FID | 494 ms | 528 ms | 122 ms | 122 ms |
+| CLS | 0.0191 | 0 | 0.0299 | 0.00821 |
+| Speed Index | 1,474 ms | 1,836 ms | 346 ms | 493 ms |
+| 転送量 | 9,486,939 B | 9,483,503 B | 9,486,939 B | 9,483,503 B |
+
+一方、Mobile HomeのCLSは100%、Desktopは72.5%削減した。
+武将ランキング／戦闘履歴のMobile CLSも0.0522から0になり、
+observed LCPはそれぞれ2,255 → 1,335 ms、1,767 → 1,673 msだった。
+
+production buildは`/`が25.9 kB、First Load JS 117 kB。
+初期／HomeからTurndown、武将詳細初期chunkからcanvas実装が除外されている。
+52ファイル477テスト、Lint、型チェック、production buildはすべて成功した。
+詳細は`docs/ui-redesign/ui-11-after/`へ記録した。
+
+### 残っているリスク
+
+- Mobile observed LCP、Speed Index、TBTはBeforeより悪化したため、速度全体が改善したとは判定しない
+- CSSはLoadingと初期shell安定化の規則によりgzip 121 B増加し、CSS非悪化条件は未達
+- simulated値は実質不変で、約9.3 MBの非圧縮JSONと計測分散が支配的だった
+- observed LCP 2.5秒以内は維持したが、Mobile TBT非悪化の受入条件は未達
+- 武将詳細の全期間`/api/state`は63,187,611 Bで、レスポンス契約を変えない今回の範囲では削減していない
+- 既存lockfileのhigh 7件は、破壊的な依存更新を避けるため自動修正していない
 
 ## 受入条件
 
