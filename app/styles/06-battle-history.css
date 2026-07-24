@@ -522,6 +522,7 @@
   color: var(--color-text-secondary);
   background: var(--surface-subtle);
   border-color: var(--color-border-default);
+  cursor: default;
 }
 
 .bh-tag--highlight {

@@ -94,13 +94,13 @@ describe("global CSS architecture", () => {
       /\.tag\s*\{[^}]*border-radius:\s*var\(--radius-sm\)/s
     );
     expect(adminFeedback).toMatch(
-      /\.tag\.branch\s*\{[^}]*color:\s*var\(--color-text-secondary\)[^}]*border-color:\s*var\(--color-border-default\)[^}]*background:\s*var\(--surface-subtle\)/s
+      /\.tag\.branch\s*\{[^}]*color:\s*var\(--color-text-secondary\)[^}]*border-color:\s*var\(--color-border-default\)[^}]*background:\s*var\(--surface-subtle\)[^}]*cursor:\s*default/s
     );
     expect(battleHistory).toMatch(
       /\.bh-tag\s*\{[^}]*border-radius:\s*var\(--radius-sm\)/s
     );
     expect(battleHistory).toMatch(
-      /\.bh-tag--branch\s*\{[^}]*color:\s*var\(--color-text-secondary\)[^}]*background:\s*var\(--surface-subtle\)[^}]*border-color:\s*var\(--color-border-default\)/s
+      /\.bh-tag--branch\s*\{[^}]*color:\s*var\(--color-text-secondary\)[^}]*background:\s*var\(--surface-subtle\)[^}]*border-color:\s*var\(--color-border-default\)[^}]*cursor:\s*default/s
     );
     expect(rankingInsights).toMatch(
       /\.latest-units-branch\s*\{[^}]*border-radius:\s*var\(--radius-sm\)[^}]*color:\s*var\(--color-text-secondary\)[^}]*border:\s*1px solid var\(--color-border-default\)[^}]*background:\s*var\(--surface-subtle\)/s

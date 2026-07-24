@@ -164,6 +164,7 @@
   color: var(--color-text-secondary);
   border-color: var(--color-border-default);
   background: var(--surface-subtle);
+  cursor: default;
 }
 .tag.unit { color: var(--label-unit-fg); border-color: var(--label-unit-border); background: var(--label-unit-bg); }
 .tag.faction { color: var(--label-faction-fg); border-color: var(--label-faction-border); background: var(--label-faction-bg); }

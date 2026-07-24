@@ -1,6 +1,11 @@
 import type { UnitType } from "@/lib/types";
 import { splitGoodAgainst } from "@/lib/unitTypeForm";
 import {
+  isStaticUnitTypeLabelTarget,
+  STATIC_UNIT_TYPE_LABEL_VALUE,
+} from "@/lib/unitTypeLabel";
+import type { MouseEvent } from "react";
+import {
   UNIT_CATALOG_COLUMNS,
   type UnitCatalogSortDirection,
   type UnitCatalogSortKey,
@@ -25,6 +30,17 @@ function UnitTags({ value }: { value: string }) {
           {unitName}
         </span>
       ))}
+    </span>
+  );
+}
+
+function UnitTypeLabel({ name }: { name: string }) {
+  return (
+    <span
+      className="tag branch"
+      data-unit-type-label={STATIC_UNIT_TYPE_LABEL_VALUE}
+    >
+      {name}
     </span>
   );
 }
@@ -72,6 +88,13 @@ export function UnitCatalogResults({
   const activeSortLabel =
     UNIT_CATALOG_COLUMNS.find((column) => column.key === sortKey)?.label ??
     "兵種";
+  const selectUnitFromContainer = (
+    event: MouseEvent<HTMLElement>,
+    name: string
+  ) => {
+    if (isStaticUnitTypeLabelTarget(event.target)) return;
+    onSelectUnit(name);
+  };
 
   return (
     <div className="catalog-results">
@@ -158,7 +181,9 @@ export function UnitCatalogResults({
             {units.map((unit) => (
               <tr
                 key={unit.name}
-                onClick={() => onSelectUnit(unit.name)}
+                onClick={(event) =>
+                  selectUnitFromContainer(event, unit.name)
+                }
                 className="catalog-clickable-row"
               >
                 <td>
@@ -169,7 +194,7 @@ export function UnitCatalogResults({
                 </td>
                 <td>
                   {unit.category ? (
-                    <span className="tag branch">{unit.category}</span>
+                    <UnitTypeLabel name={unit.category} />
                   ) : (
                     <span className="muted">-</span>
                   )}
@@ -197,7 +222,7 @@ export function UnitCatalogResults({
           <li key={unit.name} className="catalog-card">
             <article
               className="catalog-unit-card-action"
-              onClick={() => onSelectUnit(unit.name)}
+              onClick={(event) => selectUnitFromContainer(event, unit.name)}
             >
               <header className="catalog-card-header">
                 <UnitDetailButton
@@ -205,7 +230,7 @@ export function UnitCatalogResults({
                   onSelectUnit={onSelectUnit}
                 />
                 {unit.category ? (
-                  <span className="tag branch">{unit.category}</span>
+                  <UnitTypeLabel name={unit.category} />
                 ) : (
                   <span className="muted">-</span>
                 )}
