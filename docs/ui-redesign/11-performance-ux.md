@@ -2,7 +2,7 @@
 
 ## 状態
 
-実装中（作業単位1 / 4完了）
+実装中（作業単位2 / 4完了）
 
 ## 依存関係
 
@@ -263,6 +263,44 @@ copyしか使わない初期画面が、HTML→Markdown変換とTurndownを同�
 - 旧`@/lib/clipboard`からcopyだけをimportする未知のconsumerは互換性を優先してTurndownもbundleし得る
 - Historyを初めて開くときは、既存どおりTurndownを含むchunkを取得する
 - 1回のLighthouse値はDB応答時間の分散が大きいため、LCP / TBTの効果判定は最終3回中央値で行う
+
+## 作業単位2: 操作時だけ必要な画像生成の遅延
+
+### 変更内容
+
+- `components/detail/WarlordDetail.tsx`: 戦績カードmoduleの静的importを削除し、保存handlerの`try`内で動的importするようにした
+- `lib/warlordCard.test.ts`: 非ブラウザー環境の安全なno-op、ClipboardItem非対応、静的import不在、生成→download→copy→状態復帰の順序を固定した
+
+### 変更理由
+
+2400×1260 canvas、PNG生成、画像clipboard処理は、管理者が「カード保存」を押すまで
+不要である。武将詳細を読むだけの初期chunkから分離し、必要な操作時だけ取得するため。
+
+### 互換性
+
+- `saving`、`done`、`error`の表示とdisabled条件を変更していない
+- blobが`null`のときの失敗、`${name}_戦績カード.png`の名前、download後にcopyする順序、2秒後の`idle`復帰を維持した
+- module取得失敗も既存の`catch`で`error`へ収束する
+- props、詳細データ、カード寸法、描画内容、API、URL、DB、環境変数を変更していない
+
+### 検証結果
+
+- 対象テスト: 2ファイル、10テスト成功
+- `npm run lint`: 成功
+- `npm run typecheck`: 成功
+- 隔離production build: 成功
+- 武将詳細の初期dynamic files: raw 35,879 B → 33,267 B
+- 同filesのgzip: 13,020 B → 11,998 B（1,022 B削減）
+- canvas本体は初回保存時だけ取得する別chunk raw 2,922 B / gzip 1,360 Bへ分離
+- 初期の武将詳細filesに`createLinearGradient` / `ClipboardItem`がなく、操作時chunkだけにあることを確認
+- `/`の25.4 kB / First Load JS 116 kBとCSSを維持
+- `git diff --check`: 成功
+
+### 残っているリスク
+
+- 初回のカード保存だけは1,360 B gzip相当のchunk取得が先に入る
+- 認証済み実ブラウザーでのcanvas downloadとClipboard権限許可時のE2Eは最終手動確認に残る
+- Safari / Firefoxの画像clipboard fallbackは既存実装のままで、今回の対象外
 
 ## 受入条件
 

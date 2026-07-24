@@ -5,11 +5,6 @@ import type { WarlordMap } from "@/lib/types";
 import type { BattleRecord } from "@/lib/types";
 import { lookup } from "@/lib/storage";
 import { displayWarlordType } from "@/lib/warlordType";
-import {
-  renderWarlordCardBlob,
-  downloadBlob,
-  copyImageBlob,
-} from "@/lib/warlordCard";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
 import {
   collectWarlordBattles,
@@ -117,6 +112,11 @@ export function WarlordDetail({
   const handleSaveCard = useCallback(async () => {
     setCardState("saving");
     try {
+      const {
+        renderWarlordCardBlob,
+        downloadBlob,
+        copyImageBlob,
+      } = await import("@/lib/warlordCard");
       const blob = await renderWarlordCardBlob({
         name,
         faction,
