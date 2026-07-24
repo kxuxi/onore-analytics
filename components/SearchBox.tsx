@@ -1,8 +1,10 @@
 "use client";
 
+import { useCallback, useRef } from "react";
 import type {
   AriaAttributes,
   KeyboardEventHandler,
+  MutableRefObject,
   Ref,
 } from "react";
 import { SearchIcon, CloseIcon } from "@/components/icons";
@@ -41,6 +43,20 @@ export function SearchBox({
   ariaActiveDescendant,
   ariaDescribedBy,
 }: SearchBoxProps) {
+  const internalInputRef = useRef<HTMLInputElement | null>(null);
+  const setInputRef = useCallback(
+    (element: HTMLInputElement | null) => {
+      internalInputRef.current = element;
+      if (typeof inputRef === "function") {
+        inputRef(element);
+      } else if (inputRef) {
+        (inputRef as MutableRefObject<HTMLInputElement | null>).current =
+          element;
+      }
+    },
+    [inputRef]
+  );
+
   return (
     <div className="search-box">
       <span className="search-icon">
@@ -48,7 +64,7 @@ export function SearchBox({
       </span>
       <input
         id={id}
-        ref={inputRef}
+        ref={setInputRef}
         type="search"
         className="text-input search-input"
         data-search-input=""
@@ -74,6 +90,7 @@ export function SearchBox({
           onClick={() => {
             onChange("");
             onClear?.();
+            internalInputRef.current?.focus();
           }}
           aria-label="検索をクリア"
         >

@@ -43,4 +43,20 @@ describe("SearchBox", () => {
     expect(html).toContain('aria-activedescendant="warlord-option-0"');
     expect(html).toContain('aria-describedby="warlord-search-status"');
   });
+
+  it("入力値がある場合だけ同じ検索ボックス内にクリア操作を表示する", () => {
+    const html = renderToStaticMarkup(
+      <SearchBox
+        id="search-with-clear"
+        value="信長"
+        onChange={vi.fn()}
+        onClear={vi.fn()}
+        placeholder="名前で検索"
+      />
+    );
+
+    expect(html).toContain('id="search-with-clear"');
+    expect(html).toContain('aria-label="検索をクリア"');
+    expect(html.match(/class="search-box"/g)).toHaveLength(1);
+  });
 });

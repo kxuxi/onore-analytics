@@ -95,6 +95,7 @@
 }
 
 .catalog-name-button {
+  min-width: var(--target-size-minimum);
   padding: var(--space-2) 0;
   font-size: var(--font-size-body);
   font-weight: 700;
@@ -329,4 +330,3 @@
   font-size: 12px;
   opacity: 0.8;
 }
-

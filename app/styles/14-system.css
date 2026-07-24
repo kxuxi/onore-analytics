@@ -1,6 +1,6 @@
 /* ---------- 戦闘履歴 貼り付けプレビュー ---------- */
 .paste-preview-warn {
-  color: var(--warning);
+  color: var(--color-warning-text);
   font-weight: 600;
 }
 
@@ -64,6 +64,16 @@
   width: 60%;
 }
 
+/* エラー / 404画面の最上位見出し。従来のpanel見出しと同じ寸法を保つ。 */
+.page-state-title {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
 /* ---------- モーション低減（prefers-reduced-motion） ---------- */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -91,7 +101,7 @@
   gap: 4px;
   padding: 4px;
   background: var(--panel-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-control-border);
   border-radius: 10px;
 }
 
@@ -115,7 +125,7 @@
 
 .theme-seg-btn.active {
   background: var(--accent);
-  color: #fff;
+  color: var(--color-on-accent);
 }
 
 .theme-seg-btn:focus-visible {
@@ -132,4 +142,3 @@
   color: var(--text);
   font-weight: 700;
 }
-

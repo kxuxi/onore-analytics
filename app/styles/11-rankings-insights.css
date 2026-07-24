@@ -328,13 +328,13 @@
 }
 
 .nation-row:nth-child(1) .nation-rank {
-  color: #ffce63;
+  color: var(--medal-gold-fg);
 }
 .nation-row:nth-child(2) .nation-rank {
-  color: #cdd6e0;
+  color: var(--medal-silver-fg);
 }
 .nation-row:nth-child(3) .nation-rank {
-  color: #e0955a;
+  color: var(--medal-bronze-fg);
 }
 
 .nation-main {
@@ -362,7 +362,7 @@
 .nation-rate {
   font-weight: 800;
   font-size: 16px;
-  color: #1d9e75;
+  color: var(--color-success-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -385,7 +385,7 @@
 .nation-bar-fill {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #1d9e75, #2e9e57);
+  background: var(--outcome-win-fill);
 }
 
 .swi-list {
@@ -413,13 +413,13 @@
 }
 
 .swi-row:nth-child(1) .swi-rank {
-  color: #ffce63;
+  color: var(--medal-gold-fg);
 }
 .swi-row:nth-child(2) .swi-rank {
-  color: #cdd6e0;
+  color: var(--medal-silver-fg);
 }
 .swi-row:nth-child(3) .swi-rank {
-  color: #e0955a;
+  color: var(--medal-bronze-fg);
 }
 
 .swi-main {
@@ -447,7 +447,7 @@
 .swi-value {
   font-weight: 800;
   font-size: 16px;
-  color: #1d9e75;
+  color: var(--color-success-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -462,7 +462,7 @@
 .swi-bar-fill {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #1d9e75, #2e9e57);
+  background: var(--outcome-win-fill);
 }
 
 .swi-meta {

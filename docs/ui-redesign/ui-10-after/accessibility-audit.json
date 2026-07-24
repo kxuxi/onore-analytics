@@ -1,0 +1,436 @@
+{
+  "generatedAt": "2026-07-24T02:06:25.869Z",
+  "sourceHead": "7fce8f9",
+  "browser": "Chrome Headless 150",
+  "axeCore": "4.12.1",
+  "verification": {
+    "fullSweepHead": "df12db1",
+    "deltaReauditHead": "7fce8f9",
+    "deltaCases": [
+      "history-desktop-1440-light",
+      "unit-detail-desktop-1440-light"
+    ],
+    "note": "全量監査後の最終差分はAntiArrowsのARIA roleとテストのみ。影響する実DOM状態を最終HEADで再監査し置換した。"
+  },
+  "cases": [
+    {
+      "name": "home-desktop-1440-light",
+      "path": "/",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 7
+        }
+      ],
+      "title": "ホーム｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".app-footer-link",
+          "width": 63.5,
+          "height": 16
+        }
+      ]
+    },
+    {
+      "name": "home-desktop-1440-dark",
+      "path": "/",
+      "width": 1440,
+      "height": 1000,
+      "theme": "dark",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 7
+        }
+      ],
+      "title": "ホーム｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".app-footer-link",
+          "width": 63.5,
+          "height": 16
+        }
+      ]
+    },
+    {
+      "name": "home-mobile-390-light",
+      "path": "/",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 5
+        }
+      ],
+      "title": "ホーム｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".app-footer-link",
+          "width": 59.2,
+          "height": 15
+        }
+      ]
+    },
+    {
+      "name": "history-desktop-1440-light",
+      "path": "/history",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 27
+        }
+      ],
+      "title": "戦闘履歴｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".app-footer-link",
+          "width": 63.5,
+          "height": 16
+        }
+      ]
+    },
+    {
+      "name": "history-mobile-390-light",
+      "path": "/history",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 3
+        }
+      ],
+      "title": "戦闘履歴｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".app-footer-link",
+          "width": 59.2,
+          "height": 15
+        }
+      ]
+    },
+    {
+      "name": "ranking-desktop-1440-light",
+      "path": "/ranking",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 5
+        }
+      ],
+      "title": "ランキング 武将ランキング｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".app-footer-link",
+          "width": 63.5,
+          "height": 16
+        }
+      ]
+    },
+    {
+      "name": "ranking-desktop-1440-dark",
+      "path": "/ranking",
+      "width": 1440,
+      "height": 1000,
+      "theme": "dark",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 5
+        }
+      ],
+      "title": "ランキング 武将ランキング｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".app-footer-link",
+          "width": 63.5,
+          "height": 16
+        }
+      ]
+    },
+    {
+      "name": "ranking-mobile-390-light",
+      "path": "/ranking",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 3
+        }
+      ],
+      "title": "ランキング 武将ランキング｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".app-footer-link",
+          "width": 59.2,
+          "height": 15
+        }
+      ]
+    },
+    {
+      "name": "unit-ranking-mobile-390-light",
+      "path": "/ranking/units",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 2
+        }
+      ],
+      "title": "ランキング 兵種ランキング｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".app-footer-link",
+          "width": 59.2,
+          "height": 15
+        }
+      ]
+    },
+    {
+      "name": "catalog-desktop-1440-light",
+      "path": "/encyclopedia/units",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 641
+        }
+      ],
+      "title": "図鑑 兵種｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".app-footer-link",
+          "width": 63.5,
+          "height": 16
+        }
+      ]
+    },
+    {
+      "name": "catalog-mobile-390-light",
+      "path": "/encyclopedia/units",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 4
+        }
+      ],
+      "title": "図鑑 兵種｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".app-footer-link",
+          "width": 59.2,
+          "height": 15
+        }
+      ]
+    },
+    {
+      "name": "warlord-detail-desktop-1440-dark",
+      "path": "/warlord/%E5%9B%A0%E5%B9%A1%E6%9C%88%E5%A4%9C",
+      "width": 1440,
+      "height": 1000,
+      "theme": "dark",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 2
+        }
+      ],
+      "title": "因幡月夜｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".app-footer-link",
+          "width": 63.5,
+          "height": 16
+        }
+      ]
+    },
+    {
+      "name": "unit-detail-desktop-1440-light",
+      "path": "/unit/%E5%89%9B%E5%BC%93%E5%83%A7%E5%85%B5",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 55
+        }
+      ],
+      "title": "剛弓僧兵｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".app-footer-link",
+          "width": 63.5,
+          "height": 16
+        }
+      ]
+    },
+    {
+      "name": "matrix-desktop-1440-light",
+      "path": "/meta",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 2
+        }
+      ],
+      "title": "メタ分析 相性表｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".app-footer-link",
+          "width": 63.5,
+          "height": 16
+        }
+      ]
+    },
+    {
+      "name": "nations-desktop-1440-light",
+      "path": "/nations",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 3
+        }
+      ],
+      "title": "国｜ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": [
+        {
+          "target": ".app-footer-link",
+          "width": 63.5,
+          "height": 16
+        }
+      ]
+    },
+    {
+      "name": "login-desktop-1440-light",
+      "path": "/login",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 4
+        }
+      ],
+      "title": "ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": []
+    },
+    {
+      "name": "login-mobile-390-light",
+      "path": "/login",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodeCount": 4
+        }
+      ],
+      "title": "ONORE ANALYTICS",
+      "horizontalOverflow": false,
+      "hiddenFocusableCount": 0,
+      "undersizedTargets": []
+    }
+  ],
+  "summary": {
+    "cases": 17,
+    "violationNodesByRule": {},
+    "hiddenFocusableCount": 0,
+    "horizontalOverflowCases": 0
+  }
+}

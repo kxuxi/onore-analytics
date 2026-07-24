@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { registerState, importWarlordStats, saveFactionColorsToDb } from "@/lib/api";
@@ -9,6 +9,7 @@ import type { FactionColorMap } from "@/lib/factionColors";
 import { copyText } from "@/lib/clipboard";
 import { TAB_LABELS, TAB_GROUPS, GROUP_OF_TAB, PUBLIC_TAB_KEYS, type TabGroupKey } from "@/lib/tabs";
 import { useToasts } from "@/lib/useToasts";
+import { useModalA11y } from "@/lib/useModalA11y";
 import { useTheme } from "@/lib/useTheme";
 import { useAuth } from "@/lib/useAuth";
 import { useDataSync } from "@/lib/useDataSync";
@@ -39,6 +40,7 @@ import {
   TargetIcon,
   LogInIcon,
   LogOutIcon,
+  CloseIcon,
 } from "@/components/icons";
 import type { BattleRecord, TabKey, WarlordMap } from "@/lib/types";
 import { normalizationMap } from "@/lib/storage";
@@ -161,6 +163,9 @@ const DATA_LAYOUT_TABS = new Set<TabKey>([
 
 /** 過去ログ記録モード（ON のとき過去の期にも登録可。管理者のみ）の保存キー。 */
 const PAST_LOG_MODE_STORAGE_KEY = "onore-tool:past-log-mode:v1";
+const SIDEBAR_ID = "app-sidebar";
+const MAIN_PANEL_ID = "main-panel";
+const SUBTAB_PANEL_ID = "main-subtab-panel";
 
 export default function HomePage() {
   // 通知トーストの状態管理
@@ -204,10 +209,18 @@ export default function HomePage() {
   // サイドバーの開閉とモバイル判定
   const { sidebarOpen, setSidebarOpen, isMobile, toggleSidebar } =
     useSidebarLayout();
-  // モバイルでのナビゲーション時にサイドバーを閉じるコールバック
+  // モバイルでsidebar内の項目を選んだ後は、更新後の本文へフォーカスを移し、
+  // 閉じたDrawer内へフォーカスを残さない。
   const closeSidebarOnMobile = useCallback(() => {
-    if (isMobile) setSidebarOpen(false);
-  }, [isMobile, setSidebarOpen]);
+    if (!(isMobile && sidebarOpen)) return;
+    setSidebarOpen(false);
+    window.requestAnimationFrame(() => {
+      document.getElementById(MAIN_PANEL_ID)?.focus();
+    });
+  }, [isMobile, sidebarOpen, setSidebarOpen]);
+  const closeMobileSidebar = useCallback(() => {
+    setSidebarOpen(false);
+  }, [setSidebarOpen]);
   // 未ログイン（管理者以外）が見られるのは公開タブのみ。認証確認中（!authReady）と
   // 管理者は全タブ許可（undefined）にし、保護タブの URL を不用意にフォールバックしない。
   const allowedTabs = useMemo(
@@ -237,6 +250,11 @@ export default function HomePage() {
     selectFaction,
     backDetail,
   } = useAppNavigation({ onCloseSidebar: closeSidebarOnMobile, allowedTabs });
+  const sidebarRef = useModalA11y<HTMLDivElement>(
+    isMobile && sidebarOpen,
+    closeMobileSidebar,
+    { inertOutside: true, lockBodyScroll: false }
+  );
 
   const [linkCopied, setLinkCopied] = useState(false);
   const [showTop, setShowTop] = useState(false);
@@ -337,6 +355,7 @@ export default function HomePage() {
   // Escape で詳細ページを1つ戻る／モバイルのサイドバーを閉じる。
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
       if (e.key !== "Escape") return;
       if (detailStack.length > 0) {
         setDetailStack((s) => s.slice(0, -1));
@@ -347,6 +366,23 @@ export default function HomePage() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [detailStack.length, isMobile, sidebarOpen, setDetailStack, setSidebarOpen]);
+
+  // 詳細から一覧へ戻ったときは、消滅した詳細見出しではなく一覧見出しへ
+  // フォーカスを移す。詳細同士を戻る場合はDetailHeader側が新しい見出しを処理する。
+  const previousDetailDepthRef = useRef(detailStack.length);
+  useEffect(() => {
+    const previousDepth = previousDetailDepthRef.current;
+    previousDetailDepthRef.current = detailStack.length;
+    if (!(previousDepth > 0 && detailStack.length === 0)) return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      const heading = document.querySelector<HTMLElement>(
+        `#${MAIN_PANEL_ID} [data-page-heading]`
+      );
+      (heading ?? document.getElementById(MAIN_PANEL_ID))?.focus();
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [detailStack.length]);
 
   // タブ・詳細ページに応じてブラウザのタイトルを更新する（履歴・共有で分かりやすく）。
   useEffect(() => {
@@ -897,6 +933,7 @@ export default function HomePage() {
         本文へスキップ
       </a>
       <AppHeader
+        sidebarId={SIDEBAR_ID}
         sidebarOpen={sidebarOpen}
         onToggleSidebar={toggleSidebar}
         onSelectHome={() => selectTab("home")}
@@ -916,15 +953,33 @@ export default function HomePage() {
             className="sidebar-backdrop"
             onClick={() => setSidebarOpen(false)}
             aria-hidden
+            data-modal-inert-exempt
           />
         )}
 
-        <aside
+        {/* React 18ではinertのboolean値がDOMへ出力されないため、
+            型定義を保ったまま空文字属性として渡す。 */}
+        <div
+          ref={sidebarRef}
+          id={SIDEBAR_ID}
           className="sidebar"
-          role="navigation"
+          role={isMobile ? "dialog" : "complementary"}
           aria-label="メインメニュー"
+          aria-modal={isMobile && sidebarOpen ? true : undefined}
           aria-hidden={!sidebarOpen}
+          inert={
+            (sidebarOpen ? undefined : "") as unknown as boolean | undefined
+          }
         >
+          <button
+            type="button"
+            className="btn sidebar-close"
+            onClick={closeMobileSidebar}
+          >
+            <CloseIcon />
+            <span>メニューを閉じる</span>
+          </button>
+
           <TermSelector
             selectedTerm={selectedTerm}
             selectedDecade={selectedDecade}
@@ -959,7 +1014,7 @@ export default function HomePage() {
                 role="tab"
                 id={`group-${g.key}`}
                 aria-selected={activeGroup === g.key}
-                aria-controls="main-panel"
+                aria-controls={MAIN_PANEL_ID}
                 ref={(el) => {
                   tabRefs.current[i] = el;
                 }}
@@ -1000,18 +1055,20 @@ export default function HomePage() {
                 </a>
               ))}
           </div>
-        </aside>
+        </div>
 
         <main
           className={
             "main" +
             (!detail && DATA_LAYOUT_TABS.has(tab) ? " main--wide" : "")
           }
-          id="main-panel"
-          role="tabpanel"
-          aria-labelledby={hasSubtabs ? `subtab-${tab}` : `group-${activeGroup}`}
-          tabIndex={-1}
         >
+          <div
+            id={MAIN_PANEL_ID}
+            role="tabpanel"
+            aria-labelledby={`group-${activeGroup}`}
+            tabIndex={-1}
+          >
           {!hydrated ||
           (!loadError && (selectedTerm == null || logLoading)) ? (
             <div className="panel" aria-busy="true" aria-live="polite">
@@ -1057,7 +1114,7 @@ export default function HomePage() {
                         role="tab"
                         id={`subtab-${leaf}`}
                         aria-selected={tab === leaf}
-                        aria-controls="main-panel"
+                        aria-controls={SUBTAB_PANEL_ID}
                         ref={(el) => {
                           subTabRefs.current[i] = el;
                         }}
@@ -1073,10 +1130,22 @@ export default function HomePage() {
                     ))}
                   </div>
                 )}
-                {content}
+                {hasSubtabs ? (
+                  <div
+                    id={SUBTAB_PANEL_ID}
+                    role="tabpanel"
+                    aria-labelledby={`subtab-${tab}`}
+                    tabIndex={-1}
+                  >
+                    {content}
+                  </div>
+                ) : (
+                  content
+                )}
               </>
             )
           )}
+          </div>
         </main>
       </div>
 

@@ -596,13 +596,12 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
         description="※初期設定では、各指標の集計対象回数が10回未満の武将を除外します。"
       />
 
-      <div className="tmx-periods" role="tablist" aria-label="集計期間">
+      <div className="tmx-periods" role="group" aria-label="集計期間">
         {periods.map((period) => (
           <button
             key={period.key}
             type="button"
-            role="tab"
-            aria-selected={periodKey === period.key}
+            aria-pressed={periodKey === period.key}
             className={
               "tmx-period" + (periodKey === period.key ? " active" : "")
             }

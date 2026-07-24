@@ -9,7 +9,7 @@ export default function NotFound() {
     <div className="app">
       <main className="main" style={{ padding: 24 }}>
         <div className="panel">
-          <h2 style={{ marginTop: 0 }}>ページが見つかりません</h2>
+          <h1 className="page-state-title">ページが見つかりません</h1>
           <p className="muted" style={{ marginTop: 0 }}>
             お探しのページは存在しないか、移動した可能性があります。
           </p>

@@ -155,6 +155,9 @@ export function EquipSynergyTab({ log, onSelectWarlord, onSelectEquip }: Props) 
       ) : (
         <div className="table-wrap">
           <table className="table-card">
+            <caption className="sr-only">
+              武器と品物の組み合わせ別の使用回数、勝率、主な使用武将の一覧
+            </caption>
             <thead>
               <tr>
                 <th>組み合わせ（武器 × 品物）</th>

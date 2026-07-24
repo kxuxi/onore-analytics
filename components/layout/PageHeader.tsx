@@ -27,7 +27,13 @@ export function PageHeader({
     <header className={classes}>
       <div className="page-header-copy">
         <div className="page-header-title-row">
-          <h2 className="page-header-title">{title}</h2>
+          <h2
+            className="page-header-title"
+            data-page-heading
+            tabIndex={-1}
+          >
+            {title}
+          </h2>
           {meta && <div className="page-header-meta">{meta}</div>}
         </div>
         {description && (
