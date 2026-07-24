@@ -97,6 +97,9 @@ describe("BattleHistoryCard", () => {
     expect(branchIndex).toBeLessThan(itemIndex);
     expect(itemIndex).toBeLessThan(weaponIndex);
     expect(html).toContain("アンチを取っている");
+    expect(html).toContain(
+      'class="anti-arrow anti-arrow--up" role="img"'
+    );
   });
 
   it("開閉UIを第二階層と関連付け、カード全体の導線を実リンクで提供する", () => {

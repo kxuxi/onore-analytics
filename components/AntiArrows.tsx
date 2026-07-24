@@ -25,6 +25,7 @@ export function AntiArrows({ self, opponent, antiIndex }: Props) {
       {takesAnti && (
         <span
           className="anti-arrow anti-arrow--up"
+          role="img"
           title="アンチを取っている（有利）"
           aria-label="アンチを取っている"
         >
@@ -34,6 +35,7 @@ export function AntiArrows({ self, opponent, antiIndex }: Props) {
       {isAntied && (
         <span
           className="anti-arrow anti-arrow--down"
+          role="img"
           title="アンチを取られている（不利）"
           aria-label="アンチを取られている"
         >
