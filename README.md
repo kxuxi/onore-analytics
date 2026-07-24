@@ -92,7 +92,7 @@ Next.js + TypeScript 製の、ゲーム「己鯖」用の武将データベー�
 タブ区切りで以下の構造を想定しています:
 
 ```
-【N戦目】<TAB>年月<TAB>時刻<TAB>場所<TAB>勢力名<TAB>武将名<TAB>家名<TAB>タイプ<TAB>兵種名<TAB>兵種<TAB>武将の持つ品物<TAB>武将の持つ武器<TAB>V.S.<TAB>勢力名<TAB>武将名<TAB>家名<TAB>タイプ<TAB>兵種名<TAB>兵種<TAB>武将の持つ品物<TAB>武将の持つ武器<TAB>勝敗<TAB>ターン数
+【N戦目】<TAB>年月<TAB>時刻<TAB>都市<TAB>勢力名<TAB>武将名<TAB>家名<TAB>タイプ<TAB>兵種名<TAB>兵種<TAB>武将の持つ品物<TAB>武将の持つ武器<TAB>V.S.<TAB>勢力名<TAB>武将名<TAB>家名<TAB>タイプ<TAB>兵種名<TAB>兵種<TAB>武将の持つ品物<TAB>武将の持つ武器<TAB>勝敗<TAB>ターン数
 ```
 
 - タイプ例: `武特` `統特` `知特` `武統` `統知` `知武` `政治家` `謎`

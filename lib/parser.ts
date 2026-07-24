@@ -32,13 +32,13 @@ export function normalizeWidth(s: string): string {
  * 戦闘履歴 1 行を解析しやすい形へ正規化し、含まれていれば URL を取り出す。
  *
  * ゲーム履歴をリンク付き（PC でコピー）で貼ると
- *   【N戦目】年月MM/DD HH:mm場所[出兵側 V.S. 守備側](URL)勝敗Nターンで終了
- * のように日時・場所・勝敗が詰まった形になる。`[本文](URL)` を検出した場合は
- * URL を取り出し、リンク本文を前後にスペースを足して展開する（場所と勢力名、
+ *   【N戦目】年月MM/DD HH:mm都市[出兵側 V.S. 守備側](URL)勝敗Nターンで終了
+ * のように日時・都市・勝敗が詰まった形になる。`[本文](URL)` を検出した場合は
+ * URL を取り出し、リンク本文を前後にスペースを足して展開する（都市と勢力名、
  * 装備と勝敗の境界がここで切れる）。
  *
  * スマホ等でコピーするとリンク記法が失われ、プレーンテキストとして
- *   【N戦目】年月MM/DD HH:mm場所勢力名 … V.S. … 武将の持つ武器勝敗Nターン
+ *   【N戦目】年月MM/DD HH:mm都市勢力名 … V.S. … 武将の持つ武器勝敗Nターン
  * のように詰まって貼られる。この場合でも解析できるよう、リンクの有無に
  * 関わらずメタ部（【N戦目】/年月/月日 時刻）と勝敗・ターン数の境界を
  * 区切り直す。従来のタブ区切り形式は空白がもともと入っているため影響を受けない。
@@ -61,7 +61,7 @@ export function extractBattleUrl(line: string): { line: string; url?: string } {
     .replace(/(戦目】)/g, "$1 ")
     // 年月 と 月日 の境界
     .replace(/(\d+年\d+月)/g, "$1 ")
-    // 時刻(HH:mm) と 場所 の境界
+    // 時刻(HH:mm) と 都市 の境界
     .replace(/(\d{1,2}:\d{2})(?=\S)/g, "$1 ")
     // 勝敗(◯◯の勝利 / 撤退 / 敗北 / 引分) と ターン数の境界
     .replace(/(勝利|撤退|敗北|引分)(?=\d)/g, "$1 ")
@@ -104,7 +104,7 @@ function tokenizeBattleLine(raw: string): string[] {
  *
  * 実データはタブと半角スペースが混在しており、戦闘部分は 1 つのフィールド内で
  * スペース区切りになっている:
- *   【N戦目】<TAB>年月<TAB>月日 時刻<TAB>場所<TAB>
+ *   【N戦目】<TAB>年月<TAB>月日 時刻<TAB>都市<TAB>
  *   勢力名 武将名 家名 タイプ 兵種名 兵種 武将の持つ品物 武将の持つ武器 V.S. 勢力名 武将名 家名 タイプ 兵種名 兵種 武将の持つ品物 武将の持つ武器<TAB>
  *   勝敗<TAB>ターン数
  *
@@ -138,7 +138,7 @@ export function parseBattleLine(line: string): Warlord[] {
   const defender = sliceWarlord(tokens.slice(vsIndex + 1, vsIndex + 9));
 
   // 戦闘日時: 先頭の【N戦目】と出兵側ブロックの間にあるメタ情報のうち
-  // 末尾（場所）を除いたもの（年月 月日 時刻）を最終戦闘時刻として扱う。
+  // 末尾（都市）を除いたもの（年月 月日 時刻）を最終戦闘時刻として扱う。
   const meta = tokens.slice(1, vsIndex - 8);
   const { battleAt } = splitMeta(meta);
   // 実時刻部分（例: 06/15 09:30）を行動時刻として抽出。
@@ -171,11 +171,11 @@ function looksLikeDateTime(token: string): boolean {
 }
 
 /**
- * 【N戦目】と出兵側ブロックの間のメタ情報を「場所」と「戦闘日時」に分ける。
+ * 【N戦目】と出兵側ブロックの間のメタ情報を「都市」と「戦闘日時」に分ける。
  *
- * 通常は [年月, 月日, 時刻, 場所] の並びで末尾が場所だが、スマホ等で
- * リンクが失われると場所が勢力名に連結し、メタは [年月, 月日, 時刻] だけになる。
- * その場合に末尾の時刻を場所と誤認しないよう、末尾が日時要素なら場所なしとみなし
+ * 通常は [年月, 月日, 時刻, 都市] の並びで末尾が都市だが、スマホ等で
+ * リンクが失われると都市が勢力名に連結し、メタは [年月, 月日, 時刻] だけになる。
+ * その場合に末尾の時刻を都市と誤認しないよう、末尾が日時要素なら都市なしとみなし
  * 全体を戦闘日時として扱う（行動時刻の抽出が効くようにする）。
  */
 function splitMeta(meta: string[]): { place?: string; battleAt: string } {
@@ -372,7 +372,7 @@ export function isSkewedSide(side: BattleSide): boolean {
 export interface BattleCard {
   /** 例: "1戦目" */
   battleNo?: string;
-  /** 場所 */
+  /** 都市 */
   place?: string;
   /** 戦闘時刻（例: 1583年4月 10:23） */
   battleAt?: string;
@@ -525,7 +525,7 @@ function computeBattleCard(line: string): BattleCard | null {
   const right = sideFromBlock(rightBlock);
   if (!left.name || !right.name) return null;
 
-  // 先頭【N戦目】〜出兵側ブロックの間が [年月, 月日, 時刻, 場所]。
+  // 先頭【N戦目】〜出兵側ブロックの間が [年月, 月日, 時刻, 都市]。
   const meta = tokens.slice(1, vsIndex - 8);
   const { place, battleAt } = splitMeta(meta);
 
@@ -564,7 +564,7 @@ function computeBattleCard(line: string): BattleCard | null {
  *
  * 同じ戦闘でも「ターン数」や「URL リンク」の有無など表記が異なると
  * 行テキストが変わってしまうため、行全体ではなく戦闘の同一性を表す
- * 情報（戦闘時刻・場所・両者の武将名と勢力・勝敗）からキーを組み立てる。
+ * 情報（戦闘時刻・都市・両者の武将名と勢力・勝敗）からキーを組み立てる。
  * これによりターン数や URL の差異だけが違う同一戦闘は 1 件にまとまる。
  *
  * カードとして解析できない行は、従来どおり空白を圧縮した行全体をキーにする。
