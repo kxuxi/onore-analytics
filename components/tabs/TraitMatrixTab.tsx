@@ -83,13 +83,12 @@ export function TraitMatrixTab({ log, onSelectWarlord, onSelectUnit }: Props) {
         description="出兵側が、守備側にどれだけ勝てるかを示します。"
       />
 
-      <div className="tmx-periods" role="tablist" aria-label="集計期間">
+      <div className="tmx-periods" role="group" aria-label="集計期間">
         {META_PERIODS.map((p) => (
           <button
             key={p.key}
             type="button"
-            role="tab"
-            aria-selected={period === p.key}
+            aria-pressed={period === p.key}
             className={"tmx-period" + (period === p.key ? " active" : "")}
             onClick={() => selectPeriod(p.key)}
           >

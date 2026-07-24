@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { registerState, importWarlordStats, saveFactionColorsToDb } from "@/lib/api";
@@ -366,6 +366,23 @@ export default function HomePage() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [detailStack.length, isMobile, sidebarOpen, setDetailStack, setSidebarOpen]);
+
+  // 詳細から一覧へ戻ったときは、消滅した詳細見出しではなく一覧見出しへ
+  // フォーカスを移す。詳細同士を戻る場合はDetailHeader側が新しい見出しを処理する。
+  const previousDetailDepthRef = useRef(detailStack.length);
+  useEffect(() => {
+    const previousDepth = previousDetailDepthRef.current;
+    previousDetailDepthRef.current = detailStack.length;
+    if (!(previousDepth > 0 && detailStack.length === 0)) return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      const heading = document.querySelector<HTMLElement>(
+        `#${MAIN_PANEL_ID} [data-page-heading]`
+      );
+      (heading ?? document.getElementById(MAIN_PANEL_ID))?.focus();
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [detailStack.length]);
 
   // タブ・詳細ページに応じてブラウザのタイトルを更新する（履歴・共有で分かりやすく）。
   useEffect(() => {

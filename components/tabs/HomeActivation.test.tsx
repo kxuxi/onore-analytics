@@ -24,6 +24,11 @@ describe("HomeWarlordSearch", () => {
     expect(html).toContain('aria-expanded="true"');
     expect(html).toContain('role="listbox"');
     expect(html.match(/role="option"/g)).toHaveLength(2);
+    expect(html).toContain(
+      'class="home-suggest-item" role="option" aria-selected="false"'
+    );
+    expect(html).not.toContain('<button class="home-suggest-item"');
+    expect(html).not.toContain('role="presentation"');
     expect(html).toContain('id="home-warlord-suggestions-0"');
     expect(html).toContain('id="home-warlord-suggestions-1"');
     expect(html).toContain("2件の候補を表示");

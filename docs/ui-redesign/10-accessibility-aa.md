@@ -2,7 +2,7 @@
 
 ## 状態
 
-実装中（作業単位2 / 4完了）
+実装中（作業単位3 / 4完了）
 
 ## 依存関係
 
@@ -300,6 +300,50 @@
 - axeの`incomplete`は17ケース合計159ノード。selectの矢印gradient、ログイン背景gradient、任意色を含む`color-mix`など自動判定不能な箇所で、既知トークンは計算と目視で補完した
 - 保存済み国色の値そのものは任意入力のため、色覚多様性シミュレーションと全組合せの目視は最終確認に残る
 - Windows High Contrast / `forced-colors: active`は未確認
+
+## 作業単位3: 操作モデルとフォーカス復帰
+
+### 変更内容
+
+- `components/SearchBox.tsx`: 内部入力refと外部refを併用し、クリア操作が消滅した後も同じ検索入力へフォーカスを戻すようにした
+- `components/tabs/HomeActivation.tsx`: 候補を`li[role="option"]`へ変更し、入力へフォーカスを保つ`aria-activedescendant`方式へ統一した
+- Homeの候補はArrow Up / Down、Home / End、Enter、Escapeを入力上で処理し、pointerのmousedownでも入力フォーカスを奪わないようにした
+- `MetricsTab.tsx`、`RankingTab.tsx`、`TraitMatrixTab.tsx`、`MetaTab.tsx`: 即時反映する集計期間を`role="group"` + `aria-pressed`へ変更した
+- `components/layout/PageHeader.tsx`: 一覧見出しをプログラム的にフォーカスできるようにした
+- `app/page.tsx`: 詳細から一覧へ戻ったときは一覧見出し、詳細同士を戻るときは既存の詳細見出しへフォーカスするようにした
+- `SearchBox.test.tsx`、`HomeActivation.test.tsx`、`PageHeader.test.tsx`、`PeriodSelectors.test.tsx`: ARIAとフォーカス対象の回帰テストを追加した
+
+### 変更理由
+
+消滅したクリアボタンや詳細見出しへフォーカスが残る状態と、comboboxがDOMフォーカスと`aria-activedescendant`を混在させる状態を解消するため。集計期間はtabpanelを切り替えず同じ画面を即時更新するため、toggle buttonのモデルへ実装とroleを一致させた。
+
+### 互換性
+
+- 検索値、候補順、候補上限、選択結果、集計期間、集計結果、URLは変更していない
+- Mouse / touchによる候補選択と期間切替は維持した
+- 旧候補のArrow、Home、End、Enter、Escape操作を新しいinput-focusモデルでも維持した
+- `PageHeader`の見出しはTab順へ追加せず、戻り先として必要な場合だけフォーカスする
+
+### 検証結果
+
+- 対象テスト: 4ファイル、10テスト成功
+- `npm test`: 46ファイル、415テスト成功
+- `npm run lint`: 成功
+- `npm run typecheck`: 成功
+- `git diff --check`: 成功
+- Home comboboxでArrow Down後とEnd後も`activeElement`が入力であり、`aria-activedescendant`と選択候補が同期することを確認
+- Enterで候補を選択後、既存どおりダッシュボードへ切り替わり、その見出しへフォーカスすることを確認
+- Escapeで候補と入力値だけが閉じ、URL`/`と入力フォーカスを維持することを確認
+- Tabで候補へDOMフォーカスを移さず次のクリア操作へ進み、pointerのmousedownでも入力フォーカスを維持することを確認
+- ランキング検索のクリア後、クリア操作がDOMから消えても同じ入力へフォーカスが戻ることを確認
+- 武将ランキングから武将詳細を開くと詳細見出し、戻ると`/ranking`の「武将ランキング」見出しへフォーカスすることを確認
+- 4期間セレクターの実DOMで`role="group"`、単一の`aria-pressed="true"`、旧tab role不在を確認し、関連axeルールは0件
+
+### 残っているリスク
+
+- VoiceOver / NVDAでの候補読み上げと`aria-activedescendant`の通知タイミングは未確認
+- フォーカスの実ブラウザー確認はChrome 149で実施。Safari / Firefoxの入力クリア直後の描画タイミングは未確認
+- リポジトリにはブラウザーE2E基盤がないため、activeElementの横断確認はこのPRの実ブラウザー記録で補完した
 
 ## 受入条件
 

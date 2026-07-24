@@ -394,13 +394,12 @@ export function RankingTab({
     <section className="panel ranking-panel">
       <PageHeader title={copy.title} description={copy.description} />
 
-      <div className="tmx-periods" role="tablist" aria-label="集計期間">
+      <div className="tmx-periods" role="group" aria-label="集計期間">
         {periods.map((period) => (
           <button
             key={period.key}
             type="button"
-            role="tab"
-            aria-selected={periodKey === period.key}
+            aria-pressed={periodKey === period.key}
             className={
               "tmx-period" + (periodKey === period.key ? " active" : "")
             }

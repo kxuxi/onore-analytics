@@ -30,7 +30,7 @@ export function HomeWarlordSearch({
   onChoose: (name: string) => void;
 }) {
   const [activeIndex, setActiveIndex] = useState(-1);
-  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const optionRefs = useRef<Array<HTMLLIElement | null>>([]);
   const hasQuery = query.trim() !== "";
   const hasSuggestions = hasQuery && suggestions.length > 0;
   const validActiveIndex =
@@ -85,38 +85,24 @@ export function HomeWarlordSearch({
       );
       return;
     }
+    if (
+      validActiveIndex >= 0 &&
+      (event.key === "Home" || event.key === "End")
+    ) {
+      event.preventDefault();
+      setActiveIndex(
+        moveHomeSuggestionIndex(
+          validActiveIndex,
+          suggestions.length,
+          event.key === "Home" ? "first" : "last"
+        )
+      );
+      return;
+    }
     if (event.key === "Enter" && validActiveIndex >= 0) {
       event.preventDefault();
       onChoose(suggestions[validActiveIndex]);
     }
-  };
-
-  const handleOptionKeyDown = (
-    event: KeyboardEvent<HTMLButtonElement>,
-    index: number
-  ) => {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      event.stopPropagation();
-      closeSuggestions();
-      return;
-    }
-
-    let move: "next" | "previous" | "first" | "last" | null = null;
-    if (event.key === "ArrowDown") move = "next";
-    else if (event.key === "ArrowUp") move = "previous";
-    else if (event.key === "Home") move = "first";
-    else if (event.key === "End") move = "last";
-    if (!move) return;
-
-    event.preventDefault();
-    const nextIndex = moveHomeSuggestionIndex(
-      index,
-      suggestions.length,
-      move
-    );
-    setActiveIndex(nextIndex);
-    optionRefs.current[nextIndex]?.focus();
   };
 
   return (
@@ -129,7 +115,6 @@ export function HomeWarlordSearch({
         inputRef={inputRef}
         value={query}
         onChange={changeQuery}
-        onClear={() => inputRef.current?.focus()}
         onKeyDown={handleInputKeyDown}
         placeholder="武将名を入力"
         ariaLabel="自分の武将を検索"
@@ -178,23 +163,20 @@ export function HomeWarlordSearch({
             aria-label="武将候補"
           >
             {suggestions.map((suggestion, index) => (
-              <li key={suggestion} role="presentation">
-                <button
-                  ref={(element) => {
-                    optionRefs.current[index] = element;
-                  }}
-                  id={`${SUGGESTION_LIST_ID}-${index}`}
-                  type="button"
-                  className="home-suggest-item"
-                  role="option"
-                  aria-selected={validActiveIndex === index}
-                  onFocus={() => setActiveIndex(index)}
-                  onMouseEnter={() => setActiveIndex(index)}
-                  onKeyDown={(event) => handleOptionKeyDown(event, index)}
-                  onClick={() => onChoose(suggestion)}
-                >
-                  {suggestion}
-                </button>
+              <li
+                key={suggestion}
+                ref={(element) => {
+                  optionRefs.current[index] = element;
+                }}
+                id={`${SUGGESTION_LIST_ID}-${index}`}
+                className="home-suggest-item"
+                role="option"
+                aria-selected={validActiveIndex === index}
+                onMouseDown={(event) => event.preventDefault()}
+                onMouseEnter={() => setActiveIndex(index)}
+                onClick={() => onChoose(suggestion)}
+              >
+                {suggestion}
               </li>
             ))}
           </ul>
