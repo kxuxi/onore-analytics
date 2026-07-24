@@ -18,6 +18,7 @@ const FOCUSABLE_SELECTOR = [
  * - Tab / Shift+Tab のフォーカスをモーダル内にトラップする
  * - 閉じたときに元のフォーカス位置へ復帰する
  * - 開いている間は背景（body）のスクロールをロックする
+ * - inertOutside を指定した場合はモーダル外を操作不能にする
  *
  * 返り値の ref をモーダルのコンテナ要素に付与して使う。
  * モーダルが入れ子になる場合は、最前面のモーダルだけ isOpen を true にすること
@@ -25,7 +26,11 @@ const FOCUSABLE_SELECTOR = [
  */
 export function useModalA11y<T extends HTMLElement>(
   isOpen: boolean,
-  onClose: () => void
+  onClose: () => void,
+  {
+    lockBodyScroll = true,
+    inertOutside = false,
+  }: { lockBodyScroll?: boolean; inertOutside?: boolean } = {}
 ) {
   const ref = useRef<T>(null);
   // 依存配列で effect を再実行させずに最新の onClose を参照する。
@@ -81,19 +86,51 @@ export function useModalA11y<T extends HTMLElement>(
 
     document.addEventListener("keydown", onKeyDown, true);
 
-    // 背景スクロールのロック。
+    // モーダル外を操作不能にする。Dialogまでの各祖先で兄弟要素を不活性化すると、
+    // ポータルを使わないDialogでもヘッダーや本文をまとめて対象にできる。
+    const inertedElements: HTMLElement[] = [];
+    if (inertOutside) {
+      let branch: HTMLElement = node;
+      while (branch.parentElement) {
+        const parent = branch.parentElement;
+        for (const sibling of Array.from(parent.children)) {
+          if (
+            sibling === branch ||
+            !(sibling instanceof HTMLElement) ||
+            sibling.matches("[data-modal-inert-exempt]") ||
+            sibling.inert
+          ) {
+            continue;
+          }
+          sibling.inert = true;
+          inertedElements.push(sibling);
+        }
+        if (parent === document.body) break;
+        branch = parent;
+      }
+    }
+
+    // 通常のDialogは背景をスクロールさせない。呼び出し側ですでにロックする
+    // Drawer等は二重復元を避けるため無効化できる。
     const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    if (lockBodyScroll) {
+      document.body.style.overflow = "hidden";
+    }
 
     return () => {
       document.removeEventListener("keydown", onKeyDown, true);
-      document.body.style.overflow = prevOverflow;
+      if (lockBodyScroll) {
+        document.body.style.overflow = prevOverflow;
+      }
+      for (const element of inertedElements) {
+        element.inert = false;
+      }
       // 元のフォーカス位置がまだ存在すれば、そこへ戻す。
       if (previouslyFocused && document.contains(previouslyFocused)) {
         previouslyFocused.focus();
       }
     };
-  }, [isOpen]);
+  }, [isOpen, inertOutside, lockBodyScroll]);
 
   return ref;
 }

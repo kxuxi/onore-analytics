@@ -79,7 +79,8 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
 
 /**
  * 国名をテキストとして表示する箇所用の色スタイル。
- * その国に色が設定されているときだけ読みやすい色を返し、未設定なら undefined（既定色のまま）。
+ * その国に色が設定されているときだけテーマの本文色を返し、
+ * 未設定なら undefined（既定色のまま）。
  */
 export function factionNameStyle(
   faction: string | undefined,
@@ -87,14 +88,13 @@ export function factionNameStyle(
 ): CSSProperties | undefined {
   const hex = faction ? colors[faction] : undefined;
   if (!hex) return undefined;
-  // ライト/ダーク両対応: 国色を現在のテーマ文字色(--text)へ少し寄せ、
-  // どちらの背景でも読めるコントラストにする（color-mix はテーマに自動追従）。
-  return { color: `color-mix(in srgb, ${hex} 64%, var(--text))` };
+  // 任意の国色では文字コントラストを保証できないため、文字はテーマ色へ固定する。
+  return { color: "var(--text)" };
 }
 
 /**
  * 国名をバッジ（`.tag.faction` などのピル）で表示する箇所用の色スタイル。
- * 文字は読みやすい国色、枠線・背景はその国色の半透明でチントする。
+ * 文字はテーマの本文色、枠線・背景はその国色の半透明でチントする。
  * 未設定なら undefined（既定のピンクピルのまま）。
  */
 export function factionBadgeStyle(
@@ -104,10 +104,9 @@ export function factionBadgeStyle(
   const hex = faction ? colors[faction] : undefined;
   if (!hex) return undefined;
   if (!hexToRgb(hex)) return undefined;
-  // 文字は国色をテーマ文字色へ寄せて読みやすく、枠線・背景は国色の淡いチントにする。
-  // color-mix が --text / transparent を参照するためライト/ダークへ自動追従する。
+  // 任意の国色は枠線・背景だけに使い、文字はテーマ色でコントラストを保つ。
   return {
-    color: `color-mix(in srgb, ${hex} 60%, var(--text))`,
+    color: "var(--text)",
     borderColor: `color-mix(in srgb, ${hex} 50%, transparent)`,
     background: `color-mix(in srgb, ${hex} 18%, transparent)`,
   };

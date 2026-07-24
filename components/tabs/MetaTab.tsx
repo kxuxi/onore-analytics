@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import type { BattleRecord } from "@/lib/types";
 import {
   metaOverview,
@@ -66,20 +67,17 @@ export function MetaTab({ log, onSelectUnit }: Props) {
 
   return (
     <section className="panel">
-      <h2>環境ダッシュボード</h2>
-      <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-        期間内に登場した兵種の採用率ランキングと特性別の勝率、環境警告を
-        まとめて表示します。武将タイプで採用率ランキングを絞り込めます。
-        兵種名をクリックすると詳細を確認できます。
-      </p>
+      <PageHeader
+        title="環境ダッシュボード"
+        description="期間内に登場した兵種の採用率ランキングと特性別の勝率、環境警告をまとめて表示します。武将タイプで採用率ランキングを絞り込めます。兵種名をクリックすると詳細を確認できます。"
+      />
 
-      <div className="tmx-periods" role="tablist" aria-label="集計期間">
+      <div className="tmx-periods" role="group" aria-label="集計期間">
         {periods.map((p) => (
           <button
             key={p.key}
             type="button"
-            role="tab"
-            aria-selected={period === p.key}
+            aria-pressed={period === p.key}
             className={"tmx-period" + (period === p.key ? " active" : "")}
             onClick={() => setPeriod(p.key)}
           >

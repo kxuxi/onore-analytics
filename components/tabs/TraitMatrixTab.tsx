@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import type { BattleRecord } from "@/lib/types";
 import {
   traitMatchupMatrix,
@@ -77,18 +78,17 @@ export function TraitMatrixTab({ log, onSelectWarlord, onSelectUnit }: Props) {
 
   return (
     <section className="panel">
-      <h2>相性マトリックス</h2>
-      <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-        出兵側が、守備側にどれだけ勝てるかを示します。
-      </p>
+      <PageHeader
+        title="相性マトリックス"
+        description="出兵側が、守備側にどれだけ勝てるかを示します。"
+      />
 
-      <div className="tmx-periods" role="tablist" aria-label="集計期間">
+      <div className="tmx-periods" role="group" aria-label="集計期間">
         {META_PERIODS.map((p) => (
           <button
             key={p.key}
             type="button"
-            role="tab"
-            aria-selected={period === p.key}
+            aria-pressed={period === p.key}
             className={"tmx-period" + (period === p.key ? " active" : "")}
             onClick={() => selectPeriod(p.key)}
           >
@@ -103,6 +103,9 @@ export function TraitMatrixTab({ log, onSelectWarlord, onSelectUnit }: Props) {
         <>
           <div className="tmx-wrap">
             <table className="tmx-table">
+              <caption className="sr-only">
+                出兵側と守備側の武将タイプ別勝率相性表
+              </caption>
               <thead>
                 <tr>
                   <th className="tmx-corner" scope="col">

@@ -1,13 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import type { WarlordMap } from "@/lib/types";
 import { copyText } from "@/lib/clipboard";
 import { parseWarlordStats } from "@/lib/warlordStats";
 import { displayWarlordType } from "@/lib/warlordType";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
-import { FilterIcon, CloseIcon } from "@/components/icons";
+import { FilterPanel, type ActiveFilter } from "@/components/FilterPanel";
 import { SearchBox } from "@/components/SearchBox";
+import { PageHeader } from "@/components/layout/PageHeader";
+import {
+  ImportMessage,
+  ImportPreview,
+  type ImportMessageValue,
+} from "@/components/ImportFeedback";
 
 interface Props {
   db: WarlordMap;
@@ -56,9 +62,16 @@ export function DbTab({ db, colors, onSelectWarlord, onSelectFaction, onImportSt
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState("");
   const [importing, setImporting] = useState(false);
-  const [importMsg, setImportMsg] = useState<
-    { kind: "ok" | "error"; text: string } | null
-  >(null);
+  const [importMsg, setImportMsg] = useState<ImportMessageValue | null>(null);
+  const importId = useId();
+  const importIds = {
+    toggle: `${importId}-toggle`,
+    body: `${importId}-body`,
+    input: `${importId}-input`,
+    hint: `${importId}-hint`,
+    preview: `${importId}-preview`,
+    result: `${importId}-result`,
+  };
 
   const all = useMemo(() => {
     // 同じ household を持つ武将をグループ化して、最新の武将だけを表示する。
@@ -159,11 +172,59 @@ export function DbTab({ db, colors, onSelectWarlord, onSelectFaction, onImportSt
     setBranch("");
     setUnit("");
   };
+  const activeFilters: ActiveFilter[] = [
+    ...(faction
+      ? [
+          {
+            key: "faction",
+            label: "国",
+            value: faction,
+            onRemove: () => setFaction(""),
+          },
+        ]
+      : []),
+    ...(type
+      ? [
+          {
+            key: "type",
+            label: "タイプ",
+            value: type,
+            onRemove: () => setType(""),
+          },
+        ]
+      : []),
+    ...(branch
+      ? [
+          {
+            key: "branch",
+            label: "兵種タイプ",
+            value: branch,
+            onRemove: () => setBranch(""),
+          },
+        ]
+      : []),
+    ...(unit
+      ? [
+          {
+            key: "unit",
+            label: "兵種名",
+            value: unit,
+            onRemove: () => setUnit(""),
+          },
+        ]
+      : []),
+  ];
+
+  // 貼り付け内容を即時解析し、送信前に有効件数と除外行数を示す。
+  const importPreview = useMemo(
+    () => parseWarlordStats(importText),
+    [importText]
+  );
 
   // ランキング表を貼り付けて能力値を取り込む。
   const handleImport = async () => {
     if (importing) return;
-    const { stats, parsed, skipped } = parseWarlordStats(importText);
+    const { stats, parsed, skipped } = importPreview;
     if (parsed === 0) {
       setImportMsg({
         kind: "error",
@@ -222,7 +283,10 @@ export function DbTab({ db, colors, onSelectWarlord, onSelectFaction, onImportSt
 
   return (
     <section className="panel">
-      <h2>DB確認</h2>
+      <PageHeader
+        title="DB確認"
+        description="登録済みの武将を検索・並べ替えし、能力値の取り込みやTSVコピーを行います。"
+      />
 
       <div className="import-block">
         <button
@@ -230,24 +294,52 @@ export function DbTab({ db, colors, onSelectWarlord, onSelectFaction, onImportSt
           className={"btn import-toggle" + (showImport ? " active" : "")}
           onClick={() => setShowImport((v) => !v)}
           aria-expanded={showImport}
+          aria-controls={importIds.body}
+          id={importIds.toggle}
         >
           <span>ステータス取り込み</span>
         </button>
         {showImport && (
-          <div className="import-body">
-            <p className="import-hint">
+          <fieldset
+            id={importIds.body}
+            className="import-body"
+            aria-busy={importing}
+          >
+            <legend className="import-legend">武将能力値の取り込み</legend>
+            <p id={importIds.hint} className="import-hint">
               武将ランキング表をコピーして、そのまま貼り付けてください。武力・知力・統率力・政治力・計略・自己PR を各武将ページへ反映します。
             </p>
+            <label className="import-label" htmlFor={importIds.input}>
+              武将ランキング表の貼り付け
+            </label>
             <textarea
+              id={importIds.input}
               className="import-box"
               value={importText}
               aria-label="武将ランキング表の貼り付け"
+              aria-describedby={[
+                importIds.hint,
+                importText.trim() ? importIds.preview : "",
+                importMsg ? importIds.result : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
               placeholder={
                 "順位\t名前\t武力\t知力\t統率力\t政治力\t計略\t資金\t兵糧\t年齢\t勝率\t仕官月数\t自己PR\t階級\t国名\n（ランキング表をタブ区切りのまま貼り付け）"
               }
-              onChange={(e) => setImportText(e.target.value)}
+              onChange={(e) => {
+                setImportText(e.target.value);
+                setImportMsg(null);
+              }}
               spellCheck={false}
             />
+            {importText.trim() && (
+              <ImportPreview
+                id={importIds.preview}
+                parsed={importPreview.parsed}
+                skipped={importPreview.skipped}
+              />
+            )}
             <div className="import-actions">
               <button
                 type="button"
@@ -257,17 +349,13 @@ export function DbTab({ db, colors, onSelectWarlord, onSelectFaction, onImportSt
               >
                 {importing ? "取り込み中…" : "取り込む"}
               </button>
-              {importMsg && (
-                <span
-                  className={
-                    "import-msg" + (importMsg.kind === "error" ? " error" : " ok")
-                  }
-                >
-                  {importMsg.text}
-                </span>
-              )}
+              <ImportMessage
+                id={importIds.result}
+                message={importMsg}
+                announceSuccess={false}
+              />
             </div>
-          </div>
+          </fieldset>
         )}
       </div>
 
@@ -282,43 +370,27 @@ export function DbTab({ db, colors, onSelectWarlord, onSelectFaction, onImportSt
         </div>
       </div>
 
-      <p className="sr-only" role="status" aria-live="polite">
-        絞り込み結果 {filtered.length.toLocaleString("ja-JP")}件
-      </p>
-
-      <div className="search-row">
-        <SearchBox
-          value={keyword}
-          onChange={setKeyword}
-          placeholder="武将名で絞り込み"
-        />
-        <button
-          type="button"
-          className={
-            "btn filter-toggle" +
-            (showFilter || hasDropdownFilter ? " active" : "")
-          }
-          onClick={() => setShowFilter((v) => !v)}
-          aria-expanded={showFilter}
-        >
-          <FilterIcon />
-          <span>フィルター</span>
-        </button>
-        {hasFilter && (
-          <button
-            type="button"
-            className="btn clear-filters"
-            onClick={clearFilters}
-            title="絞り込み条件をすべて解除"
-          >
-            <CloseIcon />
-            <span>解除</span>
-          </button>
-        )}
-      </div>
-
-      {showFilter && (
-        <div className="filter-grid">
+      <FilterPanel
+        id="db-filters"
+        search={
+          <SearchBox
+            value={keyword}
+            onChange={setKeyword}
+            placeholder="武将名で絞り込み"
+          />
+        }
+        expanded={showFilter}
+        onToggle={() => setShowFilter((visible) => !visible)}
+        toggleActive={showFilter || hasDropdownFilter}
+        hasActiveFilters={hasFilter}
+        onClear={clearFilters}
+        activeFilters={activeFilters}
+        resultText={
+          hasFilter
+            ? `全${all.length.toLocaleString("ja-JP")}件中 ${filtered.length.toLocaleString("ja-JP")}件`
+            : `全${all.length.toLocaleString("ja-JP")}件`
+        }
+      >
         <label className="filter">
           <span>国</span>
           <select
@@ -379,8 +451,7 @@ export function DbTab({ db, colors, onSelectWarlord, onSelectFaction, onImportSt
             ))}
           </select>
         </label>
-        </div>
-      )}
+      </FilterPanel>
 
       <div className="db-sort-mobile">
         <label className="filter">
@@ -435,6 +506,9 @@ export function DbTab({ db, colors, onSelectWarlord, onSelectFaction, onImportSt
           </div>
         ) : (
           <table className="table-card">
+            <caption className="sr-only">
+              登録済み武将の所属国、タイプ、兵種、行動時間、更新日時の一覧
+            </caption>
             <thead>
               <tr>
                 <SortableTh label="国" field="faction" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />

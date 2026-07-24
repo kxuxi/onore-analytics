@@ -44,8 +44,14 @@ function resultLabel(o: BattleOutcome): string {
   return "不明";
 }
 
+function logRowContext(outcome: BattleOutcome): string {
+  const occurredAt = outcome.card.battleAt ?? outcome.record.time;
+  const matchup = `${outcome.self.name} 対 ${outcome.opponent.name}`;
+  return occurredAt ? `${matchup}、${occurredAt}` : matchup;
+}
+
 /** 戦闘ログ行の操作ボタン群（リンクコピー・詳細を開く）。行ごとにコピー状態を持つ。 */
-function LogRowActions({ url }: { url: string }) {
+function LogRowActions({ url, context }: { url: string; context: string }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     const ok = await copyText(url);
@@ -60,19 +66,22 @@ function LogRowActions({ url }: { url: string }) {
         type="button"
         className={"dl-link dl-copy" + (copied ? " copied" : "")}
         onClick={copy}
-        aria-label={
-          copied ? "リンクをコピーしました" : "戦闘ログのリンクをコピー"
-        }
+        aria-label={`戦闘ログのリンクをコピー：${context}`}
         title={copied ? "コピーしました" : "リンクをコピー"}
       >
         {copied ? <CheckIcon /> : <CopyIcon />}
       </button>
+      {copied && (
+        <span className="sr-only" role="status" aria-live="polite">
+          戦闘ログのリンクをコピーしました：{context}
+        </span>
+      )}
       <a
         className="dl-link"
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="戦闘ログの詳細を開く"
+        aria-label={`戦闘ログの詳細を開く：${context}`}
         title="戦闘ログの詳細を開く"
       >
         <ExternalLinkIcon />
@@ -221,7 +230,12 @@ export function BattleLogList({
                     />
                   </div>
                 </div>
-                {o.card.url && <LogRowActions url={o.card.url} />}
+                {o.card.url && (
+                  <LogRowActions
+                    url={o.card.url}
+                    context={logRowContext(o)}
+                  />
+                )}
               </li>
             ))}
           </ul>

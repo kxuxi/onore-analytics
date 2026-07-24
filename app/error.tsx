@@ -23,7 +23,7 @@ export default function Error({
     <div className="app">
       <main className="main" style={{ padding: 24 }}>
         <div className="panel" role="alert">
-          <h2 style={{ marginTop: 0 }}>問題が発生しました</h2>
+          <h1 className="page-state-title">問題が発生しました</h1>
           <p className="muted" style={{ marginTop: 0 }}>
             画面の表示中に予期しないエラーが発生しました。お手数ですが、もう一度お試しください。
           </p>

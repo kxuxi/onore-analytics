@@ -1,0 +1,144 @@
+/* ---------- 戦闘履歴 貼り付けプレビュー ---------- */
+.paste-preview-warn {
+  color: var(--color-warning-text);
+  font-weight: 600;
+}
+
+/* ---------- 読み込み中スケルトン ---------- */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--text) 8%, transparent),
+    transparent
+  );
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-title {
+  height: 24px;
+  width: 40%;
+  min-width: 160px;
+  margin-bottom: 18px;
+}
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.skeleton-stat {
+  height: 64px;
+}
+
+.skeleton-line {
+  height: 14px;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.skeleton-line--80 {
+  width: 80%;
+}
+
+.skeleton-line--60 {
+  width: 60%;
+}
+
+/* エラー / 404画面の最上位見出し。従来のpanel見出しと同じ寸法を保つ。 */
+.page-state-title {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* ---------- モーション低減（prefers-reduced-motion） ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- 環境設定（テーマ切替） ---------- */
+.theme-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+/* 自動 / ライト / ダーク のセグメント切替。 */
+.theme-seg {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--panel-2);
+  border: 1px solid var(--color-control-border);
+  border-radius: 10px;
+}
+
+.theme-seg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.theme-seg-btn:hover {
+  color: var(--text);
+}
+
+.theme-seg-btn.active {
+  background: var(--accent);
+  color: var(--color-on-accent);
+}
+
+.theme-seg-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.theme-current {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.theme-current strong {
+  color: var(--text);
+  font-weight: 700;
+}

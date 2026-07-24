@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { BattleRecord, WarlordMap } from "@/lib/types";
 import { lookup } from "@/lib/storage";
@@ -18,8 +18,9 @@ import {
   type BattleOutcome,
   type YearlyWinRate,
 } from "@/lib/stats";
-import { SearchBox } from "@/components/SearchBox";
 import { WinRateBar } from "@/components/detail/DetailParts";
+import { HomeActivation, HomeWarlordSearch } from "./HomeActivation";
+import { filterHomeWarlordSuggestions } from "./homeSearch";
 
 interface Props {
   log: BattleRecord[];
@@ -34,17 +35,33 @@ interface Props {
   onSelectWarlord: (name: string) => void;
   onSelectUnit: (name: string) => void;
   onSelectFaction: (name: string) => void;
+  /** 未選択時に武将ランキングを開く。未指定時は導線を表示しない。 */
+  onSelectRanking?: () => void;
+  /** 未選択時に戦闘履歴を開く。未指定時は導線を表示しない。 */
+  onSelectHistory?: () => void;
 }
 
-/** グラフに表示できる系列（勝利数=緑・敗北数=赤）。 */
+type WinLossSeriesKey = "wins" | "losses";
+
+/** グラフに表示できる系列（勝利数=実線・敗北数=破線、色はテーマに追従）。 */
 const SERIES_OPTIONS: {
-  key: string;
+  key: WinLossSeriesKey;
   label: string;
   color: string;
   valueOf: (y: YearlyWinRate) => number;
 }[] = [
-  { key: "wins", label: "勝利数", color: "#22c55e", valueOf: (y) => y.wins },
-  { key: "losses", label: "敗北数", color: "#ef4444", valueOf: (y) => y.losses },
+  {
+    key: "wins",
+    label: "勝利数",
+    color: "var(--chart-win)",
+    valueOf: (y) => y.wins,
+  },
+  {
+    key: "losses",
+    label: "敗北数",
+    color: "var(--chart-loss)",
+    valueOf: (y) => y.losses,
+  },
 ];
 
 /** これ以上戦闘のない年が続いたら「非戦期間」としてマスク表示する閾値（年）。 */
@@ -52,10 +69,73 @@ const NON_BATTLE_MIN_YEARS = 4;
 
 /** 折れ線グラフ 1 系列分（共通の年軸に沿った値[勝利数 or 敗北数]の点列）。 */
 interface ChartSeries {
-  key: string;
+  key: WinLossSeriesKey;
   label: string;
   color: string;
   points: { value: number; decided: number }[];
+}
+
+/** 折れ線を見なくても、対象期間と勝敗数の規模を把握できる文章要約。 */
+export function describeWinLossTrend(
+  data: YearlyWinRate[],
+  selectedKeys: readonly WinLossSeriesKey[] = ["wins", "losses"]
+): string {
+  const showsWins = selectedKeys.includes("wins");
+  const showsLosses = selectedKeys.includes("losses");
+  const subject =
+    showsWins && showsLosses
+      ? "勝敗数"
+      : showsWins
+        ? "勝利数"
+        : showsLosses
+          ? "敗北数"
+          : "勝敗数";
+  const withBattles = data.filter((point) => point.battles > 0);
+  if (withBattles.length === 0) {
+    return `${subject}の年別推移。戦闘データなし`;
+  }
+
+  const first = withBattles[0];
+  const last = withBattles[withBattles.length - 1];
+  const totalWins = withBattles.reduce((sum, point) => sum + point.wins, 0);
+  const totalLosses = withBattles.reduce(
+    (sum, point) => sum + point.losses,
+    0
+  );
+  const peakWins = withBattles.reduce((best, point) =>
+    point.wins > best.wins ? point : best
+  );
+  const peakLosses = withBattles.reduce((best, point) =>
+    point.losses > best.losses ? point : best
+  );
+  const period =
+    first.year === last.year
+      ? `${first.year}年`
+      : `${first.year}年から${last.year}年まで`;
+  const winsSummary = `期間合計${totalWins.toLocaleString(
+    "ja-JP"
+  )}勝。最多勝利は${peakWins.year}年の${peakWins.wins.toLocaleString(
+    "ja-JP"
+  )}勝`;
+  const lossesSummary = `期間合計${totalLosses.toLocaleString(
+    "ja-JP"
+  )}敗。最多敗北は${peakLosses.year}年の${peakLosses.losses.toLocaleString(
+    "ja-JP"
+  )}敗`;
+
+  if (showsWins && !showsLosses) {
+    return `${period}の勝利数推移。${winsSummary}`;
+  }
+  if (showsLosses && !showsWins) {
+    return `${period}の敗北数推移。${lossesSummary}`;
+  }
+  return `${period}の勝敗数推移。期間合計${totalWins.toLocaleString(
+    "ja-JP"
+  )}勝${totalLosses.toLocaleString("ja-JP")}敗。最多勝利は${
+    peakWins.year
+  }年の${peakWins.wins.toLocaleString("ja-JP")}勝、最多敗北は${
+    peakLosses.year
+  }年の${peakLosses.losses.toLocaleString("ja-JP")}敗`;
 }
 
 /** 勝敗数推移の折れ線グラフ（系列ごとに勝利数=実線・敗北数=破線、Y 軸=戦闘数）。 */
@@ -63,11 +143,14 @@ function WinLossLineChart({
   years,
   series,
   maskRanges,
+  summary,
 }: {
   years: number[];
   series: ChartSeries[];
   maskRanges: { fromIdx: number; toIdx: number }[];
+  summary: string;
 }) {
+  const summaryId = `home-win-loss-summary-${useId()}`;
   const W = 640;
   const H = 220;
   const padL = 30;
@@ -112,22 +195,36 @@ function WinLossLineChart({
   const renderSegs = (
     segs: { i: number; value: number }[][],
     color: string,
+    seriesKey: string,
     keyPrefix: string
   ) =>
     segs.map((seg, si) =>
       seg.length === 1 ? (
-        <circle
-          key={`${keyPrefix}${si}`}
-          className="home-line-dot"
-          cx={xAt(seg[0].i)}
-          cy={yAt(seg[0].value)}
-          r={2.5}
-          style={{ fill: color }}
-        />
+        seriesKey === "losses" ? (
+          <rect
+            key={`${keyPrefix}${si}`}
+            className="home-line-dot home-line-dot--losses"
+            x={xAt(seg[0].i) - 3}
+            y={yAt(seg[0].value) - 3}
+            width={6}
+            height={6}
+            rx={0.75}
+            style={{ fill: color }}
+          />
+        ) : (
+          <circle
+            key={`${keyPrefix}${si}`}
+            className="home-line-dot home-line-dot--wins"
+            cx={xAt(seg[0].i)}
+            cy={yAt(seg[0].value)}
+            r={3}
+            style={{ fill: color }}
+          />
+        )
       ) : (
         <polyline
           key={`${keyPrefix}${si}`}
-          className="home-line-path"
+          className={`home-line-path home-line-path--${seriesKey}`}
           points={seg.map((pt) => `${xAt(pt.i)},${yAt(pt.value)}`).join(" ")}
           style={{ stroke: color }}
         />
@@ -136,11 +233,15 @@ function WinLossLineChart({
 
   return (
     <div className="home-line-wrap">
+      <p id={summaryId} className="sr-only">
+        {summary}
+      </p>
       <svg
         className="home-linechart"
         viewBox={`0 0 ${W} ${H}`}
         role="img"
         aria-label="年別の勝敗数推移グラフ"
+        aria-describedby={summaryId}
       >
         {[0, 0.25, 0.5, 0.75, 1].map((g) => {
           const count = Math.round(niceMax * g);
@@ -210,7 +311,7 @@ function WinLossLineChart({
             .filter((p) => p.decided > 0);
           return (
             <g key={s.key}>
-              {renderSegs(buildSegs(pts), s.color, `${s.key}-`)}
+              {renderSegs(buildSegs(pts), s.color, s.key, `${s.key}-`)}
             </g>
           );
         })}
@@ -306,6 +407,8 @@ export function HomeTab({
   onSelectWarlord,
   onSelectUnit,
   onSelectFaction,
+  onSelectRanking,
+  onSelectHistory,
 }: Props) {
   // 自分の武将名（クッキー由来）。詳細はハイドレーション後にマウントされるため
   // 初期化子で同期的にクッキーを読んでも SSR 不整合は起きない。
@@ -313,10 +416,16 @@ export function HomeTab({
   const [editing, setEditing] = useState(false);
   const [query, setQuery] = useState("");
   // 折れ線グラフで表示中の系列（初期は勝利数・敗北数の両方）。
-  const [selectedKeys, setSelectedKeys] = useState<string[]>([
+  const [selectedKeys, setSelectedKeys] = useState<WinLossSeriesKey[]>([
     "wins",
     "losses",
   ]);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const dashboardHeadingRef = useRef<HTMLHeadingElement>(null);
+  const changeButtonRef = useRef<HTMLButtonElement>(null);
+  const pendingFocusRef = useRef<"dashboard" | "search" | "change" | null>(
+    null
+  );
 
   // 武将選択の候補は「対象の期に登場した武将」に絞る（log は対象の期でフィルタ済み）。
   const allNames = useMemo(() => {
@@ -324,11 +433,10 @@ export function HomeTab({
     return Array.from(set).sort((a, b) => a.localeCompare(b, "ja"));
   }, [log, db]);
 
-  const suggestions = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    return allNames.filter((n) => n.toLowerCase().includes(q)).slice(0, 12);
-  }, [allNames, query]);
+  const suggestions = useMemo(
+    () => filterHomeWarlordSuggestions(allNames, query),
+    [allNames, query]
+  );
 
   // 自分の武将の戦績（household 別名を統合して集計）。
   const outcomes = useMemo(
@@ -369,7 +477,7 @@ export function HomeTab({
     return ranges;
   }, [years, yearly]);
 
-  const toggleSeries = (key: string) =>
+  const toggleSeries = (key: WinLossSeriesKey) =>
     setSelectedKeys((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
@@ -389,6 +497,10 @@ export function HomeTab({
       })
       .filter((s): s is ChartSeries => s !== null);
   }, [selectedKeys, yearly, years]);
+  const chartSummary = useMemo(
+    () => describeWinLossTrend(yearly, selectedKeys),
+    [selectedKeys, yearly]
+  );
 
   const dbInfo = name ? lookup(db, name) : undefined;
   const profile = latestSelfProfile(outcomes);
@@ -397,14 +509,44 @@ export function HomeTab({
   const branch = dbInfo?.branch ?? profile?.branch;
 
   const choose = (n: string) => {
+    pendingFocusRef.current = "dashboard";
     setMyWarlord(n);
     setName(n);
     setEditing(false);
     setQuery("");
   };
 
-  // 武将選択画面（未設定 or 変更時）。
-  if (!name || editing) {
+  useEffect(() => {
+    const pendingFocus = pendingFocusRef.current;
+    if (pendingFocus === "dashboard" && name && !editing) {
+      dashboardHeadingRef.current?.focus();
+      pendingFocusRef.current = null;
+    } else if (pendingFocus === "search" && editing) {
+      searchInputRef.current?.focus();
+      pendingFocusRef.current = null;
+    } else if (pendingFocus === "change" && name && !editing) {
+      changeButtonRef.current?.focus();
+      pendingFocusRef.current = null;
+    }
+  }, [editing, name]);
+
+  // 初回の未選択状態だけに、サービスの価値と補助導線を表示する。
+  if (!name) {
+    return (
+      <HomeActivation
+        query={query}
+        suggestions={suggestions}
+        inputRef={searchInputRef}
+        onQueryChange={setQuery}
+        onChoose={choose}
+        onSelectRanking={onSelectRanking}
+        onSelectHistory={onSelectHistory}
+      />
+    );
+  }
+
+  // 選択済み武将を変更するときは、従来どおり検索とキャンセルだけを表示する。
+  if (editing) {
     return (
       <section className="panel home-panel">
         <div className="home-picker">
@@ -412,45 +554,24 @@ export function HomeTab({
           <p className="muted">
             ホームに成績サマリを表示する武将を選びます。選択はこのブラウザ（クッキー）に保存されます。
           </p>
-          <SearchBox
-            value={query}
-            onChange={setQuery}
-            placeholder="武将名で検索"
-            ariaLabel="自分の武将を検索"
+          <HomeWarlordSearch
+            inputRef={searchInputRef}
+            query={query}
+            suggestions={suggestions}
+            onQueryChange={setQuery}
+            onChoose={choose}
           />
-          {query.trim() !== "" && (
-            <ul className="home-suggest">
-              {suggestions.length === 0 ? (
-                <li className="home-suggest-empty muted">
-                  「{query}」に一致する武将が見つかりません。
-                </li>
-              ) : (
-                suggestions.map((n) => (
-                  <li key={n}>
-                    <button
-                      type="button"
-                      className="home-suggest-item"
-                      onClick={() => choose(n)}
-                    >
-                      {n}
-                    </button>
-                  </li>
-                ))
-              )}
-            </ul>
-          )}
-          {name && (
-            <button
-              type="button"
-              className="btn home-picker-cancel"
-              onClick={() => {
-                setEditing(false);
-                setQuery("");
-              }}
-            >
-              キャンセル
-            </button>
-          )}
+          <button
+            type="button"
+            className="btn home-picker-cancel"
+            onClick={() => {
+              pendingFocusRef.current = "change";
+              setEditing(false);
+              setQuery("");
+            }}
+          >
+            キャンセル
+          </button>
         </div>
       </section>
     );
@@ -484,7 +605,11 @@ export function HomeTab({
               <div className="home-hero-eyebrow">
                 📊 あなたの成績（通算）
               </div>
-              <h2 className="home-hero-name">
+              <h2
+                ref={dashboardHeadingRef}
+                className="home-hero-name"
+                tabIndex={-1}
+              >
                 <button
                   type="button"
                   className="link-btn"
@@ -497,9 +622,11 @@ export function HomeTab({
               <div className="home-hero-tags">{tags}</div>
             </div>
             <button
+              ref={changeButtonRef}
               type="button"
               className="btn home-change"
               onClick={() => {
+                pendingFocusRef.current = "search";
                 setEditing(true);
                 setQuery("");
               }}
@@ -560,7 +687,7 @@ export function HomeTab({
               ) : (
                 <>
                   <p className="muted home-series-hint">
-                    勝利数（緑）・敗北数（赤）の年別推移です。下のチェックで表示を切り替えられます。
+                    勝利数（実線）・敗北数（破線）の年別推移です。下のチェックで表示を切り替えられます。
                   </p>
                   <div className="home-series-picker">
                     {SERIES_OPTIONS.map((opt) => {
@@ -581,8 +708,12 @@ export function HomeTab({
                             onChange={() => toggleSeries(opt.key)}
                           />
                           <span
-                            className="home-series-dot"
-                            style={{ background: opt.color }}
+                            className={`home-series-line home-series-line--${opt.key}`}
+                            style={{
+                              borderColor: opt.color,
+                              color: opt.color,
+                            }}
+                            aria-hidden="true"
                           />
                           {opt.label}
                         </label>
@@ -596,6 +727,7 @@ export function HomeTab({
                       years={years}
                       series={chartSeries}
                       maskRanges={maskRanges}
+                      summary={chartSummary}
                     />
                   )}
                 </>
@@ -607,6 +739,9 @@ export function HomeTab({
               <h3 className="home-card-title">📋 最近の戦闘結果（直近5戦）</h3>
               <div className="table-wrap">
                 <table className="home-recent-table">
+                  <caption className="sr-only">
+                    最近の戦闘結果（直近5戦）
+                  </caption>
                   <thead>
                     <tr>
                       <th>日時</th>

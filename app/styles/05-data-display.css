@@ -1,0 +1,393 @@
+/* ---------- Stats ---------- */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.stat {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.stat .label {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stat .value {
+  font-size: 20px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+/* ---------- Tables ---------- */
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  min-width: 480px;
+}
+
+th, td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+thead th {
+  background: var(--panel-2);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  text-transform: uppercase;
+  position: sticky;
+  top: 0;
+}
+
+/* デスクトップでは表本体を縦スクロールさせ、見出し(thead)を固定表示する（#69）。
+   .table-wrap は overflow:auto でスクロールコンテナとなり、sticky な thead が
+   その上端に貼り付く。横長の表は引き続き横スクロールできる。
+   モバイル(<=680px)はカード表示で thead を隠すため対象外。 */
+@media (min-width: 681px) {
+  .table-wrap {
+    max-height: calc(100vh - 200px);
+    overflow: auto;
+  }
+  thead th {
+    z-index: 5;
+    box-shadow: inset 0 -1px 0 var(--border);
+  }
+}
+
+/* 並び替え可能な見出しセル（DB確認タブ） */
+thead th:has(.th-sort) {
+  padding: 0;
+}
+.th-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+  padding: 10px 12px;
+}
+.th-sort-ind {
+  font-size: 10px;
+  opacity: 0.6;
+}
+thead th[aria-sort="ascending"] .th-sort,
+thead th[aria-sort="descending"] .th-sort {
+  color: var(--text);
+}
+thead th[aria-sort="ascending"] .th-sort-ind,
+thead th[aria-sort="descending"] .th-sort-ind {
+  opacity: 1;
+  color: var(--color-interactive-text);
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.empty {
+  color: var(--muted);
+  text-align: center;
+  padding: 24px 8px;
+}
+.empty-title {
+  margin: 0 0 6px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+.empty-hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+/* ---------- Sortable / filterable table head ---------- */
+.th-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.th-sort:hover {
+  color: var(--text);
+}
+
+.th-sort.active {
+  color: var(--color-interactive-text);
+}
+
+.sort-ind {
+  font-size: 10px;
+  opacity: 0.75;
+}
+
+/* 列ヘッダーはページスクロールと重ならないよう sticky を解除 */
+.unit-table thead th {
+  position: static;
+}
+
+/* ---------- Pager ---------- */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.pager-info {
+  font-size: 13px;
+  color: var(--muted);
+  min-width: 88px;
+  text-align: center;
+}
+
+.pager-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ---------- Inline icons ---------- */
+.icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  vertical-align: middle;
+}
+
+/* ---------- History head (title + count badge) ---------- */
+.history-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.count-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-interactive-text);
+  background: rgba(106, 169, 255, 0.12);
+  border: 0.5px solid rgba(106, 169, 255, 0.35);
+  border-radius: var(--radius-pill);
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+
+/* ---------- Search row ---------- */
+.search-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+}
+
+.search-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+  display: inline-flex;
+}
+
+.search-input {
+  width: 100%;
+  padding-left: 36px;
+  padding-right: 34px;
+}
+
+/* 各ブラウザのネイティブ検索クリアは隠し、独自の×ボタンに統一する。 */
+.search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--target-size-minimum);
+  height: var(--target-size-minimum);
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.search-clear:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.search-clear-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.filter-toggle.active {
+  color: var(--color-interactive-text);
+  border-color: var(--accent-strong);
+}
+
+.sort-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.clear-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  color: var(--color-danger-text);
+  border-color: rgba(255, 107, 107, 0.35);
+}
+
+.clear-filters:hover {
+  border-color: var(--danger, #ff6b6b);
+}
+
+/* ---------- Shared filter panel ---------- */
+.filter-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.filter-panel-fields[hidden] {
+  display: none;
+}
+
+.filter-panel-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+  flex-wrap: wrap;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--color-border-default) 70%, transparent);
+}
+
+.active-filter-chips {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.active-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 100%;
+  min-height: 30px;
+  padding: 4px 8px;
+  border: 1px solid
+    color-mix(in srgb, var(--accent) 34%, var(--color-border-default));
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface-subtle));
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+}
+
+.active-filter-chip:hover,
+.active-filter-chip:focus-visible {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 15%, var(--surface-subtle));
+}
+
+.active-filter-chip .icon {
+  width: 12px;
+  height: 12px;
+  color: var(--color-text-secondary);
+}
+
+.active-filter-label {
+  color: var(--color-text-secondary);
+}
+
+.active-filter-value {
+  overflow: hidden;
+  max-width: 28ch;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.filter-result {
+  flex: 0 0 auto;
+  margin: 0 0 0 auto;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

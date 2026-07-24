@@ -8,8 +8,18 @@ import {
   rankingPeriods,
   type AssetMetricStat,
 } from "@/lib/stats";
-import { FilterIcon, CloseIcon } from "@/components/icons";
+import {
+  ASSET_RANKING_MIN_COUNT_OPTIONS,
+  DEFAULT_RANKING_FILTERS_OPEN,
+  DEFAULT_RANKING_MIN_COUNT,
+  DEFAULT_RANKING_PERIOD_KEY,
+} from "@/lib/rankingDefaults";
 import { SearchBox } from "@/components/SearchBox";
+import {
+  FilterPanel,
+  type ActiveFilter,
+} from "@/components/FilterPanel";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 /** ランキングの対象。unit=兵種 / weapon=武器(武将の持つ武器) / item=品物(武将の持つ品物)。 */
 export type RankVariant = "unit" | "weapon" | "item";
@@ -68,14 +78,14 @@ const METRIC_OPTIONS: MetricOption[] = [
   },
 ];
 
-const MIN_USE_OPTIONS = [1, 10, 30, 50, 100];
+const MIN_USE_OPTIONS = ASSET_RANKING_MIN_COUNT_OPTIONS;
 const SUMMARY_TOP_N = 3;
 
 /** 初期表示では最低使用回数を10回以上にする。 */
-const DEFAULT_MIN_USES = 10;
+const DEFAULT_MIN_USES = DEFAULT_RANKING_MIN_COUNT;
 
 /** ランキングを開いたときに選択する集計期間。 */
-const DEFAULT_PERIOD_KEY = "all";
+const DEFAULT_PERIOD_KEY = DEFAULT_RANKING_PERIOD_KEY;
 
 const VARIANT_COPY: Record<
   RankVariant,
@@ -270,7 +280,7 @@ export function RankingTab({
   const [keyword, setKeyword] = useState("");
   const [minUses, setMinUses] = useState(DEFAULT_MIN_USES);
   const [unitType, setUnitType] = useState("");
-  const [showFilter, setShowFilter] = useState(true);
+  const [showFilter, setShowFilter] = useState(DEFAULT_RANKING_FILTERS_OPEN);
   const [periodKey, setPeriodKey] = useState<string>(DEFAULT_PERIOD_KEY);
 
   const periods = useMemo(() => rankingPeriods(log), [log]);
@@ -352,6 +362,28 @@ export function RankingTab({
     setMinUses(1);
     setUnitType("");
   };
+  const activeFilters: ActiveFilter[] = [
+    ...(minUses !== 1
+      ? [
+          {
+            key: "minimum-uses",
+            label: "最低使用回数",
+            value: `${minUses}回以上`,
+            onRemove: () => setMinUses(1),
+          },
+        ]
+      : []),
+    ...(variant === "unit" && unitType
+      ? [
+          {
+            key: "unit-type",
+            label: "兵種タイプ",
+            value: unitType,
+            onRemove: () => setUnitType(""),
+          },
+        ]
+      : []),
+  ];
 
   const openAssetDetail = (name: string) => {
     if (variant === "unit") onSelectUnit(name);
@@ -360,16 +392,14 @@ export function RankingTab({
 
   return (
     <section className="panel ranking-panel">
-      <h2>{copy.title}</h2>
-      <p className="metric-note muted">{copy.description}</p>
+      <PageHeader title={copy.title} description={copy.description} />
 
-      <div className="tmx-periods" role="tablist" aria-label="集計期間">
+      <div className="tmx-periods" role="group" aria-label="集計期間">
         {periods.map((period) => (
           <button
             key={period.key}
             type="button"
-            role="tab"
-            aria-selected={periodKey === period.key}
+            aria-pressed={periodKey === period.key}
             className={
               "tmx-period" + (periodKey === period.key ? " active" : "")
             }
@@ -380,39 +410,28 @@ export function RankingTab({
         ))}
       </div>
 
-      <div className="search-row">
-        <SearchBox
-          value={keyword}
-          onChange={setKeyword}
-          placeholder={copy.searchPlaceholder}
-        />
-        <button
-          type="button"
-          className={
-            "btn filter-toggle" +
-            (showFilter || hasFilter ? " active" : "")
-          }
-          onClick={() => setShowFilter((visible) => !visible)}
-          aria-expanded={showFilter}
-        >
-          <FilterIcon />
-          <span>フィルター</span>
-        </button>
-        {hasFilter && (
-          <button
-            type="button"
-            className="btn clear-filters"
-            onClick={clearFilters}
-            title="絞り込み条件をすべて解除"
-          >
-            <CloseIcon />
-            <span>解除</span>
-          </button>
-        )}
-      </div>
-
-      {showFilter && (
-        <div className="filter-grid">
+      <FilterPanel
+        id={`${variant}-ranking-filters`}
+        search={
+          <SearchBox
+            value={keyword}
+            onChange={setKeyword}
+            placeholder={copy.searchPlaceholder}
+          />
+        }
+        expanded={showFilter}
+        onToggle={() => setShowFilter((visible) => !visible)}
+        toggleActive={showFilter || hasFilter}
+        hasActiveFilters={hasFilter}
+        onClear={clearFilters}
+        activeFilters={activeFilters}
+        resultText={
+          hasFilter
+            ? `全${rows.length.toLocaleString("ja-JP")}件中 ${filteredRows.length.toLocaleString("ja-JP")}件`
+            : `全${rows.length.toLocaleString("ja-JP")}件`
+        }
+      >
+        <>
           {activeMetric && (
             <label className="filter">
               <span>指標</span>
@@ -462,8 +481,8 @@ export function RankingTab({
               </select>
             </label>
           )}
-        </div>
-      )}
+        </>
+      </FilterPanel>
 
       {activeMetric === null ? (
         <div className="ranking-metric-grid">
@@ -531,12 +550,9 @@ export function RankingTab({
               {activeOption?.label}
             </span>
           </nav>
+          <h3 className="sr-only">{activeOption?.label}ランキング</h3>
           <p className="metric-section-desc muted">
             {activeOption?.description}
-          </p>
-
-          <p className="sr-only" role="status" aria-live="polite">
-            該当 {detailRows.length.toLocaleString("ja-JP")}件
           </p>
 
           {detailRows.length === 0 ? (

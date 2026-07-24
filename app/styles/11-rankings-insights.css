@@ -1,0 +1,599 @@
+/* ---------- 武将インサイト（相性・ヒートマップ・遍歴・コメント） ---------- */
+
+/* 相性ランキング */
+.detail-rank-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.detail-rank-head {
+  margin: 0 0 8px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.detail-rank-head--good { color: var(--outcome-win-text); }
+.detail-rank-head--bad { color: var(--outcome-loss-text); }
+
+.detail-rank-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detail-rank-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.detail-rank-no {
+  flex: 0 0 auto;
+  width: 18px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.detail-rank-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.detail-rank-faction {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.detail-rank-rate {
+  flex: 0 0 auto;
+  font-weight: 700;
+}
+
+.detail-rank-record {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* 詳細セクションの補足文 */
+.detail-note {
+  margin: -2px 0 10px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* 現在の主力兵種（所属武将の最新使用兵種） */
+.latest-units {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.latest-units-row {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  align-items: start;
+  gap: 10px;
+}
+
+.latest-units-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--label-branch-fg);
+  border: 1px solid var(--label-branch-border);
+  background: var(--label-branch-bg);
+  white-space: nowrap;
+}
+
+.latest-units-total {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.latest-units-units {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.latest-unit-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 4px 2px 9px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--label-unit-fg);
+  border: 1px solid var(--label-unit-border);
+  background: var(--label-unit-bg);
+  cursor: pointer;
+}
+
+.latest-unit-chip:hover,
+.latest-unit-chip:focus-visible {
+  filter: brightness(1.2);
+}
+
+.latest-unit-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 520px) {
+  .latest-units-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
+/* 兵種別の勝率 */
+.branch-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.branch-row {
+  display: grid;
+  grid-template-columns: 56px 1fr 44px auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.branch-name {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.branch-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 0.5px solid var(--border);
+  overflow: hidden;
+}
+
+.branch-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--outcome-win-fill);
+}
+
+.branch-rate {
+  font-weight: 700;
+  text-align: right;
+}
+
+.branch-record {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .branch-row {
+    grid-template-columns: 48px 1fr 40px;
+  }
+  .branch-record {
+    grid-column: 2 / -1;
+  }
+}
+
+/* 武将別の勝率（名前を上・勝率バーを下） */
+.user-winrate-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.user-winrate-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.user-winrate-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.user-winrate-name {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.user-winrate-meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.user-winrate-rate {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+/* 所属武将ごとの兵種傾向（過去10年）。兵種チップを横並び＋折り返し。 */
+.member-units {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.member-unit-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 4px 2px 9px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--label-unit-fg);
+  border: 1px solid var(--label-unit-border);
+  background: var(--label-unit-bg);
+  cursor: pointer;
+}
+
+.member-unit-chip:hover,
+.member-unit-chip:focus-visible {
+  filter: brightness(1.2);
+}
+
+.member-unit-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* 撃破加重指数（SWI）ランキング */
+/* 国（勢力）一覧タブ */
+.nation-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nation-row {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  align-items: start;
+  gap: 12px;
+}
+
+.nation-rank {
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.4;
+}
+
+.nation-row:nth-child(1) .nation-rank {
+  color: var(--medal-gold-fg);
+}
+.nation-row:nth-child(2) .nation-rank {
+  color: var(--medal-silver-fg);
+}
+.nation-row:nth-child(3) .nation-rank {
+  color: var(--medal-bronze-fg);
+}
+
+.nation-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.nation-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.nation-name {
+  font-weight: 700;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nation-rate {
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--color-success-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.nation-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.nation-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 0.5px solid var(--border);
+  overflow: hidden;
+}
+
+.nation-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--outcome-win-fill);
+}
+
+.swi-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.swi-row {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  align-items: start;
+  gap: 12px;
+}
+
+.swi-rank {
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.4;
+}
+
+.swi-row:nth-child(1) .swi-rank {
+  color: var(--medal-gold-fg);
+}
+.swi-row:nth-child(2) .swi-rank {
+  color: var(--medal-silver-fg);
+}
+.swi-row:nth-child(3) .swi-rank {
+  color: var(--medal-bronze-fg);
+}
+
+.swi-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.swi-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.swi-name {
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.swi-value {
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--color-success-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.swi-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 0.5px solid var(--border);
+  overflow: hidden;
+}
+
+.swi-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--outcome-win-fill);
+}
+
+.swi-meta {
+  font-size: 11px;
+  line-height: 1.5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+}
+.rank-side-active {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.rank-users {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+}
+
+/* 指標タブ：指標別サマリー・パンくず */
+.ranking-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 24px;
+  margin-top: 24px;
+}
+.ranking-metric-grid .metric-section {
+  min-width: 0;
+  margin-top: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel-2) 64%, var(--panel));
+}
+.metric-section {
+  margin-top: 24px;
+}
+.metric-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 6px;
+  border-bottom: 0.5px solid var(--border);
+}
+.metric-section-head h3 {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: 16px;
+  color: var(--text);
+}
+.metric-section-count {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.metric-section .swi-list {
+  margin-top: 12px;
+}
+.ranking-metric-grid .swi-list {
+  gap: 0;
+}
+.ranking-metric-grid .swi-row {
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+  padding: 11px 0;
+  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+.ranking-metric-grid .swi-row:first-child {
+  border-top: 0;
+}
+.ranking-metric-grid .swi-rank {
+  font-size: 15px;
+}
+.ranking-metric-grid .swi-value {
+  white-space: nowrap;
+}
+.metric-section-empty {
+  margin: 12px 0 0;
+  font-size: 12px;
+}
+.metric-section-desc {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.metric-description {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.metric-description > summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 600;
+}
+.metric-description > summary:hover {
+  color: var(--text);
+}
+.metric-description > p {
+  margin: 8px 0 0;
+  line-height: 1.65;
+}
+.metric-crumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 12px;
+  font-size: 13px;
+}
+.metric-crumb-sep {
+  color: var(--muted);
+  opacity: 0.7;
+}
+.metric-crumb-current {
+  font-weight: 700;
+}
+
+@media (max-width: 767px) {
+  .ranking-metric-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .ranking-metric-grid .metric-section {
+    padding: 13px;
+  }
+}

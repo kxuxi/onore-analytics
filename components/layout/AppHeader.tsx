@@ -8,6 +8,7 @@ import {
 } from "@/components/icons";
 
 interface AppHeaderProps {
+  sidebarId: string;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
   onSelectHome: () => void;
@@ -29,6 +30,7 @@ function formatFetchTime(timestamp: number): string {
 }
 
 export function AppHeader({
+  sidebarId,
   sidebarOpen,
   onToggleSidebar,
   onSelectHome,
@@ -54,6 +56,7 @@ export function AppHeader({
           className="hamburger"
           aria-label={sidebarOpen ? "メニューを閉じる" : "メニューを開く"}
           aria-expanded={sidebarOpen}
+          aria-controls={sidebarId}
           onClick={onToggleSidebar}
         >
           <span />
