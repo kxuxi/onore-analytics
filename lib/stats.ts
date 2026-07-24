@@ -87,6 +87,19 @@ export function outcomeForSide(
   return "other";
 }
 
+function normalizeFactionFilter(
+  faction: string | undefined
+): string | undefined {
+  return faction?.trim() || undefined;
+}
+
+function sideMatchesFaction(
+  side: Pick<BattleSide, "faction">,
+  faction: string | undefined
+): boolean {
+  return !faction || side.faction?.trim() === faction;
+}
+
 /**
  * ログ配列（参照）ごとの dedupedCards 結果メモ。多くの集計関数が同じ log
  * （filteredBattleLog 等の安定した useMemo 参照）に対して呼ぶため、参照が同じなら
@@ -1634,8 +1647,10 @@ function computeSideSwi(
   log: BattleRecord[],
   side: SideKey,
   db?: WarlordMap,
-  range?: YearRange
+  range?: YearRange,
+  factionFilter?: string
 ): Map<string, SideSwiStat> {
+  const faction = normalizeFactionFilter(factionFilter);
   // (term, 家名) で同一人物をまとめ、最新の代表名に正規化するマップ
   const nameMap = db ? logNameMap(log) : null;
 
@@ -1648,6 +1663,7 @@ function computeSideSwi(
   for (const { record, card } of dedupedCards(log)) {
     if (!withinYearRange(card, range)) continue;
     const self = side === "left" ? card.left : card.right;
+    if (!sideMatchesFaction(self, faction)) continue;
     const rawName = self.name?.trim();
     if (!rawName) continue;
     // (term, 家名) で同一人物をまとめ、代表名に正規化する。
@@ -1724,13 +1740,15 @@ export interface BreakthroughStat {
  * 武将ごとの「抜き数」を集計する（出兵側の枚抜き）。
  * 抜き数 = 1×(1枚抜き) + 2×(2枚抜き) + … + n×(n枚抜き)。
  * 1 出兵から求める＝computeSideSwi の sweepCounts と同じ。
+ * 国を指定した場合は、その国に所属して出兵した記録だけを対象にする。
  */
 export function breakthroughRanking(
   log: BattleRecord[],
   db?: WarlordMap,
-  range?: YearRange
+  range?: YearRange,
+  factionFilter?: string
 ): BreakthroughStat[] {
-  const atk = computeSideSwi(log, "left", db, range);
+  const atk = computeSideSwi(log, "left", db, range, factionFilter);
   const out: BreakthroughStat[] = [];
   for (const s of atk.values()) {
     let score = 0;
@@ -1772,12 +1790,15 @@ export interface PontaStat {
  * PontaPoint = (出兵勝 + 1.4×守備勝) ÷ 戦闘数（撤退戦を除く）。
  * 普通の勝率（勝 ÷ (勝＋負)）の分子で「守備の 1 勝」を 1.4 勝として重み付けするだけ。
  * 分母は撤退戦を除く戦闘数（＝勝＋負。引分・撤退・不明は除外）。攻守どちらの側でも集計する。
+ * 国を指定した場合は、左右それぞれで所属国が一致する側だけを対象にする。
  */
 export function pontaPointRanking(
   log: BattleRecord[],
   db?: WarlordMap,
-  range?: YearRange
+  range?: YearRange,
+  factionFilter?: string
 ): PontaStat[] {
+  const faction = normalizeFactionFilter(factionFilter);
   const nameMap = db ? logNameMap(log) : null;
   const resolve = (
     side: { name?: string; family?: string },
@@ -1813,13 +1834,17 @@ export function pontaPointRanking(
     if (!withinYearRange(card, range)) continue;
     const w = card.winner;
     if (w !== "left" && w !== "right") continue; // 撤退・引分・不明を除く（勝敗が付いた戦闘）のみ
-    const ln = resolve(card.left, record.term);
+    const ln = sideMatchesFaction(card.left, faction)
+      ? resolve(card.left, record.term)
+      : undefined;
     if (ln) {
       const e = touch(ln, card.left);
       if (w === "left") e.attackWins++;
       else e.losses++;
     }
-    const rn = resolve(card.right, record.term);
+    const rn = sideMatchesFaction(card.right, faction)
+      ? resolve(card.right, record.term)
+      : undefined;
     if (rn) {
       const e = touch(rn, card.right);
       if (w === "right") e.defenseWins++;
@@ -1891,12 +1916,15 @@ function assetName(
  *
  * 勝敗系は左右それぞれが使用した対象へ帰属する。枚抜きは出兵側のみを対象とし、
  * 同一対象・同一使用者・同一戦闘時刻を 1 出兵として、1戦目からの連勝数を数える。
+ * 国を指定した場合は、その国側の使用・勝敗・出兵だけで各指標を再集計する。
  */
 export function assetMetricRanking(
   log: BattleRecord[],
   variant: AssetMetricVariant,
-  range?: YearRange
+  range?: YearRange,
+  factionFilter?: string
 ): AssetMetricStat[] {
+  const faction = normalizeFactionFilter(factionFilter);
   interface Acc {
     name: string;
     uses: number;
@@ -1933,6 +1961,7 @@ export function assetMetricRanking(
 
     for (const sideKey of sides) {
       const side = sideKey === "left" ? card.left : card.right;
+      if (!sideMatchesFaction(side, faction)) continue;
       const name = assetName(side, variant);
       if (!name) continue;
 
@@ -1963,7 +1992,7 @@ export function assetMetricRanking(
     }
 
     const attackerAsset = assetName(card.left, variant);
-    if (!attackerAsset) continue;
+    if (!attackerAsset || !sideMatchesFaction(card.left, faction)) continue;
     const sortieKey = [
       attackerAsset,
       String(record.term),
@@ -2128,8 +2157,10 @@ const ASSIST_WINDOW_MS = 40 * 60 * 1000;
 function computeAssists(
   log: BattleRecord[],
   db?: WarlordMap,
-  range?: YearRange
+  range?: YearRange,
+  factionFilter?: string
 ): Map<string, number> {
+  const faction = normalizeFactionFilter(factionFilter);
   const nameMap = db ? logNameMap(log) : null;
   const now = new Date();
   const cards = dedupedCards(log).filter(({ card }) => withinYearRange(card, range));
@@ -2183,6 +2214,10 @@ function computeAssists(
     dt.push(t);
     defeatTimes.set(loserName, dt);
 
+    // 後続の被倒時刻は全戦闘から保持し、加点対象だけを選択国の勝者に絞る。
+    // ここで戦闘全体を除外すると、他国による追撃で倒された事実が失われる。
+    if (!sideMatchesFaction(winnerSide, faction)) continue;
+
     // ダメージイベント（同一 battleAt × 同一ペアは 1 件に集約）。
     const key = `${winnerName}@@${loserName}@@${card.battleAt ?? ""}`;
     if (!damageEventSeen.has(key)) {
@@ -2219,8 +2254,10 @@ function computeAssists(
 function computeRoundWinRates(
   log: BattleRecord[],
   db?: WarlordMap,
-  range?: YearRange
+  range?: YearRange,
+  factionFilter?: string
 ): Map<string, { attackWins: number; attackRounds: number; defenseWins: number; defenseRounds: number }> {
+  const faction = normalizeFactionFilter(factionFilter);
   const nameMap = db ? logNameMap(log) : null;
   const out = new Map<string, { attackWins: number; attackRounds: number; defenseWins: number; defenseRounds: number }>();
   for (const { record, card } of dedupedCards(log)) {
@@ -2228,13 +2265,13 @@ function computeRoundWinRates(
     if (card.winner !== "left" && card.winner !== "right") continue;
     const leftName = resolveLogName(nameMap, record.term, card.left.family, card.left.name);
     const rightName = resolveLogName(nameMap, record.term, card.right.family, card.right.name);
-    if (leftName) {
+    if (leftName && sideMatchesFaction(card.left, faction)) {
       const cur = out.get(leftName) ?? { attackWins: 0, attackRounds: 0, defenseWins: 0, defenseRounds: 0 };
       cur.attackRounds += 1;
       if (card.winner === "left") cur.attackWins += 1;
       out.set(leftName, cur);
     }
-    if (rightName) {
+    if (rightName && sideMatchesFaction(card.right, faction)) {
       const cur = out.get(rightName) ?? { attackWins: 0, attackRounds: 0, defenseWins: 0, defenseRounds: 0 };
       cur.defenseRounds += 1;
       if (card.winner === "right") cur.defenseWins += 1;
@@ -2249,8 +2286,10 @@ function computeEfficiency(
   log: BattleRecord[],
   side: SideKey,
   db?: WarlordMap,
-  range?: YearRange
+  range?: YearRange,
+  factionFilter?: string
 ): Map<string, { wins: number; sorties: number }> {
+  const faction = normalizeFactionFilter(factionFilter);
   const nameMap = db ? logNameMap(log) : null;
   interface Sortie {
     wins: Set<number>;
@@ -2261,6 +2300,7 @@ function computeEfficiency(
   for (const { record, card } of dedupedCards(log)) {
     if (!withinYearRange(card, range)) continue;
     const self = side === "left" ? card.left : card.right;
+    if (!sideMatchesFaction(self, faction)) continue;
     const rawName = self.name?.trim();
     if (!rawName) continue;
     const name = resolveLogName(nameMap, record.term, self.family, rawName);
@@ -2294,18 +2334,20 @@ function computeEfficiency(
  * 
  * @param log 戦闘ログ
  * @param db 武将DB。渡された場合、同じ household の複数の名前を1つに正規化。
+ * @param factionFilter 指定した国に所属していた側だけを集計する任意条件。
  */
 export function warlordRanking(
   log: BattleRecord[],
   db?: WarlordMap,
-  range?: YearRange
+  range?: YearRange,
+  factionFilter?: string
 ): WarlordRankStat[] {
-  const atk = computeSideSwi(log, "left", db, range);
-  const def = computeSideSwi(log, "right", db, range);
-  const atkEff = computeEfficiency(log, "left", db, range);
-  const defEff = computeEfficiency(log, "right", db, range);
-  const roundRates = computeRoundWinRates(log, db, range);
-  const assistsMap = computeAssists(log, db, range);
+  const atk = computeSideSwi(log, "left", db, range, factionFilter);
+  const def = computeSideSwi(log, "right", db, range, factionFilter);
+  const atkEff = computeEfficiency(log, "left", db, range, factionFilter);
+  const defEff = computeEfficiency(log, "right", db, range, factionFilter);
+  const roundRates = computeRoundWinRates(log, db, range, factionFilter);
+  const assistsMap = computeAssists(log, db, range, factionFilter);
   const names = new Set<string>([...atk.keys(), ...def.keys()]);
   const out: WarlordRankStat[] = [];
   for (const name of names) {
@@ -2784,6 +2826,22 @@ export function latestGameYear(log: BattleRecord[]): number | null {
     if (y != null && (max == null || y > max)) max = y;
   }
   return max;
+}
+
+/** 指定したゲーム内年の範囲に登場する国名を、日本語順で返す。 */
+export function factionsInYearRange(
+  log: BattleRecord[],
+  range?: YearRange
+): string[] {
+  const factions = new Set<string>();
+  for (const { card } of dedupedCards(log)) {
+    if (!withinYearRange(card, range)) continue;
+    for (const side of [card.left, card.right]) {
+      const faction = side.faction?.trim();
+      if (faction) factions.add(faction);
+    }
+  }
+  return Array.from(factions).sort((a, b) => a.localeCompare(b, "ja"));
 }
 
 /**

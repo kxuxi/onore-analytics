@@ -10,6 +10,7 @@ import {
 import { PageHeader } from "@/components/layout/PageHeader";
 import {
   breakthroughRanking,
+  factionsInYearRange,
   formatWinRate,
   pontaPointRanking,
   rankingPeriods,
@@ -387,6 +388,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
   const [activeMetric, setActiveMetric] = useState<SortKey | null>(null);
   const [minContacts, setMinContacts] = useState(DEFAULT_MIN_CONTACTS);
   const [query, setQuery] = useState("");
+  const [faction, setFaction] = useState("");
   const [branch, setBranch] = useState("");
   const [warlordType, setWarlordType] = useState("");
   const [showFilter, setShowFilter] = useState(DEFAULT_RANKING_FILTERS_OPEN);
@@ -396,11 +398,23 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
     () => periods.find((period) => period.key === periodKey),
     [periodKey, periods]
   );
+  const availableFactions = useMemo(
+    () => factionsInYearRange(log, range),
+    [log, range]
+  );
+  const factionOptions = useMemo(() => {
+    if (!faction || availableFactions.includes(faction)) {
+      return availableFactions;
+    }
+    return [...availableFactions, faction].sort((a, b) =>
+      a.localeCompare(b, "ja")
+    );
+  }, [availableFactions, faction]);
 
   // PontaPoint・枚抜き・旧武将ランキングの各指標を武将ごとに統合する。
   const ranking = useMemo<MetricRow[]>(() => {
     const byName = new Map<string, MetricRow>();
-    for (const p of pontaPointRanking(log, db, range)) {
+    for (const p of pontaPointRanking(log, db, range, faction)) {
       const row = createMetricRow(p.name, p.faction, p.branch);
       row.pontaPoint = p.pontaPoint;
       row.attackWins = p.attackWins;
@@ -408,7 +422,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
       row.battles = p.battles;
       byName.set(p.name, row);
     }
-    for (const b of breakthroughRanking(log, db, range)) {
+    for (const b of breakthroughRanking(log, db, range, faction)) {
       const row =
         byName.get(b.name) ?? createMetricRow(b.name, b.faction, b.branch);
       row.breakthrough = b.score;
@@ -418,7 +432,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
       row.branch = row.branch ?? b.branch;
       byName.set(b.name, row);
     }
-    for (const oldRanking of warlordRanking(log, db, range)) {
+    for (const oldRanking of warlordRanking(log, db, range, faction)) {
       const row =
         byName.get(oldRanking.name) ??
         createMetricRow(
@@ -451,33 +465,35 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
       r.warlordType = db?.[r.name]?.type?.trim() || undefined;
     }
     return rows;
-  }, [log, db, range]);
+  }, [log, db, range, faction]);
 
   // 兵種の選択肢（集計対象から収集）。
-  const branchOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          ranking
-            .map((r) => r.branch?.trim())
-            .filter((v): v is string => !!v)
-        )
-      ).sort((a, b) => a.localeCompare(b, "ja")),
-    [ranking]
-  );
+  const branchOptions = useMemo(() => {
+    const options = Array.from(
+      new Set(
+        ranking
+          .map((r) => r.branch?.trim())
+          .filter((v): v is string => !!v)
+      )
+    ).sort((a, b) => a.localeCompare(b, "ja"));
+    if (!branch || options.includes(branch)) return options;
+    return [...options, branch].sort((a, b) => a.localeCompare(b, "ja"));
+  }, [branch, ranking]);
 
   // 武将タイプの選択肢（集計対象から収集）。
-  const warlordTypeOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          ranking
-            .map((row) => row.warlordType)
-            .filter((value): value is string => !!value)
-        )
-      ).sort((a, b) => a.localeCompare(b, "ja")),
-    [ranking]
-  );
+  const warlordTypeOptions = useMemo(() => {
+    const options = Array.from(
+      new Set(
+        ranking
+          .map((row) => row.warlordType)
+          .filter((value): value is string => !!value)
+      )
+    ).sort((a, b) => a.localeCompare(b, "ja"));
+    if (!warlordType || options.includes(warlordType)) return options;
+    return [...options, warlordType].sort((a, b) =>
+      a.localeCompare(b, "ja")
+    );
+  }, [ranking, warlordType]);
 
   // サマリー：共通フィルターを適用してから、指標ごとの上位 TOP_N を切り出す。
   const summaries = useMemo(
@@ -546,15 +562,37 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
   }, []);
 
   // 検索ボックスとは別にトグルするドロップダウン系の絞り込み。
-  const hasDropdownFilter = !!(branch || warlordType || minContacts !== 1);
-  const hasFilter = !!(query || branch || warlordType || minContacts !== 1);
+  const hasDropdownFilter = !!(
+    faction ||
+    branch ||
+    warlordType ||
+    minContacts !== 1
+  );
+  const hasFilter = !!(
+    query ||
+    faction ||
+    branch ||
+    warlordType ||
+    minContacts !== 1
+  );
   const clearFilters = () => {
     setQuery("");
+    setFaction("");
     setBranch("");
     setWarlordType("");
     setMinContacts(1);
   };
   const activeFilters: ActiveFilter[] = [
+    ...(faction
+      ? [
+          {
+            key: "faction",
+            label: "国",
+            value: faction,
+            onRemove: () => setFaction(""),
+          },
+        ]
+      : []),
     ...(minContacts !== 1
       ? [
           {
@@ -634,6 +672,21 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
         }
       >
         <>
+          <label className="filter">
+            <span>国</span>
+            <select
+              className="select"
+              value={faction}
+              onChange={(event) => setFaction(event.target.value)}
+            >
+              <option value="">すべて</option>
+              {factionOptions.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="filter">
             <span>
               {activeMetric
