@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
+import { SIDEBAR_INIT_SCRIPT } from "@/lib/sidebarLayout";
 import "./globals.css";
 
 const SITE_NAME = "ONORE ANALYTICS";
@@ -62,6 +63,7 @@ export default function RootLayout({
     <html lang="ja" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: SIDEBAR_INIT_SCRIPT }} />
       </head>
       <body>
         {children}

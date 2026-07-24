@@ -2,7 +2,7 @@
 
 ## 状態
 
-実装中（作業単位3 / 4完了）
+実装完了（作業単位4 / 4完了、最終比較中）
 
 ## 依存関係
 
@@ -342,6 +342,54 @@ copyしか使わない初期画面が、HTML→Markdown変換とTurndownを同�
 - Homeの単発observed LCPは1,947 ms → 3,689 msと分散した一方、転送量とsimulated LCPは不変だった。最終3回中央値で回帰を判定する
 - 画面固有の実コンテンツ形状まではSkeletonで再現しないため、初期viewport外の描画量変化は残る
 - dynamic fallbackは構造とrequest停止で確認したが、ローカルDBではchunkがstate本文より先に完了し、実paintは発生しなかった
+
+## 作業単位4: 初期sidebarとheader slotの安定化
+
+### 変更内容
+
+- `lib/sidebarLayout.ts`: 768px境界、保存キー、既存の保存値判定を集約し、hydration前の幅予約用head scriptを追加した
+- `app/layout.tsx`: theme初期化と独立したsidebar初期化scriptをheadで実行するようにした
+- `lib/useSidebarLayout.ts`: pure判定を共用し、幅判定完了後のready状態、初期化前操作の保護、標準／legacy／innerWidth resize経路を追加した
+- `app/page.tsx` / `app/styles/03-shell.css`: Desktop初回だけ保存済み幅を予約し、ReactがARIAと`inert`を確定するまでsidebar内容とtransitionを隠した
+- `components/layout/AppHeader.tsx`: 最終取得前から`最終取得 00:00`の同寸非表示slotを常設した
+- 保存値、例外、統合source、header SSRを42テストで固定した
+
+### 変更理由
+
+従来はDesktopでもSSR時にsidebarを必ず閉じ、mount後に既定または保存済みopenへ
+展開していた。また最終取得時刻を通信後に挿入していた。初回paint前に現在と同じ
+状態の寸法だけを予約し、横方向の移動とheader actionsの幅変化を防ぐため。
+
+### 互換性
+
+- Desktopの未保存／`"1"`はopen、`"0"`／不正値はclosed、読取例外はopenを維持した
+- Mobileは保存値を読まず常時closedで始め、Mobile操作を保存しない
+- Desktop操作の`"1"`／`"0"`保存、767 / 768px境界、resize時の再読込を維持した
+- `role`、`aria-expanded`、`aria-hidden`、`aria-modal`、`inert`、focus trap、body scroll lockを変更していない
+- 最終取得後の文言、時刻形式、titleを変更していない
+- API、DB、URL、環境変数、データ、集計結果を変更していない
+
+### 検証結果
+
+- 対象テスト: 2ファイル、42テスト成功
+- `npm run lint`: 成功
+- `npm run typecheck`: 成功
+- 隔離production build: 成功
+- `/`のroute size: 25.5 kB → 25.9 kB、First Load JSは117 kBを維持
+- CSS: raw 95,505 B → 95,738 B、gzip 17,482 B → 17,547 B
+- 767 / 768px × 未保存／`"1"`／`"0"`／不正値／読取例外の10条件がすべて既存契約と一致
+- 1440 → 767 → 1440の復元、Desktop保存、Mobile非保存、標準／legacy／例外resize経路を確認
+- 初期化前クリックのstorage write、hydration warning、sidebar初期化区間のlayout shiftはいずれも0
+- 768pxのopen / closedとも、sidebarとmainの初期rectがready後まで完全一致
+- header actionsと最終取得slotの取得前後rectが完全一致し、時刻挿入によるlayout shiftは0
+- Home Lighthouse（各1回）: Mobile CLS 0、Desktop CLS 0.00821。変更前Desktop中央値0.0299から低下
+- `git diff --check`: 成功
+
+### 残っているリスク
+
+- Desktopに残るCLS 0.00821のsourceは`NAV.nav`で、期一覧の非同期挿入による縦移動。sidebar幅とheader slot由来のshiftは除去できている
+- head scriptとhookは同じテスト表で固定したが、判定ロジックが2箇所に出力されるため将来変更時は両方の契約更新が必要
+- head scriptは既存theme scriptと同じinline script方針を使う。より厳格なCSPへ移行する場合はnonce等を両scriptへ同時導入する必要がある
 
 ## 受入条件
 

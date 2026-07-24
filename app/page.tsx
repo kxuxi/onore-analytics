@@ -232,8 +232,13 @@ export default function HomePage() {
     selectDecade,
   } = useTermSelection(terms, selectedTerm, setSelectedTerm);
   // サイドバーの開閉とモバイル判定
-  const { sidebarOpen, setSidebarOpen, isMobile, toggleSidebar } =
-    useSidebarLayout();
+  const {
+    sidebarOpen,
+    setSidebarOpen,
+    isMobile,
+    sidebarLayoutReady,
+    toggleSidebar,
+  } = useSidebarLayout();
   // モバイルでsidebar内の項目を選んだ後は、更新後の本文へフォーカスを移し、
   // 閉じたDrawer内へフォーカスを残さない。
   const closeSidebarOnMobile = useCallback(() => {
@@ -953,7 +958,13 @@ export default function HomePage() {
   }
 
   return (
-    <div className={"app" + (sidebarOpen ? " sidebar-open" : "")}>
+    <div
+      className={
+        "app" +
+        (sidebarOpen ? " sidebar-open" : "") +
+        (sidebarLayoutReady ? " sidebar-layout-ready" : "")
+      }
+    >
       <a href="#main-panel" className="skip-link">
         本文へスキップ
       </a>
