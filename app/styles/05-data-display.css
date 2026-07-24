@@ -100,7 +100,7 @@ thead th[aria-sort="descending"] .th-sort {
 thead th[aria-sort="ascending"] .th-sort-ind,
 thead th[aria-sort="descending"] .th-sort-ind {
   opacity: 1;
-  color: var(--accent);
+  color: var(--color-interactive-text);
 }
 
 tbody tr:last-child td {
@@ -154,7 +154,7 @@ tbody tr:hover {
 }
 
 .th-sort.active {
-  color: var(--accent);
+  color: var(--color-interactive-text);
 }
 
 .sort-ind {
@@ -206,7 +206,7 @@ tbody tr:hover {
 .count-badge {
   font-size: 12px;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--color-interactive-text);
   background: rgba(106, 169, 255, 0.12);
   border: 0.5px solid rgba(106, 169, 255, 0.35);
   border-radius: var(--radius-pill);
@@ -287,7 +287,7 @@ tbody tr:hover {
 }
 
 .filter-toggle.active {
-  color: var(--accent);
+  color: var(--color-interactive-text);
   border-color: var(--accent-strong);
 }
 
@@ -303,7 +303,7 @@ tbody tr:hover {
   align-items: center;
   gap: 6px;
   flex: 0 0 auto;
-  color: var(--danger, #ff6b6b);
+  color: var(--color-danger-text);
   border-color: rgba(255, 107, 107, 0.35);
 }
 

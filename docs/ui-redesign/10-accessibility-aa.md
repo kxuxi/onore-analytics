@@ -2,7 +2,7 @@
 
 ## 状態
 
-実装中（作業単位1 / 4完了）
+実装中（作業単位2 / 4完了）
 
 ## 依存関係
 
@@ -256,6 +256,50 @@
 - VoiceOver / NVDAによる読み上げ順は未確認
 - Mobile drawerの完全な自動E2E回帰テストは未導入。今回のPRでは実ブラウザー検証記録で固定する
 - UnitEditModalのEscape競合は既存コンポーネントテストとイベント処理の静的確認までで、認証済み管理画面の再操作は最終横断確認で行う
+
+## 作業単位2: 用途別カラートークンと操作境界
+
+### 変更内容
+
+- `app/styles/01-tokens-theme.css`: 面の色とその上の文字色を分離し、`on-accent`、`on-danger`、`on-success`、interactive、success、danger、warning、control borderの用途別トークンを追加した
+- `02-foundations.css`〜`15-home.css`: ボタン、ナビ、リンク、状態表示、ランキング、履歴、詳細、ログイン、テーマ切替へ用途別トークンを適用した
+- `11-rankings-insights.css`: 固定の金・銀・銅・緑を既存メダル／勝敗トークンへ統合した
+- `13-analytics.css`: 相性表の件数文字と保存完了表示を、背景に依存しない文字色へ変更した
+- `lib/factionColors.ts`: 任意の国色は枠・背景・スウォッチに残し、文字はテーマの本文色で表示するようにした
+- `lib/factionColors.test.ts`: 国色が文字へ流入せず、枠と背景には維持されることを固定した
+- 入力、select、buttonなど識別に境界が必要な操作部品だけ`control border`を使用し、カードや表罫線の密度は維持した
+- 個別指定のない操作要素にも共通の`:focus-visible`を追加した
+
+### 変更理由
+
+アクセント色、成功色、危険色を背景と文字で兼用していたため、テーマを切り替えると一方で基準を下回っていた。用途別に組合せを固定し、Light / Darkの通常文字4.5:1と操作境界3:1を安定して満たすため。
+
+### 互換性
+
+- データ、集計値、API、URL、DB、環境変数、保存済みの国色値は変更していない
+- 色を使う情報分類と勝敗の意味は維持し、テーマごとの可読色だけを変更した
+- 国色による識別はバッジ背景、枠、スウォッチ、遍歴のドットに残した
+- カード、表、区切り線の`--border`は一律変更せず、操作部品だけを対象にした
+
+### 検証結果
+
+- `npm test -- lib/factionColors.test.ts`: 1ファイル、9テスト成功
+- `npm test`: 44ファイル、409テスト成功
+- `npm run lint`: 成功
+- `npm run typecheck`: 成功
+- `git diff --check`: 成功
+- 実データの読み込み完了後、Chrome 149で変更前と同じ17ケースをLight / Dark、1440×1000 / 390×844で再監査
+- axe `color-contrast`: 17ケース合計0件
+- 塗り上の通常文字は最小4.63:1、interactive / success / danger / warning文字は対象面で5.18:1以上を計算確認
+- control borderは自身の操作面に対してLight 3.15:1、Dark 4.14:1を計算確認
+- Lightのprimary buttonは通常5.82:1、hover 4.70:1であることを実DOMの計算済みスタイルでも確認
+- ランキングLightと武将詳細Darkを同じビューポートで画像確認し、情報欠落とレイアウト変化がないことを確認
+
+### 残っているリスク
+
+- axeの`incomplete`は17ケース合計159ノード。selectの矢印gradient、ログイン背景gradient、任意色を含む`color-mix`など自動判定不能な箇所で、既知トークンは計算と目視で補完した
+- 保存済み国色の値そのものは任意入力のため、色覚多様性シミュレーションと全組合せの目視は最終確認に残る
+- Windows High Contrast / `forced-colors: active`は未確認
 
 ## 受入条件
 

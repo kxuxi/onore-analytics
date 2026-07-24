@@ -19,6 +19,21 @@
   --chart-win: #22c55e;
   --chart-loss: #ef4444;
 
+  /* 色そのものではなく用途を表すトークン。面色と文字色を同じ変数で
+     兼用せず、Light / Darkの両方で必要なコントラストを保つ。 */
+  --color-on-accent: #0b1220;
+  --color-on-danger: #0b1220;
+  --color-on-success: #0b1220;
+  --color-interactive-text: #6aa9ff;
+  --color-success-text: #3ddca6;
+  --color-danger-text: #f08a63;
+  --color-warning-text: #f0b429;
+  --color-control-border: color-mix(
+    in srgb,
+    var(--text) 45%,
+    var(--border)
+  );
+
   /* ラベル系（タイプ/兵種/兵種/国/警告）の配色。1か所で定義してテーマで自動切替する。
      .tag.* / .status.* / 各詳細ページのピル類はすべてこの変数を参照する。 */
   --label-type-fg: #ffd479;
@@ -125,6 +140,13 @@
   --chart-primary: #2368c4;
   --chart-win: #167a45;
   --chart-loss: #c43d3d;
+  --color-on-accent: #ffffff;
+  --color-on-danger: #ffffff;
+  --color-on-success: #0b1220;
+  --color-interactive-text: #1b55bd;
+  --color-success-text: #0b6b4f;
+  --color-danger-text: #a33a16;
+  --color-warning-text: #8a5a00;
 
   /* ラベル系はダーク前提の濃い背景だと浮くので、淡い背景＋濃い文字へ切替。 */
   --label-type-fg: #8a5a00;
@@ -158,6 +180,7 @@
   --toast-success-border: #9bd6ad;
   --toast-error-bg: #fdeceb;
   --toast-error-border: #f1b0ac;
+  --toast-bg: var(--panel-2);
 
   --hover-surface: var(--border);
 }
@@ -167,7 +190,8 @@
 :root[data-theme="light"] .header {
   background: rgba(255, 255, 255, 0.92);
 }
-:root[data-theme="light"] .btn:hover {
+:root[data-theme="light"]
+  .btn:not(.btn-primary):not(.btn-danger):hover {
   background: var(--border);
 }
 :root[data-theme="light"] .bh-card:hover {
@@ -195,4 +219,3 @@
 :root[data-theme="light"] tbody tr:hover {
   background: rgba(17, 24, 39, 0.035);
 }
-

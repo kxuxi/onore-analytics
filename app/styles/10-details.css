@@ -27,8 +27,8 @@
 }
 
 .detail-share.copied {
-  color: var(--success, #4caf50);
-  border-color: var(--success, #4caf50);
+  color: var(--color-success-text);
+  border-color: var(--color-success-text);
 }
 
 /* 武将詳細のウォッチリスト・トグル（管理者のみ）。 */
@@ -474,8 +474,8 @@
   word-break: break-word;
 }
 
-.dl-name:hover { color: var(--accent); text-decoration: underline; }
-.dl-name.active { color: var(--accent); }
+.dl-name:hover { color: var(--color-interactive-text); text-decoration: underline; }
+.dl-name.active { color: var(--color-interactive-text); }
 
 .dl-unit {
   appearance: none;
@@ -489,8 +489,8 @@
   white-space: nowrap;
 }
 
-.dl-unit:hover { border-color: var(--accent); color: var(--accent); }
-.dl-unit.active { border-color: var(--accent); color: var(--accent); }
+.dl-unit:hover { border-color: var(--accent); color: var(--color-interactive-text); }
+.dl-unit.active { border-color: var(--accent); color: var(--color-interactive-text); }
 
 /* 兵種アンチの矢印（戦闘履歴カード／戦闘ログ共通）。兵種名の横に密着させる。 */
 .dl-unit-wrap {
@@ -526,7 +526,7 @@
 }
 
 .dl-link:hover {
-  color: var(--accent);
+  color: var(--color-interactive-text);
   background: var(--hover-surface);
 }
 .dl-link .icon { width: 15px; height: 15px; }
@@ -547,7 +547,7 @@
   cursor: pointer;
 }
 
-.dl-copy.copied { color: var(--success, #4caf50); }
+.dl-copy.copied { color: var(--color-success-text); }
 
 @media (max-width: 600px) {
   .dl-link {

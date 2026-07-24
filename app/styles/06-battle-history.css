@@ -128,7 +128,7 @@
 }
 
 .bh-result--retreat {
-  color: var(--danger);
+  color: var(--color-danger-text);
   background: color-mix(in srgb, var(--danger) 10%, var(--surface-raised));
   border-color: color-mix(in srgb, var(--danger) 38%, var(--border));
 }
@@ -169,12 +169,16 @@
 }
 
 .bh-action--copied {
-  color: var(--success);
-  border-color: color-mix(in srgb, var(--success) 60%, var(--border));
+  color: var(--color-success-text);
+  border-color: color-mix(
+    in srgb,
+    var(--color-success-text) 60%,
+    var(--border)
+  );
 }
 
 .bh-action--delete:hover {
-  color: var(--danger);
+  color: var(--color-danger-text);
   background: color-mix(in srgb, var(--danger) 10%, var(--surface-raised));
   border-color: var(--danger);
 }
@@ -285,7 +289,7 @@
 }
 
 .bh-battle-number {
-  color: var(--accent);
+  color: var(--color-interactive-text);
   font-weight: 750;
   background: color-mix(in srgb, var(--accent) 10%, var(--surface-raised));
   border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
@@ -371,7 +375,7 @@
 }
 
 .bh-tag--unit:hover {
-  color: var(--accent);
+  color: var(--color-interactive-text);
   background: color-mix(in srgb, var(--accent) 10%, var(--surface-raised));
   border-color: var(--accent);
 }
@@ -416,7 +420,7 @@
   gap: var(--space-1);
   min-height: var(--control-min-height);
   padding: var(--space-1) var(--space-2);
-  color: var(--accent);
+  color: var(--color-interactive-text);
   font-size: var(--font-size-xs);
   text-decoration: none;
   border: 1px solid transparent;
@@ -510,7 +514,7 @@
   }
 
   .bh-disclosure:hover {
-    color: var(--accent);
+    color: var(--color-interactive-text);
     background: color-mix(in srgb, var(--accent) 8%, transparent);
     border-color: var(--accent);
   }
@@ -620,7 +624,7 @@
 
 .pill-btn:hover {
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--color-interactive-text);
 }
 
 .pill-btn.highlight:hover {
@@ -634,7 +638,7 @@
   border: none;
   padding: 0;
   margin: 0;
-  color: var(--accent);
+  color: var(--color-interactive-text);
   font: inherit;
   cursor: pointer;
   text-align: left;
@@ -644,4 +648,3 @@
 .link-like:hover {
   text-decoration: underline;
 }
-

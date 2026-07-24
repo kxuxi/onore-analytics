@@ -47,12 +47,12 @@ describe("factionNameStyle / factionBadgeStyle", () => {
     expect(factionBadgeStyle("徳川家", {})).toBeUndefined();
   });
 
-  it("色設定済みなら国色を含むスタイルを返す", () => {
+  it("色設定済みなら文字色を固定し、枠線と背景には国色を残す", () => {
     const style = factionNameStyle("織田家", { 織田家: "#CC3333" });
-    expect(style?.color).toContain("#CC3333");
+    expect(style?.color).toBe("var(--text)");
 
     const badge = factionBadgeStyle("織田家", { 織田家: "#CC3333" });
-    expect(badge?.color).toContain("#CC3333");
+    expect(badge?.color).toBe("var(--text)");
     expect(badge?.borderColor).toContain("#CC3333");
     expect(badge?.background).toContain("#CC3333");
   });
