@@ -42,6 +42,7 @@ export interface BattleHistoryCardProps {
   antiIndex: Map<string, Set<string>>;
   onSelectWarlord: (name: string) => void;
   onSelectUnit: (name: string) => void;
+  onSelectEquip: (name: string, slot: "weapon" | "item") => void;
   onDelete: (id: number) => Promise<void>;
   canDelete?: boolean;
 }
@@ -50,6 +51,7 @@ interface SideTag {
   text: string;
   kind: "unit" | "branch" | "equip";
   highlight: boolean;
+  slot?: "weapon" | "item";
 }
 
 /** 兵種名、兵種タイプ、品物、武器を既存の表示順で返す。 */
@@ -69,12 +71,21 @@ function buildSideTags(side: BattleSide): SideTag[] {
       highlight: false,
     });
   }
-  for (const equipment of side.equips) {
+  const addEquipment = (equipment: string, slot?: "weapon" | "item") => {
     tags.push({
       text: normalizeDisplayToken(equipment),
       kind: "equip",
       highlight: isSpecialToken(equipment),
+      slot,
     });
+  };
+  if (side.equip1) addEquipment(side.equip1, "item");
+  if (side.equip2) addEquipment(side.equip2, "weapon");
+  // 明示的な装備枠を持たない旧形式は誤分類を避け、従来どおり表示だけ行う。
+  if (!side.equip1 && !side.equip2) {
+    for (const equipment of side.equips) {
+      addEquipment(equipment);
+    }
   }
   return tags;
 }
@@ -179,6 +190,7 @@ export function BattleHistoryCard({
   antiIndex,
   onSelectWarlord,
   onSelectUnit,
+  onSelectEquip,
   onDelete,
   canDelete = false,
 }: BattleHistoryCardProps) {
@@ -366,44 +378,72 @@ export function BattleHistoryCard({
         <span className="bh-tags-empty">情報なし</span>
       ) : (
         <div className="bh-tags">
-          {tags.map((tag, index) =>
-            tag.kind === "unit" ? (
-              <span
-                key={`${tag.kind}-${tag.text}-${index}`}
-                className="bh-unit-group"
-              >
+          {tags.map((tag, index) => {
+            if (tag.kind === "unit") {
+              return (
+                <span
+                  key={`${tag.kind}-${tag.text}-${index}`}
+                  className="bh-unit-group"
+                >
+                  <button
+                    type="button"
+                    className="bh-tag bh-tag--unit"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onSelectUnit(tag.text);
+                    }}
+                    title={`${tag.text} の戦績を見る`}
+                  >
+                    {highlightMatch(tag.text, highlight)}
+                  </button>
+                  <AntiArrows
+                    self={side}
+                    opponent={opponent}
+                    antiIndex={antiIndex}
+                  />
+                </span>
+              );
+            }
+
+            const className = [
+              "bh-tag",
+              `bh-tag--${tag.kind}`,
+              tag.highlight ? "bh-tag--highlight" : "",
+              tag.slot ? "bh-tag--interactive" : "",
+            ]
+              .filter(Boolean)
+              .join(" ");
+            const content = highlightMatch(tag.text, highlight);
+
+            if (tag.kind === "equip" && tag.slot) {
+              const slot = tag.slot;
+              const slotLabel = slot === "weapon" ? "武器" : "品物";
+              return (
                 <button
+                  key={`${tag.kind}-${slot}-${tag.text}-${index}`}
                   type="button"
-                  className="bh-tag bh-tag--unit"
+                  className={className}
                   onClick={(event) => {
                     event.stopPropagation();
-                    onSelectUnit(tag.text);
+                    onSelectEquip(tag.text, slot);
                   }}
-                  title={`${tag.text} の戦績を見る`}
+                  aria-label={`${tag.text} の${slotLabel}図鑑を見る`}
+                  title={`${tag.text} の${slotLabel}図鑑を見る`}
                 >
-                  {highlightMatch(tag.text, highlight)}
+                  {content}
                 </button>
-                <AntiArrows
-                  self={side}
-                  opponent={opponent}
-                  antiIndex={antiIndex}
-                />
-              </span>
-            ) : (
+              );
+            }
+
+            return (
               <span
                 key={`${tag.kind}-${tag.text}-${index}`}
-                className={[
-                  "bh-tag",
-                  `bh-tag--${tag.kind}`,
-                  tag.highlight ? "bh-tag--highlight" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
+                className={className}
               >
-                {highlightMatch(tag.text, highlight)}
+                {content}
               </span>
-            )
-          )}
+            );
+          })}
         </div>
       )}
     </section>

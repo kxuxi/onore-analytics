@@ -102,6 +102,20 @@ const LEGACY_DETAIL_CASES = [
   name: string;
 }>;
 
+const HISTORY_EQUIPMENT_ROUTE_CASES = [
+  {
+    label: "武器",
+    detail: { kind: "weapon", name: "マジックワンド" },
+  },
+  {
+    label: "品物",
+    detail: { kind: "item", name: "ヘヴンズ・キー" },
+  },
+] satisfies Array<{
+  label: string;
+  detail: DetailView;
+}>;
+
 describe("buildPath", () => {
   it("ホーム（既定タブ）はルート、戦闘履歴は /history になる", () => {
     expect(buildPath("home", null)).toBe("/");
@@ -139,6 +153,21 @@ describe("buildPath", () => {
       expect(buildPath(tab, detail)).toBe(path);
       expect(navStateFromPath(path)).toEqual({
         tab,
+        detailStack: [detail],
+      });
+    }
+  );
+
+  it.each(HISTORY_EQUIPMENT_ROUTE_CASES)(
+    "戦闘履歴から開く $label の日本語名をURLで安全に往復できる",
+    ({ detail }) => {
+      const path = buildPath("history", detail);
+
+      expect(path).toBe(
+        `/history/${detail.kind}/${encodeURIComponent(detail.name)}`
+      );
+      expect(navStateFromPath(path)).toEqual({
+        tab: "history",
         detailStack: [detail],
       });
     }

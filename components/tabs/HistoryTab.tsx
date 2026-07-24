@@ -38,6 +38,7 @@ interface Props {
   factionColors: FactionColorMap;
   onSelectWarlord: (name: string) => void;
   onSelectUnit: (name: string) => void;
+  onSelectEquip: (name: string, slot: "weapon" | "item") => void;
   onDelete: (id: number) => Promise<void>;
   /** 現在のページに表示している戦闘履歴をまとめて削除する。 */
   onBulkDelete: (ids: number[]) => Promise<void>;
@@ -53,6 +54,7 @@ export function HistoryTab({
   factionColors,
   onSelectWarlord,
   onSelectUnit,
+  onSelectEquip,
   onDelete,
   onBulkDelete,
 }: Props) {
@@ -622,6 +624,7 @@ export function HistoryTab({
                   antiIndex={antiIndex}
                   onSelectWarlord={onSelectWarlord}
                   onSelectUnit={onSelectUnit}
+                  onSelectEquip={onSelectEquip}
                   onDelete={onDelete}
                   canDelete={canDelete}
                 />

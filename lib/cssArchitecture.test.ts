@@ -76,6 +76,40 @@ describe("global CSS architecture", () => {
     expect(catalog).toContain("@container catalog-results");
   });
 
+  it("データタグを角丸長方形にし、兵種タイプだけを中立色で表示する", () => {
+    const battleHistory = readFileSync(
+      join(stylesDirectory, "06-battle-history.css"),
+      "utf8"
+    );
+    const adminFeedback = readFileSync(
+      join(stylesDirectory, "07-admin-feedback.css"),
+      "utf8"
+    );
+    const rankingInsights = readFileSync(
+      join(stylesDirectory, "11-rankings-insights.css"),
+      "utf8"
+    );
+
+    expect(adminFeedback).toMatch(
+      /\.tag\s*\{[^}]*border-radius:\s*var\(--radius-sm\)/s
+    );
+    expect(adminFeedback).toMatch(
+      /\.tag\.branch\s*\{[^}]*color:\s*var\(--color-text-secondary\)[^}]*border-color:\s*var\(--color-border-default\)[^}]*background:\s*var\(--surface-subtle\)/s
+    );
+    expect(battleHistory).toMatch(
+      /\.bh-tag\s*\{[^}]*border-radius:\s*var\(--radius-sm\)/s
+    );
+    expect(battleHistory).toMatch(
+      /\.bh-tag--branch\s*\{[^}]*color:\s*var\(--color-text-secondary\)[^}]*background:\s*var\(--surface-subtle\)[^}]*border-color:\s*var\(--color-border-default\)/s
+    );
+    expect(rankingInsights).toMatch(
+      /\.latest-units-branch\s*\{[^}]*border-radius:\s*var\(--radius-sm\)[^}]*color:\s*var\(--color-text-secondary\)[^}]*border:\s*1px solid var\(--color-border-default\)[^}]*background:\s*var\(--surface-subtle\)/s
+    );
+    expect(rankingInsights).toMatch(
+      /\.latest-unit-chip\s*\{[^}]*border-radius:\s*var\(--radius-sm\)/s
+    );
+  });
+
   it("CSSを結合してからNext.js既定のPostCSS変換を適用する", () => {
     const config = requireFromTest("../postcss.config.js") as PostCssConfig;
     const supportedBrowsers = requireFromTest(

@@ -99,12 +99,12 @@
   align-items: center;
   gap: 6px;
   padding: 3px 9px;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   font-weight: 700;
-  color: var(--label-branch-fg);
-  border: 1px solid var(--label-branch-border);
-  background: var(--label-branch-bg);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border-default);
+  background: var(--surface-subtle);
   white-space: nowrap;
 }
 
@@ -125,7 +125,7 @@
   align-items: center;
   gap: 5px;
   padding: 2px 4px 2px 9px;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
