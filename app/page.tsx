@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { registerState, importWarlordStats, saveFactionColorsToDb } from "@/lib/api";
 import { parseBattleEntriesChecked } from "@/lib/parser";
 import type { FactionColorMap } from "@/lib/factionColors";
-import { copyText } from "@/lib/clipboard";
+import { copyText } from "@/lib/copyText";
 import { TAB_LABELS, TAB_GROUPS, GROUP_OF_TAB, PUBLIC_TAB_KEYS, type TabGroupKey } from "@/lib/tabs";
 import { useToasts } from "@/lib/useToasts";
 import { useModalA11y } from "@/lib/useModalA11y";

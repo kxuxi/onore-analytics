@@ -2,7 +2,7 @@
 
 ## 状態
 
-調査・計画確定（未実装）
+実装中（作業単位1 / 4完了）
 
 ## 依存関係
 
@@ -222,6 +222,47 @@ footerがviewport内を移動するCLSを抑える。
 4. 共通Loadingと寸法予約を追加し、空白・CLS・読み上げを確認
 5. sidebar初期幅とheader slotを安定化し、保存状態・ARIAを確認
 6. 同条件のAfter計測、全自動検証、GitHub checksを記録
+
+## 作業単位1: 軽量なcopy境界
+
+### 変更内容
+
+- `lib/copyText.ts`: 既存のtext copy実装を挙動変更なく独立させた
+- `lib/clipboard.ts`: Turndownと`htmlToMarkdown`を維持し、`copyText`を新moduleからnamed re-exportした
+- copyだけを使う7箇所を`@/lib/copyText`へ変更し、HistoryのHTML貼り付け変換だけを従来のclipboard入口に残した
+- native clipboard、拒否後のfallback、`execCommand`失敗、DOM利用不可、Markdownのlink / escape / trim、旧export互換をテストで固定した
+
+### 変更理由
+
+copyしか使わない初期画面が、HTML→Markdown変換とTurndownを同時に取得していた。
+公開済みのmodule入口を残したまま内部依存だけを細くし、Home・ランキング等の
+初期JavaScriptを削減するため。
+
+### 互換性
+
+- `copyText(text): Promise<boolean>`の名前、引数、戻り値、clipboard→textarea fallback順を変更していない
+- `@/lib/clipboard`から`copyText`と`htmlToMarkdown`をnamed importする既存コードは引き続き動作する
+- Turndown設定、リンク、特殊文字、前後空白の変換結果を変更していない
+- package依存、API、URL、DB、環境変数、表示文言は変更していない
+
+### 検証結果
+
+- 対象テスト: 5ファイル、21テスト成功
+- `npm run lint`: 成功
+- `npm run typecheck`: 成功
+- 隔離production build: 成功
+- `/`のroute size: 29.7 kB → 25.4 kB
+- `/`のFirst Load JS: 121 kB → 116 kB
+- Home初期requestの総転送量: 9,486,939 B → 9,482,207 B（同じ146期、1回比較）
+- production初期page / Home chunkにTurndown markerがなく、Historyのdynamic chunkだけに残ることを確認
+- CSS本文は95,340 Bのまま
+- `git diff --check`: 成功
+
+### 残っているリスク
+
+- 旧`@/lib/clipboard`からcopyだけをimportする未知のconsumerは互換性を優先してTurndownもbundleし得る
+- Historyを初めて開くときは、既存どおりTurndownを含むchunkを取得する
+- 1回のLighthouse値はDB応答時間の分散が大きいため、LCP / TBTの効果判定は最終3回中央値で行う
 
 ## 受入条件
 

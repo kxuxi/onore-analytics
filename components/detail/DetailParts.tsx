@@ -10,7 +10,7 @@ import {
 } from "react";
 import { formatWinRate, type StatSummary } from "@/lib/stats";
 import { ChevronLeft, ShareIcon, CheckIcon } from "@/components/icons";
-import { copyText } from "@/lib/clipboard";
+import { copyText } from "@/lib/copyText";
 import { BattleLogList } from "@/components/detail/BattleLogList";
 import { Section } from "@/components/detail/Section";
 

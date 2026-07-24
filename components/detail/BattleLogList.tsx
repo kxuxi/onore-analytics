@@ -7,7 +7,7 @@ import type { BattleOutcome, OutcomeResult } from "@/lib/stats";
 import type { BattleSide } from "@/lib/parser";
 import { useAntiIndex } from "@/lib/useAntiIndex";
 import { AntiArrows } from "@/components/AntiArrows";
-import { copyText } from "@/lib/clipboard";
+import { copyText } from "@/lib/copyText";
 import {
   useYearRangeFilter,
   YearRangeFilterBar,
