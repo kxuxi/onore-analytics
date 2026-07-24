@@ -1,0 +1,89 @@
+{
+  "generatedAt": "2026-07-24T02:08:36.134Z",
+  "sourceHead": "7fce8f9",
+  "browser": "Chrome Headless 150",
+  "motion": "disabled",
+  "dynamicFetchTime": "00:00",
+  "cases": [
+    {
+      "filename": "home-desktop-1440-light.png",
+      "path": "/",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "sha256": "bb0abf32ce8b7a8169a16694a1c66219a218552cf0fb147ba41773be7d4181b3"
+    },
+    {
+      "filename": "home-desktop-1440-dark.png",
+      "path": "/",
+      "width": 1440,
+      "height": 1000,
+      "theme": "dark",
+      "sha256": "213c6dce4156bcc0da0a30cb569662b96f4d8f1d6ac13c9704665329f8f30f32"
+    },
+    {
+      "filename": "home-mobile-390-light.png",
+      "path": "/",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "sha256": "b05083b1fe33b44d5d6cc877d62f92343044e9ad0f5e611a3c6325c6ed4fba9a"
+    },
+    {
+      "filename": "history-desktop-1440-light.png",
+      "path": "/history",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "sha256": "2f08183107d715c57971e3fac81adc8f45eda783bd60be9b0399755626cd219c"
+    },
+    {
+      "filename": "ranking-desktop-1440-light.png",
+      "path": "/ranking",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "sha256": "230d313660014ef4e2ce9f3aad5078f46c0241bbb86d2818ed7309435060dcba"
+    },
+    {
+      "filename": "ranking-desktop-1440-dark.png",
+      "path": "/ranking",
+      "width": 1440,
+      "height": 1000,
+      "theme": "dark",
+      "sha256": "e3f9935413ebc51054326cb526cd6c7bbfcd3a146095a81bfe32b754a0ca9421"
+    },
+    {
+      "filename": "catalog-mobile-390-light.png",
+      "path": "/encyclopedia/units",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "sha256": "87df3d589876d270e990c1b80ff492416227922caea69bebc7e34135eb6db0c1"
+    },
+    {
+      "filename": "matrix-desktop-1440-light.png",
+      "path": "/meta",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "sha256": "e1c561a5b6dd3ab0e3d407fc67263bbef2194b1ec301f935a24d5baabd58f27f"
+    },
+    {
+      "filename": "nations-desktop-1440-light.png",
+      "path": "/nations",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "sha256": "79b1e01131d78c8d328910a0b7f1bff60f686bea86024766c324ae480173d6e0"
+    },
+    {
+      "filename": "login-desktop-1440-light.png",
+      "path": "/login",
+      "width": 1440,
+      "height": 1000,
+      "theme": "light",
+      "sha256": "67a341ca3944d59ad6ebedc5b7eb0ad1f6e5936ddf00d219563dd33d114701b2"
+    }
+  ]
+}

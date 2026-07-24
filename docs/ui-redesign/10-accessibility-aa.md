@@ -2,7 +2,7 @@
 
 ## 状態
 
-実装完了（作業単位4 / 4、最終横断検証中）
+実装・検証完了（作業単位4 / 4）
 
 ## 依存関係
 
@@ -354,12 +354,14 @@
 - 読み上げ用要約は、勝利／敗北チェックボックスで現在表示している系列だけを説明するよう同期した
 - Home、被弾表、DB確認、偵察、装備シナジー、相性表の各データ表へ、目的を説明する視覚非表示captionを追加した
 - `app/error.tsx`、`app/not-found.tsx`: ページ固有の最上位見出しを`h1`へ変更し、既存の見た目は維持した
+- `components/AntiArrows.tsx`: 読み上げラベルを持つ矢印へ`role="img"`を追加し、ARIAの名前と役割を一致させた
 - `app/styles/01-tokens-theme.css`: WCAG 2.2 AAの基準を表す`--target-size-minimum: 24px`を追加した
 - 検索クリア、toast close、テキスト風ボタン、タグボタン、詳細内リンク、折りたたみ見出しなど、独立した操作を24px以上にした
+- 相性表の小さい件数文字をテーマ本文色へ統一し、Lightの赤系セルでも通常文字のコントラストを維持した
 - coarse pointerでは検索クリア、toast close、Mobileメニューの閉じる操作を44pxにした
 - coarse pointerの検索欄は、44pxのクリア操作と入力末尾が重ならない右余白を確保した
 - sticky headerにフォーカス対象が隠れないよう、文書と主要見出しへ72pxの`scroll-padding` / `scroll-margin`を追加した
-- `HomeTab.test.tsx`、`DataTableCaptions.test.tsx`、`SystemPages.test.tsx`: 数値要約、線種、caption、見出し階層を回帰テストで固定した
+- `HomeTab.test.tsx`、`DataTableCaptions.test.tsx`、`SystemPages.test.tsx`、`BattleHistoryCard.test.tsx`: 数値要約、線種、caption、見出し階層、矢印のARIA roleを回帰テストで固定した
 
 ### 変更理由
 
@@ -375,14 +377,14 @@
 
 ### 検証結果
 
-- 対象テスト: 4ファイル、14テスト成功
+- 対象テスト: 5ファイル、20テスト成功
 - `npm run lint`: 成功
 - `npm run typecheck`: 成功
 - `git diff --check`: 成功
 - Chrome 150の実データで、勝利線の`stroke-dasharray: none`、敗北線の`6px 4px`、凡例のsolid / dashedを確認
 - 実データの読み上げ用要約が「1609年から1719年」「155勝90敗」「最多勝利」「最多敗北」を含むことを確認
 - 勝利系列を非表示にするとSVGが敗北線だけになり、要約も「90敗」「最多敗北」だけへ同期することを確認
-- 公開アプリ15ケースの1440×1000 / 390×844で、24px未満の独立操作が0件、ページ全体の横overflowが0件であることを確認
+- 公開17ケースの1440×1000 / 390×844で、24px未満の独立操作が0件、ページ全体の横overflowが0件であることを確認
 - 残る24px未満の検出は文中のフッターリンクだけで、独立操作ではないことを確認
 - coarse pointerで検索クリアとtoast closeが44×44px、Mobileメニューの閉じる操作が高さ44pxであることを確認
 - coarse pointerの一般検索欄で右padding 56px、クリア操作44×44px、入力右端から操作左端まで52pxを確保したことを確認
@@ -394,6 +396,37 @@
 - Firefox / SafariでSVGのCSS変数と破線の描画は未確認
 - フッターの文中リンクはインライン例外を利用しており、独立した44pxターゲットにはしていない
 - 200% / 400%拡大、テキスト間隔変更、`forced-colors: active`、実機coarse pointerは最終の手動確認候補として残る
+
+## 最終横断監査
+
+| 指標 | Before | After |
+| --- | ---: | ---: |
+| axe violation node | 507 | 0 |
+| `aria-allowed-role` | 25 | 0 |
+| `landmark-one-main` | 15 | 0 |
+| `region` | 104 | 0 |
+| `aria-hidden-focus` | 5 | 0 |
+| `color-contrast` | 358 | 0 |
+| `aria-hidden`配下の非`inert`フォーカス要素 | 75 | 0 |
+| 24px未満の独立操作 | 25 | 0 |
+| ページ全体の横overflow | 0 / 17 | 0 / 17 |
+
+- 変更前と同じ17ケースをChrome Headless 150 / axe-core 4.12.1で再監査した
+- `aria-prohibited-attr`の未確定項目を追跡し、アンチ矢印のARIA role不足を修正した
+- 変更後の`incomplete`は`color-contrast` 779ノード。`color-mix()`、gradient、SVG、標準select等の自動判定不能箇所であり、合格扱いにはしていない
+- 変更前と同じ10画面を同じviewport / themeで画像化し、情報欠落、テキスト衝突、ページ全体の横overflowがないことを確認した
+- 詳細結果と画像は`docs/ui-redesign/ui-10-after/`へ記録した
+
+## 最終検証
+
+- `npm test`: 48ファイル、424テスト成功
+- `npm run lint`: 警告・エラーなし
+- `npm run typecheck`: 成功
+- `npm run build`: 成功
+  - 稼働中の開発サーバーと`.next`を共有しない一時worktreeで、実装HEAD `7fce8f9`をビルドした
+  - Prisma Client生成、production compile、型検証、10静的ページ生成、build trace収集まで成功した
+- `git diff --check`: 成功
+- 変更後画像10件のSHA-256と、390×844 / 1440×1000の実寸をmanifestに対して再検証した
 
 ## 受入条件
 
