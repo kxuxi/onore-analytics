@@ -77,6 +77,7 @@ describe("BattleHistoryCard", () => {
     expect(primaryHtml).toContain("ゲーム内");
     expect(primaryHtml).toContain("実日時");
     expect(primaryHtml).toContain("12戦目");
+    expect(primaryHtml).toContain("都市");
     expect(primaryHtml).toContain("関ヶ原");
     expect(primaryHtml).toContain("8ターン");
     expect(html).toContain(
@@ -189,6 +190,48 @@ describe("BattleHistoryCard", () => {
     expect(html).toContain(
       '<span class="bh-tag bh-tag--equip bh-tag--highlight"><mark class="bh-highlight">銀時計</mark></span>'
     );
+  });
+
+  it("生データの記号付き検索語を表示名へ正規化して一致箇所を示す", () => {
+    const html = renderCard(CARD, RECORD, "*名品(銀時計)");
+
+    expect(html).toContain('class="bh-disclosure-match">検索一致</span>');
+    expect(html).toContain(
+      '<mark class="bh-highlight">銀時計</mark>'
+    );
+  });
+
+  it("兵種・装備がない場合は空の開閉操作を表示しない", () => {
+    const withoutDetails: BattleCard = {
+      ...CARD,
+      left: {
+        ...CARD.left,
+        unit: undefined,
+        branch: "",
+        equips: [],
+        equip1: undefined,
+        equip2: undefined,
+      },
+      right: {
+        ...CARD.right,
+        unit: undefined,
+        branch: "",
+        equips: [],
+        equip1: undefined,
+        equip2: undefined,
+      },
+    };
+    const html = renderCard(withoutDetails);
+
+    expect(html).not.toContain("bh-disclosure");
+    expect(html).not.toContain("bh-secondary");
+  });
+
+  it("未知形式の日時は加工せず表示する", () => {
+    const html = renderCard({ ...CARD, battleAt: "日時形式不明" });
+
+    expect(html).toContain('<time class="bh-time">日時形式不明</time>');
+    expect(html).not.toContain("bh-time-label");
   });
 
   it("URLや補足値がない場合は、存在しない操作や値を追加しない", () => {

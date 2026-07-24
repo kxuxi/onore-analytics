@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useEffect,
   useId,
   useState,
   type MouseEvent,
@@ -80,7 +81,7 @@ function buildSideTags(side: BattleSide): SideTag[] {
 
 /** 検索語に一致する部分を、大文字小文字を区別せず強調する。 */
 function highlightMatch(text: string, query: string): ReactNode {
-  const normalizedQuery = query.trim();
+  const normalizedQuery = normalizeDisplayToken(query);
   if (!normalizedQuery) return text;
 
   const lowerText = text.toLowerCase();
@@ -136,7 +137,7 @@ function splitDisplayBattleTime(
 }
 
 function sideTagsMatchQuery(tags: readonly SideTag[], query: string): boolean {
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = normalizeDisplayToken(query).toLowerCase();
   return (
     normalizedQuery !== "" &&
     tags.some((tag) => tag.text.toLowerCase().includes(normalizedQuery))
@@ -185,6 +186,17 @@ export function BattleHistoryCard({
   const [deleting, setDeleting] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
   const detailsId = `battle-history-details-${useId()}`;
+  const leftTags = card ? buildSideTags(card.left) : [];
+  const rightTags = card ? buildSideTags(card.right) : [];
+  const detailsMatchQuery =
+    sideTagsMatchQuery(leftTags, highlight) ||
+    sideTagsMatchQuery(rightTags, highlight);
+
+  useEffect(() => {
+    if (detailsMatchQuery) {
+      setDetailsExpanded(true);
+    }
+  }, [detailsMatchQuery, highlight]);
 
   if (!card) {
     return <RawBattleHistoryCard record={record} highlight={highlight} />;
@@ -215,12 +227,7 @@ export function BattleHistoryCard({
   const matchupLabel = `${card.left.name} 対 ${card.right.name}`;
   const hasActions = Boolean(card.url || canDelete);
   const hasContext = Boolean(card.battleNo || card.place || card.turns);
-  const leftTags = buildSideTags(card.left);
-  const rightTags = buildSideTags(card.right);
   const hasTeamDetails = leftTags.length > 0 || rightTags.length > 0;
-  const detailsMatchQuery =
-    sideTagsMatchQuery(leftTags, highlight) ||
-    sideTagsMatchQuery(rightTags, highlight);
   const hasDecidedWinner =
     card.winner === "left" || card.winner === "right";
 
