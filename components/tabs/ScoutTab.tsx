@@ -364,6 +364,9 @@ export function ScoutTab({ db, colors, onSelectWarlord }: Props) {
           ) : (
             <div className="table-wrap">
               <table className="table-card">
+                <caption className="sr-only">
+                  偵察対象武将の所属国、タイプ、兵種の一覧
+                </caption>
                 <thead>
                   <tr>
                     <th>国</th>

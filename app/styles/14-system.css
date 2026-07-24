@@ -64,6 +64,16 @@
   width: 60%;
 }
 
+/* エラー / 404画面の最上位見出し。従来のpanel見出しと同じ寸法を保つ。 */
+.page-state-title {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
 /* ---------- モーション低減（prefers-reduced-motion） ---------- */
 @media (prefers-reduced-motion: reduce) {
   *,

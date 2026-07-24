@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { BattleRecord, WarlordMap } from "@/lib/types";
 import { lookup } from "@/lib/storage";
@@ -41,15 +41,27 @@ interface Props {
   onSelectHistory?: () => void;
 }
 
-/** グラフに表示できる系列（勝利数=緑・敗北数=赤）。 */
+type WinLossSeriesKey = "wins" | "losses";
+
+/** グラフに表示できる系列（勝利数=実線・敗北数=破線、色はテーマに追従）。 */
 const SERIES_OPTIONS: {
-  key: string;
+  key: WinLossSeriesKey;
   label: string;
   color: string;
   valueOf: (y: YearlyWinRate) => number;
 }[] = [
-  { key: "wins", label: "勝利数", color: "#22c55e", valueOf: (y) => y.wins },
-  { key: "losses", label: "敗北数", color: "#ef4444", valueOf: (y) => y.losses },
+  {
+    key: "wins",
+    label: "勝利数",
+    color: "var(--chart-win)",
+    valueOf: (y) => y.wins,
+  },
+  {
+    key: "losses",
+    label: "敗北数",
+    color: "var(--chart-loss)",
+    valueOf: (y) => y.losses,
+  },
 ];
 
 /** これ以上戦闘のない年が続いたら「非戦期間」としてマスク表示する閾値（年）。 */
@@ -57,10 +69,73 @@ const NON_BATTLE_MIN_YEARS = 4;
 
 /** 折れ線グラフ 1 系列分（共通の年軸に沿った値[勝利数 or 敗北数]の点列）。 */
 interface ChartSeries {
-  key: string;
+  key: WinLossSeriesKey;
   label: string;
   color: string;
   points: { value: number; decided: number }[];
+}
+
+/** 折れ線を見なくても、対象期間と勝敗数の規模を把握できる文章要約。 */
+export function describeWinLossTrend(
+  data: YearlyWinRate[],
+  selectedKeys: readonly WinLossSeriesKey[] = ["wins", "losses"]
+): string {
+  const showsWins = selectedKeys.includes("wins");
+  const showsLosses = selectedKeys.includes("losses");
+  const subject =
+    showsWins && showsLosses
+      ? "勝敗数"
+      : showsWins
+        ? "勝利数"
+        : showsLosses
+          ? "敗北数"
+          : "勝敗数";
+  const withBattles = data.filter((point) => point.battles > 0);
+  if (withBattles.length === 0) {
+    return `${subject}の年別推移。戦闘データなし`;
+  }
+
+  const first = withBattles[0];
+  const last = withBattles[withBattles.length - 1];
+  const totalWins = withBattles.reduce((sum, point) => sum + point.wins, 0);
+  const totalLosses = withBattles.reduce(
+    (sum, point) => sum + point.losses,
+    0
+  );
+  const peakWins = withBattles.reduce((best, point) =>
+    point.wins > best.wins ? point : best
+  );
+  const peakLosses = withBattles.reduce((best, point) =>
+    point.losses > best.losses ? point : best
+  );
+  const period =
+    first.year === last.year
+      ? `${first.year}年`
+      : `${first.year}年から${last.year}年まで`;
+  const winsSummary = `期間合計${totalWins.toLocaleString(
+    "ja-JP"
+  )}勝。最多勝利は${peakWins.year}年の${peakWins.wins.toLocaleString(
+    "ja-JP"
+  )}勝`;
+  const lossesSummary = `期間合計${totalLosses.toLocaleString(
+    "ja-JP"
+  )}敗。最多敗北は${peakLosses.year}年の${peakLosses.losses.toLocaleString(
+    "ja-JP"
+  )}敗`;
+
+  if (showsWins && !showsLosses) {
+    return `${period}の勝利数推移。${winsSummary}`;
+  }
+  if (showsLosses && !showsWins) {
+    return `${period}の敗北数推移。${lossesSummary}`;
+  }
+  return `${period}の勝敗数推移。期間合計${totalWins.toLocaleString(
+    "ja-JP"
+  )}勝${totalLosses.toLocaleString("ja-JP")}敗。最多勝利は${
+    peakWins.year
+  }年の${peakWins.wins.toLocaleString("ja-JP")}勝、最多敗北は${
+    peakLosses.year
+  }年の${peakLosses.losses.toLocaleString("ja-JP")}敗`;
 }
 
 /** 勝敗数推移の折れ線グラフ（系列ごとに勝利数=実線・敗北数=破線、Y 軸=戦闘数）。 */
@@ -68,11 +143,14 @@ function WinLossLineChart({
   years,
   series,
   maskRanges,
+  summary,
 }: {
   years: number[];
   series: ChartSeries[];
   maskRanges: { fromIdx: number; toIdx: number }[];
+  summary: string;
 }) {
+  const summaryId = `home-win-loss-summary-${useId()}`;
   const W = 640;
   const H = 220;
   const padL = 30;
@@ -117,22 +195,36 @@ function WinLossLineChart({
   const renderSegs = (
     segs: { i: number; value: number }[][],
     color: string,
+    seriesKey: string,
     keyPrefix: string
   ) =>
     segs.map((seg, si) =>
       seg.length === 1 ? (
-        <circle
-          key={`${keyPrefix}${si}`}
-          className="home-line-dot"
-          cx={xAt(seg[0].i)}
-          cy={yAt(seg[0].value)}
-          r={2.5}
-          style={{ fill: color }}
-        />
+        seriesKey === "losses" ? (
+          <rect
+            key={`${keyPrefix}${si}`}
+            className="home-line-dot home-line-dot--losses"
+            x={xAt(seg[0].i) - 3}
+            y={yAt(seg[0].value) - 3}
+            width={6}
+            height={6}
+            rx={0.75}
+            style={{ fill: color }}
+          />
+        ) : (
+          <circle
+            key={`${keyPrefix}${si}`}
+            className="home-line-dot home-line-dot--wins"
+            cx={xAt(seg[0].i)}
+            cy={yAt(seg[0].value)}
+            r={3}
+            style={{ fill: color }}
+          />
+        )
       ) : (
         <polyline
           key={`${keyPrefix}${si}`}
-          className="home-line-path"
+          className={`home-line-path home-line-path--${seriesKey}`}
           points={seg.map((pt) => `${xAt(pt.i)},${yAt(pt.value)}`).join(" ")}
           style={{ stroke: color }}
         />
@@ -141,11 +233,15 @@ function WinLossLineChart({
 
   return (
     <div className="home-line-wrap">
+      <p id={summaryId} className="sr-only">
+        {summary}
+      </p>
       <svg
         className="home-linechart"
         viewBox={`0 0 ${W} ${H}`}
         role="img"
         aria-label="年別の勝敗数推移グラフ"
+        aria-describedby={summaryId}
       >
         {[0, 0.25, 0.5, 0.75, 1].map((g) => {
           const count = Math.round(niceMax * g);
@@ -215,7 +311,7 @@ function WinLossLineChart({
             .filter((p) => p.decided > 0);
           return (
             <g key={s.key}>
-              {renderSegs(buildSegs(pts), s.color, `${s.key}-`)}
+              {renderSegs(buildSegs(pts), s.color, s.key, `${s.key}-`)}
             </g>
           );
         })}
@@ -320,7 +416,7 @@ export function HomeTab({
   const [editing, setEditing] = useState(false);
   const [query, setQuery] = useState("");
   // 折れ線グラフで表示中の系列（初期は勝利数・敗北数の両方）。
-  const [selectedKeys, setSelectedKeys] = useState<string[]>([
+  const [selectedKeys, setSelectedKeys] = useState<WinLossSeriesKey[]>([
     "wins",
     "losses",
   ]);
@@ -381,7 +477,7 @@ export function HomeTab({
     return ranges;
   }, [years, yearly]);
 
-  const toggleSeries = (key: string) =>
+  const toggleSeries = (key: WinLossSeriesKey) =>
     setSelectedKeys((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
@@ -401,6 +497,10 @@ export function HomeTab({
       })
       .filter((s): s is ChartSeries => s !== null);
   }, [selectedKeys, yearly, years]);
+  const chartSummary = useMemo(
+    () => describeWinLossTrend(yearly, selectedKeys),
+    [selectedKeys, yearly]
+  );
 
   const dbInfo = name ? lookup(db, name) : undefined;
   const profile = latestSelfProfile(outcomes);
@@ -587,7 +687,7 @@ export function HomeTab({
               ) : (
                 <>
                   <p className="muted home-series-hint">
-                    勝利数（緑）・敗北数（赤）の年別推移です。下のチェックで表示を切り替えられます。
+                    勝利数（実線）・敗北数（破線）の年別推移です。下のチェックで表示を切り替えられます。
                   </p>
                   <div className="home-series-picker">
                     {SERIES_OPTIONS.map((opt) => {
@@ -608,8 +708,12 @@ export function HomeTab({
                             onChange={() => toggleSeries(opt.key)}
                           />
                           <span
-                            className="home-series-dot"
-                            style={{ background: opt.color }}
+                            className={`home-series-line home-series-line--${opt.key}`}
+                            style={{
+                              borderColor: opt.color,
+                              color: opt.color,
+                            }}
+                            aria-hidden="true"
                           />
                           {opt.label}
                         </label>
@@ -623,6 +727,7 @@ export function HomeTab({
                       years={years}
                       series={chartSeries}
                       maskRanges={maskRanges}
+                      summary={chartSummary}
                     />
                   )}
                 </>
@@ -634,6 +739,9 @@ export function HomeTab({
               <h3 className="home-card-title">📋 最近の戦闘結果（直近5戦）</h3>
               <div className="table-wrap">
                 <table className="home-recent-table">
+                  <caption className="sr-only">
+                    最近の戦闘結果（直近5戦）
+                  </caption>
                   <thead>
                     <tr>
                       <th>日時</th>

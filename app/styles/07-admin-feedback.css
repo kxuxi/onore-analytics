@@ -180,6 +180,7 @@
 button.tag.faction-link {
   font-family: inherit;
   cursor: pointer;
+  min-height: var(--target-size-minimum);
 }
 button.tag.faction-link:hover,
 button.tag.faction-link:focus-visible {
@@ -193,6 +194,7 @@ button.tag.faction-link:focus-visible {
   cursor: pointer;
   font: inherit;
   font-weight: 600;
+  min-height: var(--target-size-minimum);
 }
 
 .tag-btn:hover {
@@ -516,8 +518,8 @@ button.tag.faction-link:focus-visible {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: var(--target-size-minimum);
+  height: var(--target-size-minimum);
   padding: 0;
   border: none;
   border-radius: 999px;

@@ -103,6 +103,9 @@ export function TraitMatrixTab({ log, onSelectWarlord, onSelectUnit }: Props) {
         <>
           <div className="tmx-wrap">
             <table className="tmx-table">
+              <caption className="sr-only">
+                出兵側と守備側の武将タイプ別勝率相性表
+              </caption>
               <thead>
                 <tr>
                   <th className="tmx-corner" scope="col">

@@ -2,7 +2,7 @@
 
 ## 状態
 
-実装中（作業単位3 / 4完了）
+実装完了（作業単位4 / 4、最終横断検証中）
 
 ## 依存関係
 
@@ -66,7 +66,7 @@
 | P1 | 汎用検索クリア後にフォーカスを失う | Home以外は消滅したクリアボタンから`body`へ落ちる | `SearchBox.tsx` |
 | P1 | 一部の状態・フォーカスが淡い色差だけ | subtab、期間、候補選択の境界差が3:1未満。sticky headerの遮蔽対策も不足 | shell、analytics、home |
 | P1 | 勝敗折れ線が色に依存し、要約が数値を含まない | Lightの勝利線は約2.01:1。コメント上の敗北破線も未実装 | `HomeTab.tsx` |
-| P2 | 一部データ表にcaptionがない | 表の目的を支援技術から直接取得しにくい | Home、Damage、DB、Scout、Synergy |
+| P2 | 一部データ表にcaptionがない | 表の目的を支援技術から直接取得しにくい | Home、Damage、DB、Scout、Synergy、Matrix |
 | P2 | 24px未満の独立操作がある | 検索クリア22px、toast close 20px等。2.5.8の間隔例外へ依存する | controls、toast、detail |
 | P2 | 404／エラーがh2から始まる | ページ固有の最上位見出しがない | `error.tsx`、`not-found.tsx` |
 
@@ -344,6 +344,56 @@
 - VoiceOver / NVDAでの候補読み上げと`aria-activedescendant`の通知タイミングは未確認
 - フォーカスの実ブラウザー確認はChrome 149で実施。Safari / Firefoxの入力クリア直後の描画タイミングは未確認
 - リポジトリにはブラウザーE2E基盤がないため、activeElementの横断確認はこのPRの実ブラウザー記録で補完した
+
+## 作業単位4: 色以外の識別、代替情報、操作領域
+
+### 変更内容
+
+- `components/tabs/HomeTab.tsx`、`app/styles/15-home.css`: 勝敗線をテーマ用chart tokenへ統合し、勝利を実線・丸、敗北を破線・四角で表示した
+- 勝敗折れ線へ対象期間、合計勝敗、最多勝利年、最多敗北年を含む読み上げ用要約を追加し、`aria-describedby`でSVGと関連付けた
+- 読み上げ用要約は、勝利／敗北チェックボックスで現在表示している系列だけを説明するよう同期した
+- Home、被弾表、DB確認、偵察、装備シナジー、相性表の各データ表へ、目的を説明する視覚非表示captionを追加した
+- `app/error.tsx`、`app/not-found.tsx`: ページ固有の最上位見出しを`h1`へ変更し、既存の見た目は維持した
+- `app/styles/01-tokens-theme.css`: WCAG 2.2 AAの基準を表す`--target-size-minimum: 24px`を追加した
+- 検索クリア、toast close、テキスト風ボタン、タグボタン、詳細内リンク、折りたたみ見出しなど、独立した操作を24px以上にした
+- coarse pointerでは検索クリア、toast close、Mobileメニューの閉じる操作を44pxにした
+- coarse pointerの検索欄は、44pxのクリア操作と入力末尾が重ならない右余白を確保した
+- sticky headerにフォーカス対象が隠れないよう、文書と主要見出しへ72pxの`scroll-padding` / `scroll-margin`を追加した
+- `HomeTab.test.tsx`、`DataTableCaptions.test.tsx`、`SystemPages.test.tsx`: 数値要約、線種、caption、見出し階層を回帰テストで固定した
+
+### 変更理由
+
+勝敗線を色だけで区別していた状態、表の目的を直接取得しにくい状態、24px未満の独立操作、sticky headerによるフォーカス遮蔽を解消するため。線種と明示的な文言、数値要約を併用し、色を認識できない場合も同じ情報へ到達できるようにした。
+
+### 互換性
+
+- 勝敗の集計式、対象年、SVG座標、表示対象データ、チェックボックスの切替は変更していない
+- captionと要約は視覚非表示で、表の列、行、表示密度を変更しない
+- URL、ルーティング、API、DB、環境変数、設定キー、保存値は変更していない
+- 24px化は独立操作だけに限定し、文中のフッターリンクはWCAG 2.5.8のインライン例外として従来の行高を維持した
+- 全操作の一律44px化は行わず、狭幅で情報密度を損なわない範囲に限定した
+
+### 検証結果
+
+- 対象テスト: 4ファイル、14テスト成功
+- `npm run lint`: 成功
+- `npm run typecheck`: 成功
+- `git diff --check`: 成功
+- Chrome 150の実データで、勝利線の`stroke-dasharray: none`、敗北線の`6px 4px`、凡例のsolid / dashedを確認
+- 実データの読み上げ用要約が「1609年から1719年」「155勝90敗」「最多勝利」「最多敗北」を含むことを確認
+- 勝利系列を非表示にするとSVGが敗北線だけになり、要約も「90敗」「最多敗北」だけへ同期することを確認
+- 公開アプリ15ケースの1440×1000 / 390×844で、24px未満の独立操作が0件、ページ全体の横overflowが0件であることを確認
+- 残る24px未満の検出は文中のフッターリンクだけで、独立操作ではないことを確認
+- coarse pointerで検索クリアとtoast closeが44×44px、Mobileメニューの閉じる操作が高さ44pxであることを確認
+- coarse pointerの一般検索欄で右padding 56px、クリア操作44×44px、入力右端から操作左端まで52pxを確保したことを確認
+- ランキングを最下部までスクロール後に見出しへフォーカスし、見出し上端158px、sticky header下端64pxで遮蔽されないことを確認
+
+### 残っているリスク
+
+- VoiceOver / NVDAによる数値要約とcaptionの読み上げは未確認
+- Firefox / SafariでSVGのCSS変数と破線の描画は未確認
+- フッターの文中リンクはインライン例外を利用しており、独立した44pxターゲットにはしていない
+- 200% / 400%拡大、テキスト間隔変更、`forced-colors: active`、実機coarse pointerは最終の手動確認候補として残る
 
 ## 受入条件
 

@@ -620,6 +620,7 @@
   cursor: pointer;
   font-size: 11px;
   line-height: 1.4;
+  min-height: var(--target-size-minimum);
 }
 
 .pill-btn:hover {
@@ -640,6 +641,7 @@
   margin: 0;
   color: var(--color-interactive-text);
   font: inherit;
+  min-height: var(--target-size-minimum);
   cursor: pointer;
   text-align: left;
   word-break: break-word;

@@ -190,6 +190,7 @@
   justify-content: space-between;
   gap: 12px;
   width: 100%;
+  min-height: var(--target-size-minimum);
   padding: 0;
   background: none;
   border: none;
@@ -469,6 +470,7 @@
   padding: 0;
   font: inherit;
   font-weight: 700;
+  min-height: var(--target-size-minimum);
   color: var(--text);
   cursor: pointer;
   word-break: break-word;
@@ -480,6 +482,7 @@
 .dl-unit {
   appearance: none;
   font-size: 11px;
+  min-height: var(--target-size-minimum);
   padding: 1px 8px;
   border-radius: 999px;
   background: var(--panel);

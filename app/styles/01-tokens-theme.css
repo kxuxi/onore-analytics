@@ -111,6 +111,7 @@
   --ease-standard: ease;
 
   --control-min-height: 40px;
+  --target-size-minimum: 24px;
   --touch-target: 44px;
   --sidebar-width: 220px;
   --sticky-header-offset: 60px;

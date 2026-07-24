@@ -334,6 +334,9 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
           </div>
         ) : (
           <table className="table-card">
+            <caption className="sr-only">
+              武将ごとの行動状況、所属国、タイプ、兵種、最終行動時刻の一覧
+            </caption>
             <thead>
               <tr>
                 <th>状況</th>

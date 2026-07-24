@@ -6,6 +6,10 @@ body {
     color var(--duration-normal) var(--ease-standard);
 }
 
+html {
+  scroll-padding-top: calc(var(--sticky-header-offset) + var(--space-3));
+}
+
 * {
   box-sizing: border-box;
 }
@@ -39,6 +43,17 @@ body {
 button {
   font-family: inherit;
   cursor: pointer;
+}
+
+summary {
+  min-height: var(--target-size-minimum);
+}
+
+#main-panel,
+[data-page-heading],
+.detail-title h2,
+.page-state-title {
+  scroll-margin-top: calc(var(--sticky-header-offset) + var(--space-3));
 }
 
 input,

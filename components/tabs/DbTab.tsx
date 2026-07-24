@@ -506,6 +506,9 @@ export function DbTab({ db, colors, onSelectWarlord, onSelectFaction, onImportSt
           </div>
         ) : (
           <table className="table-card">
+            <caption className="sr-only">
+              登録済み武将の所属国、タイプ、兵種、行動時間、更新日時の一覧
+            </caption>
             <thead>
               <tr>
                 <SortableTh label="国" field="faction" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
