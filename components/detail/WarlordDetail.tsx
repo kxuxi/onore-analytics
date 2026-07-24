@@ -25,13 +25,13 @@ import {
 } from "@/lib/stats";
 import { PieChart, chartColor } from "@/components/PieChart";
 import { DownloadIcon, StarIcon } from "@/components/icons";
-import { BattleLogList } from "@/components/detail/BattleLogList";
 import { useYearRangeFilter, YearRangeFilterBar } from "@/components/detail/YearRangeFilter";
 import { Section } from "@/components/detail/Section";
 import {
-  DetailHeader,
-  StatCards,
-  WinRateBar,
+  DetailBattleLogSection,
+  DetailEmptyState,
+  DetailPage,
+  DetailSummary,
 } from "@/components/detail/DetailParts";
 import {
   MatchupRanking,
@@ -182,77 +182,90 @@ export function WarlordDetail({
   );
 
   return (
-    <section className="panel detail-panel">
-      <DetailHeader
-        kind="武将"
-        title={name}
-        tags={tags}
-        actions={
-          isAdmin ? (
-            <>
+    <DetailPage
+      kind="武将"
+      title={name}
+      tags={tags}
+      actions={
+        isAdmin ? (
+          <>
+            <button
+              type="button"
+              className="btn detail-card-btn"
+              onClick={handleSaveCard}
+              disabled={cardState === "saving" || summary.battles === 0}
+              aria-label={
+                cardState === "saving"
+                  ? "戦績カードを生成中"
+                  : cardState === "done"
+                    ? "戦績カードを保存しました"
+                    : cardState === "error"
+                      ? "戦績カードの保存に失敗しました"
+                      : "戦績カードを画像として保存"
+              }
+              title="戦績カードを画像として保存（クリップボードにもコピー）"
+            >
+              <DownloadIcon />
+              <span>
+                {cardState === "saving"
+                  ? "生成中…"
+                  : cardState === "done"
+                    ? "保存しました"
+                    : cardState === "error"
+                      ? "失敗しました"
+                      : "カード保存"}
+              </span>
+            </button>
+            {onToggleWatch && (
               <button
                 type="button"
-                className="btn detail-card-btn"
-                onClick={handleSaveCard}
-                disabled={cardState === "saving" || summary.battles === 0}
-                title="戦績カードを画像として保存（クリップボードにもコピー）"
+                className={"btn detail-watch" + (isWatched ? " active" : "")}
+                onClick={() => onToggleWatch(name)}
+                aria-pressed={isWatched}
+                aria-label={
+                  isWatched
+                    ? "ウォッチリストから外す"
+                    : "ウォッチリストに追加"
+                }
+                title={
+                  isWatched
+                    ? "ウォッチリストから外す"
+                    : "ウォッチリストに追加"
+                }
               >
-                <DownloadIcon />
-                <span>
-                  {cardState === "saving"
-                    ? "生成中…"
-                    : cardState === "done"
-                      ? "保存しました"
-                      : cardState === "error"
-                        ? "失敗しました"
-                        : "カード保存"}
-                </span>
+                <StarIcon filled={isWatched} />
+                <span>{isWatched ? "ウォッチ中" : "ウォッチ"}</span>
               </button>
-              {onToggleWatch && (
-                <button
-                  type="button"
-                  className={"btn detail-watch" + (isWatched ? " active" : "")}
-                  onClick={() => onToggleWatch(name)}
-                  aria-pressed={isWatched}
-                  title={
-                    isWatched
-                      ? "ウォッチリストから外す"
-                      : "ウォッチリストに追加"
-                  }
-                >
-                  <StarIcon filled={isWatched} />
-                  <span>{isWatched ? "ウォッチ中" : "ウォッチ"}</span>
-                </button>
-              )}
-            </>
-          ) : undefined
-        }
-        onBack={onBack}
-      />
-
+            )}
+          </>
+        ) : undefined
+      }
+      onBack={onBack}
+    >
       <AbilityStats warlord={dbInfo} />
 
       {outcomes.length === 0 ? (
         !dbInfo ? (
-          <div className="empty">
-            <p className="empty-title">武将が見つかりません</p>
-            <p className="empty-hint">
-              「{name}」は現在のDB・戦闘履歴のどちらにも見つかりませんでした。
-              名前が変更・削除されたか、共有リンクが古い可能性があります。
-            </p>
-          </div>
+          <DetailEmptyState
+            title="武将が見つかりません"
+            hint={
+              <>
+                「{name}」は現在のDB・戦闘履歴のどちらにも見つかりませんでした。
+                名前が変更・削除されたか、共有リンクが古い可能性があります。
+              </>
+            }
+          />
         ) : (
           <>
-            <div className="empty">
+            <DetailEmptyState>
               この武将が登場する戦闘履歴がまだありません。
-            </div>
+            </DetailEmptyState>
             {canComment && <WarlordComment name={name} />}
           </>
         )
       ) : (
         <>
-          <StatCards summary={summary} />
-          <WinRateBar summary={summary} />
+          <DetailSummary summary={summary} />
 
           <FactionHistory stints={timeline} colors={colors} />
 
@@ -310,21 +323,16 @@ export function WarlordDetail({
             </div>
           </Section>
 
-          <Section
-            title="戦闘ログ"
+          <DetailBattleLogSection
             count={`${yearFilter.filtered.length}件`}
-            mobileCollapsed
-          >
-            <BattleLogList
-              outcomes={outcomes}
-              currentName={name}
-              onSelectWarlord={onSelectWarlord}
-              onSelectUnit={onSelectUnit}
-              yearFilter={yearFilter}
-            />
-          </Section>
+            outcomes={outcomes}
+            currentName={name}
+            onSelectWarlord={onSelectWarlord}
+            onSelectUnit={onSelectUnit}
+            yearFilter={yearFilter}
+          />
         </>
       )}
-    </section>
+    </DetailPage>
   );
 }

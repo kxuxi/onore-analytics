@@ -11,6 +11,13 @@
   --danger-strong: #e04848;
   --success: #4caf50;
   --warning: #f0b429;
+  --outcome-win-text: #3ddca6;
+  --outcome-loss-text: #f08a63;
+  --outcome-win-fill: #1d9e75;
+  --outcome-loss-fill: #d85a30;
+  --chart-primary: #3b82f6;
+  --chart-win: #22c55e;
+  --chart-loss: #ef4444;
 
   /* ラベル系（タイプ/兵種/兵種/国/警告）の配色。1か所で定義してテーマで自動切替する。
      .tag.* / .status.* / 各詳細ページのピル類はすべてこの変数を参照する。 */
@@ -111,6 +118,13 @@
   --danger-strong: #bd2a24;
   --success: #2f9e44;
   --warning: #b9770a;
+  --outcome-win-text: #0b6b4f;
+  --outcome-loss-text: #a33a16;
+  --outcome-win-fill: #147d5b;
+  --outcome-loss-fill: #bd4b25;
+  --chart-primary: #2368c4;
+  --chart-win: #167a45;
+  --chart-loss: #c43d3d;
 
   /* ラベル系はダーク前提の濃い背景だと浮くので、淡い背景＋濃い文字へ切替。 */
   --label-type-fg: #8a5a00;
@@ -3355,13 +3369,16 @@ button.tag.faction-link:focus-visible {
 
 /* ===== 武将ページ / 兵種ページ ===== */
 .detail-head {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "back title actions";
   align-items: flex-start;
   gap: 12px;
   margin-bottom: 14px;
 }
 
 .detail-back {
+  grid-area: back;
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -3403,8 +3420,9 @@ button.tag.faction-link:focus-visible {
 /* 戻るボタンと見出しの右側に、操作ボタン群（編集など）と共有ボタンをまとめる。
    margin-left:auto はラッパーへ移し、内側の共有ボタンの auto は打ち消す。 */
 .detail-head-actions {
+  grid-area: actions;
   flex: 0 0 auto;
-  margin-left: auto;
+  justify-self: end;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -3415,6 +3433,7 @@ button.tag.faction-link:focus-visible {
 }
 
 .detail-title {
+  grid-area: title;
   min-width: 0;
 }
 
@@ -3450,8 +3469,61 @@ button.tag.faction-link:focus-visible {
   margin-top: 4px;
 }
 
-.stat-win-text { color: #3ddca6; }
-.stat-loss-text { color: #f08a63; }
+.detail-summary {
+  margin-top: 24px;
+}
+
+.detail-summary-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.detail-summary .detail-stats {
+  margin-top: 0;
+}
+
+@media (max-width: 600px) {
+  .detail-head {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "back actions"
+      "title title";
+    row-gap: 12px;
+  }
+
+  .detail-head-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .detail-back,
+  .detail-head-actions .btn {
+    min-height: 44px;
+  }
+
+  .detail-head-actions .detail-card-btn > span,
+  .detail-head-actions .detail-watch > span,
+  .detail-head-actions .detail-share > span {
+    display: none;
+  }
+
+  .detail-head-actions .detail-card-btn,
+  .detail-head-actions .detail-watch,
+  .detail-head-actions .detail-share {
+    justify-content: center;
+    width: 44px;
+    padding-inline: 0;
+  }
+
+  .detail-title h2 {
+    margin-top: 3px;
+    font-size: 22px;
+    line-height: 1.3;
+  }
+}
+
+.stat-win-text { color: var(--outcome-win-text); }
+.stat-loss-text { color: var(--outcome-loss-text); }
 .stat-other-text { color: var(--muted); }
 
 .wr-bar {
@@ -3464,8 +3536,8 @@ button.tag.faction-link:focus-visible {
   margin: 12px 0 2px;
 }
 
-.wr-win { background: #1d9e75; }
-.wr-loss { background: #d85a30; }
+.wr-win { background: var(--outcome-win-fill); }
+.wr-loss { background: var(--outcome-loss-fill); }
 
 .detail-section {
   margin-top: 24px;
@@ -3719,8 +3791,14 @@ button.tag.faction-link:focus-visible {
   white-space: nowrap;
 }
 
-.dl-result--win { background: rgba(29, 158, 117, 0.16); color: #3ddca6; }
-.dl-result--loss { background: rgba(216, 90, 48, 0.16); color: #f08a63; }
+.dl-result--win {
+  background: color-mix(in srgb, var(--outcome-win-fill) 16%, transparent);
+  color: var(--outcome-win-text);
+}
+.dl-result--loss {
+  background: color-mix(in srgb, var(--outcome-loss-fill) 16%, transparent);
+  color: var(--outcome-loss-text);
+}
 .dl-result--other { background: var(--panel); color: var(--muted); }
 
 .dl-main {
@@ -3810,17 +3888,24 @@ button.tag.faction-link:focus-visible {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: var(--radius-md);
   color: var(--muted);
 }
 
-.dl-link:hover { color: var(--accent); }
+.dl-link:hover {
+  color: var(--accent);
+  background: var(--hover-surface);
+}
 .dl-link .icon { width: 15px; height: 15px; }
 
 .dl-actions {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 /* コピーボタンは dl-link の見た目を踏襲しつつ button 既定スタイルを打ち消す */
@@ -3834,25 +3919,32 @@ button.tag.faction-link:focus-visible {
 
 .dl-copy.copied { color: var(--success, #4caf50); }
 
+@media (max-width: 600px) {
+  .dl-link {
+    min-width: var(--touch-target);
+    min-height: var(--touch-target);
+  }
+}
+
 /* ---------- 武将インサイト（相性・ヒートマップ・遍歴・コメント） ---------- */
 
 /* 相性ランキング */
-.rank-cols {
+.detail-rank-cols {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 16px;
 }
 
-.rank-head {
+.detail-rank-head {
   margin: 0 0 8px;
   font-size: 12px;
   letter-spacing: 0.06em;
 }
 
-.rank-head--good { color: #3ddca6; }
-.rank-head--bad { color: #f08a63; }
+.detail-rank-head--good { color: var(--outcome-win-text); }
+.detail-rank-head--bad { color: var(--outcome-loss-text); }
 
-.rank-list {
+.detail-rank-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -3861,7 +3953,7 @@ button.tag.faction-link:focus-visible {
   gap: 6px;
 }
 
-.rank-row {
+.detail-rank-row {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -3872,7 +3964,7 @@ button.tag.faction-link:focus-visible {
   font-size: 13px;
 }
 
-.rank-no {
+.detail-rank-no {
   flex: 0 0 auto;
   width: 18px;
   text-align: center;
@@ -3880,7 +3972,7 @@ button.tag.faction-link:focus-visible {
   color: var(--muted);
 }
 
-.rank-name {
+.detail-rank-name {
   flex: 1 1 auto;
   min-width: 0;
   display: inline-flex;
@@ -3889,17 +3981,17 @@ button.tag.faction-link:focus-visible {
   flex-wrap: wrap;
 }
 
-.rank-faction {
+.detail-rank-faction {
   font-size: 11px;
   color: var(--muted);
 }
 
-.rank-rate {
+.detail-rank-rate {
   flex: 0 0 auto;
   font-weight: 700;
 }
 
-.rank-record {
+.detail-rank-record {
   flex: 0 0 auto;
   font-size: 11px;
   color: var(--muted);
@@ -4031,7 +4123,7 @@ button.tag.faction-link:focus-visible {
 .branch-bar-fill {
   display: block;
   height: 100%;
-  background: #1d9e75;
+  background: var(--outcome-win-fill);
 }
 
 .branch-rate {

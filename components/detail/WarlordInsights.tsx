@@ -52,21 +52,23 @@ function RankRow({
   onSelectWarlord: (name: string) => void;
 }) {
   return (
-    <li className="rank-row">
-      <span className="rank-no">{rank}</span>
-      <span className="rank-name">
+    <li className="detail-rank-row">
+      <span className="detail-rank-no">{rank}</span>
+      <span className="detail-rank-name">
         <OpponentName name={stat.name} onSelect={onSelectWarlord} />
         {stat.faction && (
           <span
-            className="rank-faction"
+            className="detail-rank-faction"
             style={factionNameStyle(stat.faction, colors)}
           >
             {stat.faction}
           </span>
         )}
       </span>
-      <span className="rank-rate">{formatWinRate(stat.winRate, stat.decided)}</span>
-      <span className="rank-record">
+      <span className="detail-rank-rate">
+        {formatWinRate(stat.winRate, stat.decided)}
+      </span>
+      <span className="detail-rank-record">
         {stat.wins.toLocaleString("ja-JP")}勝{stat.losses.toLocaleString("ja-JP")}敗
       </span>
     </li>
@@ -85,10 +87,12 @@ export function MatchupRanking({
   if (ranking.best.length === 0) return null;
   return (
     <Section title="相性ランキング" mobileCollapsed>
-      <div className="rank-cols">
-        <div className="rank-col">
-          <h4 className="rank-head rank-head--good">相性の良い相手</h4>
-          <ol className="rank-list">
+      <div className="detail-rank-cols">
+        <div className="detail-rank-col">
+          <h4 className="detail-rank-head detail-rank-head--good">
+            相性の良い相手
+          </h4>
+          <ol className="detail-rank-list">
             {ranking.best.map((s, i) => (
               <RankRow
                 key={s.name}
@@ -101,9 +105,11 @@ export function MatchupRanking({
           </ol>
         </div>
         {ranking.worst.length > 0 && (
-          <div className="rank-col">
-            <h4 className="rank-head rank-head--bad">苦手な相手</h4>
-            <ol className="rank-list">
+          <div className="detail-rank-col">
+            <h4 className="detail-rank-head detail-rank-head--bad">
+              苦手な相手
+            </h4>
+            <ol className="detail-rank-list">
               {ranking.worst.map((s, i) => (
                 <RankRow
                   key={s.name}
@@ -192,11 +198,61 @@ function heatTitle(
   )} / ${cell.battles.toLocaleString("ja-JP")}戦）`;
 }
 
+/** 色を見なくてもヒートマップの母数と最高・最低の時間帯を把握できる要約。 */
+export function describeWinHeatmap(heatmap: WinHeatmap): string {
+  const decidedCells = heatmap.cells.flatMap((row, day) =>
+    row
+      .map((cell, bucket) => ({ cell, day, bucket }))
+      .filter(({ cell }) => cell.decided > 0)
+  );
+  if (decidedCells.length === 0) {
+    return `時間帯・曜日別の勝率。日時を確認できた${heatmap.dated.toLocaleString(
+      "ja-JP"
+    )}戦、勝敗が確定した時間帯なし`;
+  }
+
+  const best = decidedCells.reduce((current, candidate) =>
+    candidate.cell.winRate > current.cell.winRate ||
+    (candidate.cell.winRate === current.cell.winRate &&
+      candidate.cell.decided > current.cell.decided)
+      ? candidate
+      : current
+  );
+  const worst = decidedCells.reduce((current, candidate) =>
+    candidate.cell.winRate < current.cell.winRate ||
+    (candidate.cell.winRate === current.cell.winRate &&
+      candidate.cell.decided > current.cell.decided)
+      ? candidate
+      : current
+  );
+  const describeCell = ({
+    cell,
+    day,
+    bucket,
+  }: (typeof decidedCells)[number]) =>
+    `${DAY_LABELS[day]}曜日 ${
+      heatmap.bucketLabels[bucket]
+    }時台 ${formatWinRate(cell.winRate, cell.decided)}（${cell.wins.toLocaleString(
+      "ja-JP"
+    )}勝${cell.losses.toLocaleString("ja-JP")}敗）`;
+  const prefix = `時間帯・曜日別の勝率。日時を確認できた${heatmap.dated.toLocaleString(
+    "ja-JP"
+  )}戦`;
+  if (best.day === worst.day && best.bucket === worst.bucket) {
+    return `${prefix}。対象時間帯は${describeCell(best)}`;
+  }
+  return `${prefix}。最高は${describeCell(best)}、最低は${describeCell(worst)}`;
+}
+
 export function WinHeatmapSection({ heatmap }: { heatmap: WinHeatmap }) {
   if (heatmap.dated === 0) return null;
   return (
     <Section title="時間帯・曜日別の勝率" mobileCollapsed>
-      <div className="heatmap-wrap">
+      <div
+        className="heatmap-wrap"
+        role="group"
+        aria-label={describeWinHeatmap(heatmap)}
+      >
         <div className="heatmap">
           <div className="heat-corner" />
           {heatmap.bucketLabels.map((label) => (
@@ -205,20 +261,26 @@ export function WinHeatmapSection({ heatmap }: { heatmap: WinHeatmap }) {
             </div>
           ))}
           {heatmap.cells.map((row, day) => (
-            <div key={day} className="heat-row" role="row">
+            <div key={day} className="heat-row">
               <div className="heat-row-label">{DAY_LABELS[day]}</div>
-              {row.map((cell, b) => (
-                <div
-                  key={b}
-                  className="heat-cell"
-                  style={heatStyle(cell)}
-                  title={heatTitle(
-                    DAY_LABELS[day],
-                    heatmap.bucketLabels[b],
-                    cell
-                  )}
-                />
-              ))}
+              {row.map((cell, b) => {
+                const cellLabel = heatTitle(
+                  DAY_LABELS[day],
+                  heatmap.bucketLabels[b],
+                  cell
+                );
+                return (
+                  <div
+                    key={b}
+                    className="heat-cell"
+                    style={heatStyle(cell)}
+                    role={cell.battles > 0 ? "img" : undefined}
+                    aria-label={cell.battles > 0 ? cellLabel : undefined}
+                    aria-hidden={cell.battles === 0 ? true : undefined}
+                    title={cellLabel}
+                  />
+                );
+              })}
             </div>
           ))}
         </div>
@@ -373,7 +435,7 @@ export function AbilityStats({ warlord }: { warlord: Warlord | undefined }) {
 /* ---------- 通算勝率の推移（累積・管理者向け） ---------- */
 
 /** 折れ線の色（勝率＝青系）。 */
-const WR_LINE_COLOR = "#3b82f6";
+const WR_LINE_COLOR = "var(--chart-primary)";
 
 /**
  * 通算（累積）勝率の推移を折れ線で描く（Y 軸 0〜100%、50% 基準線つき）。
@@ -420,6 +482,18 @@ export function WinRateTrend({ data }: { data: YearlyWinRate[] }) {
   });
   // 最初に勝敗が確定した年以降だけを線にする。
   const linePts = cumPoints.filter((p) => p.started);
+  const firstPoint = linePts[0];
+  const lastPoint = linePts[linePts.length - 1];
+  const chartSummary =
+    firstPoint && lastPoint
+      ? `通算勝率の推移。${firstPoint.year}年時点は${Math.round(
+          firstPoint.pct
+        )}%、${lastPoint.year}年時点は${Math.round(
+          lastPoint.pct
+        )}%（通算${lastPoint.cumWins.toLocaleString(
+          "ja-JP"
+        )}勝${lastPoint.cumLosses.toLocaleString("ja-JP")}敗）`
+      : "通算勝率の推移。勝敗が確定したデータなし";
 
   return (
     <Section title="通算勝率の推移" mobileCollapsed>
@@ -431,7 +505,7 @@ export function WinRateTrend({ data }: { data: YearlyWinRate[] }) {
           className="home-linechart"
           viewBox={`0 0 ${W} ${H}`}
           role="img"
-          aria-label="通算勝率の推移グラフ"
+          aria-label={chartSummary}
         >
           {[0, 25, 50, 75, 100].map((pct) => (
             <g key={pct}>

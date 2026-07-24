@@ -29,6 +29,7 @@ import {
   latestGameYear,
   RANKING_LAST10_KEY,
   equipSynergy,
+  collectEquipBattles,
   traitMatchupMatrix,
   collectTraitMatchupBattles,
   MATCHUP_TRAITS,
@@ -987,6 +988,99 @@ describe("weaponStats / itemStats", () => {
     expect(kabuto.attackUses).toBe(0);
     expect(kabuto.losses).toBe(2);
     expect(kabuto.winRate).toBeCloseTo(0);
+  });
+
+  it("詳細収集は武器=equip2、品物=equip1の列対応を維持する", () => {
+    const oneBattle = [rec(equipLine("04/10 10:00", "信長の勝利"), 1)];
+
+    expect(
+      collectEquipBattles(oneBattle, "鬼丸", "weapon").map((o) => o.side)
+    ).toEqual(["left"]);
+    expect(
+      collectEquipBattles(oneBattle, "カルバリン砲", "weapon").map(
+        (o) => o.side
+      )
+    ).toEqual(["right"]);
+    expect(
+      collectEquipBattles(oneBattle, "金の腕輪", "item").map((o) => o.side)
+    ).toEqual(["left"]);
+    expect(
+      collectEquipBattles(oneBattle, "金の兜", "item").map((o) => o.side)
+    ).toEqual(["right"]);
+
+    expect(collectEquipBattles(oneBattle, "鬼丸", "item")).toEqual([]);
+    expect(collectEquipBattles(oneBattle, "金の腕輪", "weapon")).toEqual([]);
+  });
+
+  it.each([
+    { slot: "weapon" as const, name: "共有武器" },
+    { slot: "item" as const, name: "共用品物" },
+  ])("左右双方が同じ$slotを持つ戦闘は2視点で収集する", ({ slot, name }) => {
+    const sharedLine = equipLine("04/10 10:00", "信長の勝利")
+      .replace("金の腕輪 鬼丸", "共用品物 共有武器")
+      .replace("金の兜 カルバリン砲", "共用品物 共有武器");
+
+    const outcomes = collectEquipBattles([rec(sharedLine, 1)], name, slot);
+
+    expect(outcomes.map((o) => o.side)).toEqual(["left", "right"]);
+    expect(outcomes.map((o) => o.self.name)).toEqual(["信長", "勝頼"]);
+    expect(outcomes[0].record).toBe(outcomes[1].record);
+  });
+
+  it("同じ戦闘の重複は入力順で最初のレコードと解析結果を保持する", () => {
+    const first: BattleRecord = {
+      ...rec(equipLine("04/10 10:00", "信長の勝利"), 10),
+      id: 101,
+    };
+    const duplicate: BattleRecord = {
+      ...rec(
+        equipLine("04/10 10:00", "信長の勝利").replace(/ 12$/, " 8"),
+        20
+      ),
+      id: 202,
+    };
+
+    const outcomes = collectEquipBattles(
+      [first, duplicate],
+      "鬼丸",
+      "weapon"
+    );
+
+    expect(outcomes).toHaveLength(1);
+    expect(outcomes[0].record).toBe(first);
+    expect(outcomes[0].record.id).toBe(101);
+    expect(outcomes[0].card.turns).toBe("12");
+  });
+
+  it("実時刻の新しい順、同時刻はsavedAt降順、日時不明は末尾に並べる", () => {
+    const makeDetailRecord = (
+      id: number,
+      time: string,
+      savedAt: number,
+      opponent: string
+    ): BattleRecord => ({
+      ...rec(
+        equipLine(time, "信長の勝利").replace("勝頼", opponent),
+        savedAt
+      ),
+      id,
+    });
+    const latest = makeDetailRecord(1, "04/11 11:00", 1, "最新");
+    const tiedOlderSave = makeDetailRecord(2, "04/10 10:00", 100, "同時刻A");
+    const tiedNewerSave = makeDetailRecord(3, "04/10 10:00", 200, "同時刻B");
+    const oldest = makeDetailRecord(4, "04/09 09:00", 999, "最古");
+    const undated: BattleRecord = {
+      ...makeDetailRecord(5, "04/12 12:00", 300, "日時不明"),
+      time: undefined,
+    };
+
+    const outcomes = collectEquipBattles(
+      [undated, oldest, tiedOlderSave, latest, tiedNewerSave],
+      "鬼丸",
+      "weapon"
+    );
+
+    expect(outcomes.map((o) => o.record.id)).toEqual([1, 3, 2, 4, 5]);
   });
 });
 
