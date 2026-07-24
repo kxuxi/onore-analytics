@@ -242,7 +242,7 @@ describe("DetailBattleLogSection", () => {
       '<span class="bh-tag bh-tag--branch" data-unit-type-label="static">騎兵</span>'
     );
     expect(html).toContain(
-      "color:color-mix(in srgb, #116611 32%, var(--text))"
+      "color:#116611"
     );
     expect(html).toContain(
       "border-left-color:color-mix(in srgb, #116611 38%, var(--border))"

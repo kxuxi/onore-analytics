@@ -91,7 +91,7 @@ describe("BattleHistoryCard", () => {
     expect(html).toContain('aria-label="出兵側：武将甲、勝者"');
     expect(html).toContain('aria-label="守備側：武将乙、敗者"');
     expect(html).toContain(
-      "color:color-mix(in srgb, #116611 32%, var(--text))"
+      "color:#116611"
     );
     expect(html).toContain('class="bh-winner-icon"');
     expect(html).toContain(">勝者</span>");
@@ -99,10 +99,10 @@ describe("BattleHistoryCard", () => {
     expect(html).toContain('class="bh-side-role">出兵側</span>');
     expect(html).toContain('class="bh-side-role">守備側</span>');
     expect(html).toContain(
-      '<span class="bh-faction" style="color:color-mix(in srgb, #116611 32%, var(--text))">東軍</span>'
+      '<span class="bh-faction" style="color:#116611">東軍</span>'
     );
     expect(html).toContain(
-      '<span class="bh-faction" style="color:color-mix(in srgb, #881111 32%, var(--text))">西軍</span>'
+      '<span class="bh-faction" style="color:#881111">西軍</span>'
     );
 
     const unitIndex = html.indexOf("ライフル銃兵");
