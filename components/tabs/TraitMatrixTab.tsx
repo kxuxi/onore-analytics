@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import type { BattleRecord } from "@/lib/types";
+import type { FactionColorMap } from "@/lib/factionColors";
 import {
   traitMatchupMatrix,
   collectTraitMatchupBattles,
@@ -14,8 +15,10 @@ import { CloseIcon } from "@/components/icons";
 
 interface Props {
   log: BattleRecord[];
+  factionColors?: FactionColorMap;
   onSelectWarlord: (name: string) => void;
   onSelectUnit: (name: string) => void;
+  onSelectEquip?: (name: string, slot: "weapon" | "item") => void;
 }
 
 /** 集計期間のプリセット（ゲーム内の年で区切る）。環境ダッシュボードと共通。 */
@@ -39,7 +42,13 @@ function winLevel(winRate: number): 1 | 2 | 3 | 4 | 5 {
  * 行＝出兵側の特性 / 列＝防衛側の特性。各マスは出兵側視点の勝率で、クリックすると
  * その相性の対戦履歴を下に表示する。サンプルが MIN_SAMPLE 戦未満のマスは「–」とする。
  */
-export function TraitMatrixTab({ log, onSelectWarlord, onSelectUnit }: Props) {
+export function TraitMatrixTab({
+  log,
+  factionColors,
+  onSelectWarlord,
+  onSelectUnit,
+  onSelectEquip,
+}: Props) {
   const [period, setPeriod] = useState<PeriodKey>("all");
   const [selected, setSelected] = useState<{ row: string; col: string } | null>(
     null
@@ -227,8 +236,10 @@ export function TraitMatrixTab({ log, onSelectWarlord, onSelectUnit }: Props) {
           {drilldown.length > 0 ? (
             <BattleLogList
               outcomes={drilldown}
+              factionColors={factionColors}
               onSelectWarlord={onSelectWarlord}
               onSelectUnit={onSelectUnit}
+              onSelectEquip={onSelectEquip}
             />
           ) : (
             <p className="muted">この相性の対戦履歴がありません。</p>

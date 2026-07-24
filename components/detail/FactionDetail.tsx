@@ -35,6 +35,7 @@ interface Props {
   canViewLatestUnits: boolean;
   onSelectWarlord: (name: string) => void;
   onSelectUnit: (name: string) => void;
+  onSelectEquip?: (name: string, slot: "weapon" | "item") => void;
   onBack: () => void;
 }
 
@@ -57,6 +58,7 @@ export function FactionDetail({
   canViewLatestUnits,
   onSelectWarlord,
   onSelectUnit,
+  onSelectEquip,
   onBack,
 }: Props) {
   // 国全体の戦績（誰がこの国で戦ったかを問わず、この国の旗で戦った全戦闘）。
@@ -163,8 +165,10 @@ export function FactionDetail({
               <DetailBattleLogSection
                 count={`${outcomes.length}件`}
                 outcomes={outcomes}
+                factionColors={colors}
                 onSelectWarlord={onSelectWarlord}
                 onSelectUnit={onSelectUnit}
+                onSelectEquip={onSelectEquip}
               />
             </>
           )}

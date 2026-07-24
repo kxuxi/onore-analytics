@@ -66,8 +66,10 @@ describe("データ表のcaption", () => {
     const markup = renderToStaticMarkup(
       <TraitMatrixTab
         log={SYNERGY_LOG}
+        factionColors={{}}
         onSelectWarlord={vi.fn()}
         onSelectUnit={vi.fn()}
+        onSelectEquip={vi.fn()}
       />
     );
 

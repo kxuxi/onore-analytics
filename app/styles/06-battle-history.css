@@ -245,6 +245,12 @@
   box-shadow: inset 3px 0 0 var(--medal-gold-border);
 }
 
+.bh-side--focused {
+  outline: 2px solid
+    color-mix(in srgb, var(--color-focus-ring) 66%, var(--color-border-default));
+  outline-offset: -2px;
+}
+
 .bh-side-head {
   display: flex;
   align-items: center;
@@ -259,6 +265,59 @@
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.08em;
+}
+
+.bh-perspective {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  min-height: 22px;
+  padding: 2px 6px;
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: var(--line-height-tight);
+  white-space: nowrap;
+  background: var(--surface-raised);
+  border: 1px solid var(--color-border-default);
+  border-left-width: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.bh-perspective--win {
+  color: var(--outcome-win-text);
+  background: color-mix(
+    in srgb,
+    var(--outcome-win-fill) 10%,
+    var(--surface-raised)
+  );
+  border-color: color-mix(
+    in srgb,
+    var(--outcome-win-fill) 45%,
+    var(--color-border-default)
+  );
+  border-left-color: var(--outcome-win-fill);
+}
+
+.bh-perspective--loss {
+  color: var(--outcome-loss-text);
+  background: color-mix(
+    in srgb,
+    var(--outcome-loss-fill) 10%,
+    var(--surface-raised)
+  );
+  border-color: color-mix(
+    in srgb,
+    var(--outcome-loss-fill) 45%,
+    var(--color-border-default)
+  );
+  border-left-color: var(--outcome-loss-fill);
+}
+
+.bh-perspective--other {
+  color: var(--color-text-secondary);
+  background: var(--surface-raised);
+  border-color: var(--color-border-default);
 }
 
 .bh-side-status {

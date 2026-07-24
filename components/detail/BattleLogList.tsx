@@ -1,34 +1,31 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { normalizeDisplayToken } from "@/lib/parser";
 import { BATTLE_LOG_PAGE_SIZE as PAGE_SIZE } from "@/lib/stats";
 import type { BattleOutcome, OutcomeResult } from "@/lib/stats";
-import type { BattleSide } from "@/lib/parser";
+import type { FactionColorMap } from "@/lib/factionColors";
 import { useAntiIndex } from "@/lib/useAntiIndex";
-import { AntiArrows } from "@/components/AntiArrows";
-import { copyText } from "@/lib/copyText";
+import { BattleHistoryCard } from "@/components/tabs/BattleHistoryCard";
 import {
   useYearRangeFilter,
   YearRangeFilterBar,
   type YearRangeFilter,
 } from "@/components/detail/YearRangeFilter";
-import {
-  ExternalLinkIcon,
-  CopyIcon,
-  CheckIcon,
-  ChevronLeft,
-  ChevronRight,
-} from "@/components/icons";
+import { ChevronLeft, ChevronRight } from "@/components/icons";
 
 interface Props {
   outcomes: BattleOutcome[];
-  /** 強調表示する武将名（武将ページ） */
+  /**
+   * @deprecated 対象側は各 BattleOutcome.side から判定する。
+   * 既存の呼び出し互換性のため受け付けるが、表示には使用しない。
+   */
   currentName?: string;
-  /** 強調表示する兵種名（兵種ページ） */
+  /** @deprecated currentName と同様に後方互換のため受け付ける。 */
   currentUnit?: string;
+  factionColors?: FactionColorMap;
   onSelectWarlord: (name: string) => void;
   onSelectUnit: (name: string) => void;
+  onSelectEquip?: (name: string, slot: "weapon" | "item") => void;
   /**
    * 年フィルターを外部（呼び出し側）と共有する場合に渡す。
    * 渡された場合、自前の年フィルターUIは表示せず、渡された絞り込み済み結果をそのまま使う。
@@ -36,115 +33,12 @@ interface Props {
   yearFilter?: YearRangeFilter;
 }
 
-function resultLabel(o: BattleOutcome): string {
-  if (o.result === "win") return "勝利";
-  if (o.result === "loss") return "敗北";
-  if (o.card.winner === "retreat") return "撤退";
-  if (o.card.winner === "draw") return "引分";
-  return "不明";
-}
-
-function logRowContext(outcome: BattleOutcome): string {
-  const occurredAt = outcome.card.battleAt ?? outcome.record.time;
-  const matchup = `${outcome.self.name} 対 ${outcome.opponent.name}`;
-  return occurredAt ? `${matchup}、${occurredAt}` : matchup;
-}
-
-/** 戦闘ログ行の操作ボタン群（リンクコピー・詳細を開く）。行ごとにコピー状態を持つ。 */
-function LogRowActions({ url, context }: { url: string; context: string }) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    const ok = await copyText(url);
-    if (ok) {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
-    }
-  };
-  return (
-    <div className="dl-actions">
-      <button
-        type="button"
-        className={"dl-link dl-copy" + (copied ? " copied" : "")}
-        onClick={copy}
-        aria-label={`戦闘ログのリンクをコピー：${context}`}
-        title={copied ? "コピーしました" : "リンクをコピー"}
-      >
-        {copied ? <CheckIcon /> : <CopyIcon />}
-      </button>
-      {copied && (
-        <span className="sr-only" role="status" aria-live="polite">
-          戦闘ログのリンクをコピーしました：{context}
-        </span>
-      )}
-      <a
-        className="dl-link"
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={`戦闘ログの詳細を開く：${context}`}
-        title="戦闘ログの詳細を開く"
-      >
-        <ExternalLinkIcon />
-      </a>
-    </div>
-  );
-}
-
-interface ChipProps {
-  side: BattleSide;
-  opponent: BattleSide;
-  antiIndex: Map<string, Set<string>>;
-  currentName?: string;
-  currentUnit?: string;
-  onSelectWarlord: (name: string) => void;
-  onSelectUnit: (name: string) => void;
-}
-
-function SideChip({
-  side,
-  opponent,
-  antiIndex,
-  currentName,
-  currentUnit,
-  onSelectWarlord,
-  onSelectUnit,
-}: ChipProps) {
-  const unit = side.unit ? normalizeDisplayToken(side.unit) : undefined;
-  const nameActive = !!currentName && side.name === currentName;
-  const unitActive = !!currentUnit && unit === currentUnit;
-  return (
-    <span className="dl-chip">
-      <button
-        type="button"
-        className={"dl-name" + (nameActive ? " active" : "")}
-        onClick={() => onSelectWarlord(side.name)}
-        title={`${side.name} の戦績を見る`}
-      >
-        {side.name}
-      </button>
-      {unit && (
-        <span className="dl-unit-wrap">
-          <button
-            type="button"
-            className={"dl-unit" + (unitActive ? " active" : "")}
-            onClick={() => onSelectUnit(unit)}
-            title={`${unit} の戦績を見る`}
-          >
-            {unit}
-          </button>
-          <AntiArrows self={side} opponent={opponent} antiIndex={antiIndex} />
-        </span>
-      )}
-    </span>
-  );
-}
-
 export function BattleLogList({
   outcomes,
-  currentName,
-  currentUnit,
+  factionColors,
   onSelectWarlord,
   onSelectUnit,
+  onSelectEquip,
   yearFilter,
 }: Props) {
   // 呼び出し側から年フィルターが渡されなければ、自前で管理する（フックは常に呼ぶ）。
@@ -193,50 +87,20 @@ export function BattleLogList({
         </div>
       ) : (
         <>
-          <ul className="detail-log">
+          <ul className="battle-list">
             {paged.map((o, i) => (
-              <li
+              <BattleHistoryCard
                 key={`${o.record.savedAt}-${start + i}-${o.side}`}
-                className={"dl-row dl-row--" + o.result}
-              >
-                <span className={"dl-result dl-result--" + o.result}>
-                  {resultLabel(o)}
-                </span>
-                <div className="dl-main">
-                  <div className="dl-meta">
-                    {o.card.battleAt ?? o.record.time ?? ""}
-                    {o.card.place ? ` · ${o.card.place}` : ""}
-                    {o.card.turns ? ` · ${o.card.turns}ターン` : ""}
-                  </div>
-                  <div className="dl-match">
-                    <SideChip
-                      side={o.self}
-                      opponent={o.opponent}
-                      antiIndex={antiIndex}
-                      currentName={currentName}
-                      currentUnit={currentUnit}
-                      onSelectWarlord={onSelectWarlord}
-                      onSelectUnit={onSelectUnit}
-                    />
-                    <span className="dl-vs">vs</span>
-                    <SideChip
-                      side={o.opponent}
-                      opponent={o.self}
-                      antiIndex={antiIndex}
-                      currentName={currentName}
-                      currentUnit={currentUnit}
-                      onSelectWarlord={onSelectWarlord}
-                      onSelectUnit={onSelectUnit}
-                    />
-                  </div>
-                </div>
-                {o.card.url && (
-                  <LogRowActions
-                    url={o.card.url}
-                    context={logRowContext(o)}
-                  />
-                )}
-              </li>
+                record={o.record}
+                card={o.card}
+                factionColors={factionColors}
+                highlight=""
+                antiIndex={antiIndex}
+                onSelectWarlord={onSelectWarlord}
+                onSelectUnit={onSelectUnit}
+                onSelectEquip={onSelectEquip}
+                perspective={{ side: o.side, result: o.result }}
+              />
             ))}
           </ul>
 

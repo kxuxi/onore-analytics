@@ -24,24 +24,29 @@ const SUMMARY: StatSummary = {
 
 function makeOutcome(
   year: number,
-  selfName: string,
-  opponentName: string
+  leftName: string,
+  rightName: string,
+  side: "left" | "right" = "left"
 ): BattleOutcome {
-  const self: BattleSide = {
+  const left: BattleSide = {
     faction: "東軍",
-    name: selfName,
+    name: leftName,
     type: "武特",
     unit: "重騎兵",
     branch: "騎兵",
-    equips: [],
+    equips: ["銀時計", "火縄銃"],
+    equip1: "銀時計",
+    equip2: "火縄銃",
   };
-  const opponent: BattleSide = {
+  const right: BattleSide = {
     faction: "西軍",
-    name: opponentName,
+    name: rightName,
     type: "統特",
     unit: "長槍兵",
     branch: "歩兵",
-    equips: [],
+    equips: ["軍配", "太刀"],
+    equip1: "軍配",
+    equip2: "太刀",
   };
   const record = {
     line: `${year}年の戦闘`,
@@ -51,20 +56,20 @@ function makeOutcome(
   };
   const card = {
     battleAt: `${year}年4月 04/01 12:00`,
-    left: self,
-    right: opponent,
+    left,
+    right,
     winner: "left" as const,
-    resultRaw: `${selfName}の勝利`,
+    resultRaw: `${leftName}の勝利`,
     url: `https://example.com/battle/${year}`,
   };
 
   return {
     record,
     card,
-    side: "left",
-    self,
-    opponent,
-    result: "win",
+    side,
+    self: side === "left" ? left : right,
+    opponent: side === "left" ? right : left,
+    result: side === "left" ? "win" : "loss",
   };
 }
 
@@ -176,7 +181,7 @@ describe("DetailEmptyState", () => {
 });
 
 describe("DetailBattleLogSection", () => {
-  it("件数・強調対象・外部年フィルターをBattleLogListへ透過する", () => {
+  it("外部年フィルターを保ち、戦闘履歴と同じカード・装備導線で表示する", () => {
     const shown = makeOutcome(1600, "武将甲", "武将乙");
     const excluded = makeOutcome(1700, "表示しない武将", "別の武将");
     const yearFilter: YearRangeFilter = {
@@ -197,6 +202,8 @@ describe("DetailBattleLogSection", () => {
         currentUnit="重騎兵"
         onSelectWarlord={vi.fn()}
         onSelectUnit={vi.fn()}
+        onSelectEquip={vi.fn()}
+        factionColors={{ 東軍: "#116611", 西軍: "#881111" }}
         yearFilter={yearFilter}
       />
     );
@@ -204,17 +211,80 @@ describe("DetailBattleLogSection", () => {
     expect(html).toContain('class="detail-section"');
     expect(html).toContain("戦闘ログ");
     expect(html).toContain("2件");
-    expect(html).toContain('class="dl-name active"');
-    expect(html).toContain('class="dl-unit active"');
+    expect(html).toMatch(/<ul class="[^"]*\bbattle-list\b[^"]*">/);
+    expect(html.match(/<li class="bh-card\b/g)).toHaveLength(1);
     expect(html).toContain("武将甲");
     expect(html).not.toContain("表示しない武将");
     expect(html).not.toContain("表示する年");
     expect(html).toContain('aria-expanded="true"');
     expect(html).toContain(
-      'aria-label="戦闘ログのリンクをコピー：武将甲 対 武将乙、1600年4月 04/01 12:00"'
+      'aria-label="出兵側：武将甲、このページの対象、勝利"'
     );
     expect(html).toContain(
-      'aria-label="戦闘ログの詳細を開く：武将甲 対 武将乙、1600年4月 04/01 12:00"'
+      '<span class="bh-perspective bh-perspective--win">対象・勝利</span>'
     );
+    expect(html).toContain(
+      'aria-label="戦闘ログのリンクをコピー：武将甲 対 武将乙"'
+    );
+    expect(html).toContain(
+      'aria-label="戦闘ログの詳細を開く：武将甲 対 武将乙"'
+    );
+    expect(html).toContain(
+      'aria-label="銀時計 の品物図鑑を見る"'
+    );
+    expect(html).toContain(
+      'aria-label="火縄銃 の武器図鑑を見る"'
+    );
+    expect(html).toContain(
+      '<span class="bh-tag bh-tag--branch" data-unit-type-label="static">騎兵</span>'
+    );
+    expect(html).toContain(
+      "color:color-mix(in srgb, #116611 32%, var(--text))"
+    );
+    expect(html).not.toContain("bh-action--delete");
+    expect(html).not.toContain("戦闘履歴を削除");
+  });
+
+  it("同一戦闘の左右2視点を統合せず、対象側の勝利・敗北を区別する", () => {
+    const leftOutcome = makeOutcome(1600, "武将甲", "武将乙", "left");
+    const rightOutcome: BattleOutcome = {
+      ...leftOutcome,
+      side: "right",
+      self: leftOutcome.card.right,
+      opponent: leftOutcome.card.left,
+      result: "loss",
+    };
+    const html = renderToStaticMarkup(
+      <DetailBattleLogSection
+        count="2件"
+        outcomes={[leftOutcome, rightOutcome]}
+        onSelectWarlord={vi.fn()}
+        onSelectUnit={vi.fn()}
+        onSelectEquip={vi.fn()}
+        factionColors={{}}
+      />
+    );
+    const cards = html.split('<li class="bh-card').slice(1);
+
+    expect(cards).toHaveLength(2);
+    expect(
+      html.match(
+        /<span class="bh-perspective bh-perspective--win">対象・勝利<\/span>/g
+      )
+    ).toHaveLength(1);
+    expect(
+      html.match(
+        /<span class="bh-perspective bh-perspective--loss">対象・敗北<\/span>/g
+      )
+    ).toHaveLength(1);
+    expect(html).toContain(
+      'aria-label="出兵側：武将甲、このページの対象、勝利"'
+    );
+    expect(html).toContain(
+      'aria-label="守備側：武将乙、このページの対象、敗北"'
+    );
+    for (const card of cards) {
+      expect(card.indexOf("武将甲")).toBeLessThan(card.indexOf("武将乙"));
+    }
   });
 });

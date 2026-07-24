@@ -55,6 +55,7 @@ interface Props {
   yearRankTags?: YearRankTag[];
   onSelectWarlord: (name: string) => void;
   onSelectUnit: (name: string) => void;
+  onSelectEquip?: (name: string, slot: "weapon" | "item") => void;
   onSelectFaction: (name: string) => void;
   onBack: () => void;
 }
@@ -71,6 +72,7 @@ export function WarlordDetail({
   yearRankTags,
   onSelectWarlord,
   onSelectUnit,
+  onSelectEquip,
   onSelectFaction,
   onBack,
 }: Props) {
@@ -326,9 +328,10 @@ export function WarlordDetail({
           <DetailBattleLogSection
             count={`${yearFilter.filtered.length}件`}
             outcomes={outcomes}
-            currentName={name}
+            factionColors={colors}
             onSelectWarlord={onSelectWarlord}
             onSelectUnit={onSelectUnit}
+            onSelectEquip={onSelectEquip}
             yearFilter={yearFilter}
           />
         </>
