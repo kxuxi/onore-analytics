@@ -186,6 +186,10 @@
     transform var(--duration-normal) var(--ease-standard);
 }
 
+.sidebar-close {
+  display: none;
+}
+
 /* ---------- サイドバー内の期セレクター ---------- */
 .sidebar-term {
   padding: 10px 4px 12px;
@@ -456,9 +460,8 @@
 .sidebar-backdrop {
   position: fixed;
   inset: 0;
-  top: var(--sticky-header-offset);
   background: rgba(0, 0, 0, 0.45);
-  z-index: 24;
+  z-index: 34;
   animation: fade-in 0.15s ease;
 }
 

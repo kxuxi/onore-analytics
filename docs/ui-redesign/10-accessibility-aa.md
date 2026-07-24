@@ -2,7 +2,7 @@
 
 ## 状態
 
-調査・計画確定済み／未実装
+実装中（作業単位1 / 4完了）
 
 ## 依存関係
 
@@ -216,6 +216,46 @@
 6. 公開17ケースと管理画面状態を再監査
 7. `npm test` → `npm run lint` → `npm run typecheck` → `npm run build`
 8. PR本文へ変更内容、互換性、検証結果、残存リスク、Before / Afterを確定
+
+## 作業単位1: 意味構造と重大なキーボード阻害
+
+### 変更内容
+
+- `app/page.tsx`: ネイティブ`main`とtabpanelを分離し、sidebarをDesktopではcomplementary、Mobile展開時はmodal dialogとして扱うようにした
+- `app/page.tsx`: 閉じたsidebarへ`aria-hidden`と`inert`を設定し、Mobile展開時は明示的な「メニューを閉じる」操作を追加した
+- `components/layout/AppHeader.tsx`: ハンバーガーへ`aria-controls`を追加した
+- `lib/useModalA11y.ts`: bodyのスクロールロックを呼び出し側で選択可能にし、必要なDialogでは外側の領域を`inert`化できるようにした
+- `app/page.tsx`: モーダルが処理済みのEscapeを詳細画面のグローバル処理が再処理しないようにした
+- `app/styles/03-shell.css`、`08-responsive-tables.css`: Mobile drawerの閉じる操作と背景レイヤーを追加した
+- `components/layout/AppHeader.test.tsx`: ハンバーガーとsidebarの関連付けを固定した
+
+### 変更理由
+
+閉じたメニューへTab移動できる状態、失われた`main`ランドマーク、Dialogを閉じたEscapeが詳細画面まで戻す競合を解消するため。Mobile drawerはモーダル宣言だけでなく、外側のヘッダー・本文・フッターを実際に操作不能にし、宣言と挙動を一致させた。
+
+### 互換性
+
+- URL、ルーティング、選択中タブ、期間、データ、API、DB、環境変数は変更していない
+- Desktop sidebarとMobileのタッチ／マウスによる項目選択は維持した
+- Mobile drawerには既存の背景タップとEscapeに加えて、明示的な閉じる操作を追加した
+- `useModalA11y`の既定値は従来どおりbodyのスクロールをロックし、既存Dialogの呼び出し方法を維持した
+
+### 検証結果
+
+- `npm test -- components/layout/AppHeader.test.tsx components/tabs/UnitEditModal.test.tsx`: 2ファイル、4テスト成功
+- `npm run lint`: 成功
+- `npm run typecheck`: 成功
+- `git diff --check`: 成功
+- Chrome 149 / 1280×900、390×844でHome・ランキングを確認
+- axeの`aria-allowed-role`、`aria-hidden-focus`、`landmark-one-main`、`region`: 対象ケース0件
+- Mobile drawer閉鎖時の`inert`、展開時の初期フォーカス、外側領域の`inert`、閉じる操作後のハンバーガー復帰を実DOMで確認
+- Mobile drawerからランキングを選択後、URLが`/ranking`となり、フォーカスが`#main-panel`へ移ることを確認
+
+### 残っているリスク
+
+- VoiceOver / NVDAによる読み上げ順は未確認
+- Mobile drawerの完全な自動E2E回帰テストは未導入。今回のPRでは実ブラウザー検証記録で固定する
+- UnitEditModalのEscape競合は既存コンポーネントテストとイベント処理の静的確認までで、認証済み管理画面の再操作は最終横断確認で行う
 
 ## 受入条件
 
