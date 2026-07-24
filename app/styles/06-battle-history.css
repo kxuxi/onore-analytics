@@ -641,6 +641,7 @@
   margin: 0;
   color: var(--color-interactive-text);
   font: inherit;
+  min-width: var(--target-size-minimum);
   min-height: var(--target-size-minimum);
   cursor: pointer;
   text-align: left;
