@@ -1126,6 +1126,14 @@ input:focus {
   font-weight: 600;
   color: var(--text);
 }
+
+.scout-input-label {
+  display: inline-block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
 .scout-report-count {
   margin-left: 8px;
   font-size: 12px;
@@ -1140,10 +1148,17 @@ input:focus {
   line-height: 1.8;
 }
 
+.unit-edit-form {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+}
+
 .unit-form {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   margin-top: 8px;
   flex: 1 1 auto;
   min-height: 0;
@@ -1151,9 +1166,45 @@ input:focus {
   padding-right: 4px;
 }
 
+.unit-form-section {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.unit-form-section + .unit-form-section {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.unit-form-section > legend {
+  margin-bottom: 10px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.unit-form-section-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.unit-form-section:last-child .unit-form-section-fields {
+  grid-template-columns: 1fr;
+}
+
 .unit-form textarea.text-input {
   resize: vertical;
   min-height: 60px;
+}
+
+.unit-edit-form .text-input[aria-invalid="true"] {
+  border-color: var(--outcome-loss-text);
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--outcome-loss-text) 18%, transparent);
 }
 
 .filter {
@@ -2614,11 +2665,19 @@ button.tag.faction-link:focus-visible {
 }
 
 .import-body {
+  min-inline-size: 0;
   margin-top: 10px;
   padding: 12px;
   background: var(--panel-2);
   border: 1px solid var(--border);
   border-radius: 8px;
+}
+
+.import-legend {
+  padding: 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
 }
 
 .import-hint {
@@ -2628,11 +2687,30 @@ button.tag.faction-link:focus-visible {
   line-height: 1.5;
 }
 
+.import-label {
+  display: inline-block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
 .import-box {
   min-height: 120px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
   white-space: pre;
+}
+
+.import-preview {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--outcome-win-text);
+}
+
+.import-preview.invalid {
+  color: var(--outcome-loss-text);
 }
 
 .import-actions {
@@ -2645,14 +2723,15 @@ button.tag.faction-link:focus-visible {
 
 .import-msg {
   font-size: 13px;
+  font-weight: 600;
 }
 
 .import-msg.ok {
-  color: var(--success, #4caf50);
+  color: var(--outcome-win-text);
 }
 
 .import-msg.error {
-  color: var(--danger, #ff6b6b);
+  color: var(--outcome-loss-text);
 }
 
 .btn:disabled {
@@ -2916,10 +2995,11 @@ button.tag.faction-link:focus-visible {
   max-width: 560px;
 }
 
-.form-error {
+.modal .form-error {
   margin: 0;
-  color: var(--danger, #ff6b6b);
+  color: var(--outcome-loss-text);
   font-size: 13px;
+  font-weight: 600;
 }
 
 /* ---------- Small screens ---------- */
@@ -3003,6 +3083,9 @@ button.tag.faction-link:focus-visible {
     grid-template-columns: 1fr 1fr;
   }
   .unit-form {
+    gap: 14px;
+  }
+  .unit-form-section-fields {
     grid-template-columns: 1fr;
   }
   th, td { padding: 8px 10px; }

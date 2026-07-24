@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import type { BattleRecord, UnitType } from "@/lib/types";
 import { fetchUnitTypes, bulkUpsertUnitTypes } from "@/lib/api";
 import { unitNamesInLog } from "@/lib/stats";
@@ -15,6 +15,11 @@ import {
 import { FilterPanel, type ActiveFilter } from "@/components/FilterPanel";
 import { SearchBox } from "@/components/SearchBox";
 import { PageHeader } from "@/components/layout/PageHeader";
+import {
+  ImportMessage,
+  ImportPreview,
+  type ImportMessageValue,
+} from "@/components/ImportFeedback";
 import { UnitCatalogResults } from "./UnitCatalogResults";
 import {
   UNIT_CATALOG_COLUMNS,
@@ -59,9 +64,16 @@ export function UnitTab({
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState("");
   const [importing, setImporting] = useState(false);
-  const [importMsg, setImportMsg] = useState<
-    { kind: "ok" | "error"; text: string } | null
-  >(null);
+  const [importMsg, setImportMsg] = useState<ImportMessageValue | null>(null);
+  const importId = useId();
+  const importIds = {
+    toggle: `${importId}-toggle`,
+    body: `${importId}-body`,
+    input: `${importId}-input`,
+    hint: `${importId}-hint`,
+    preview: `${importId}-preview`,
+    result: `${importId}-result`,
+  };
 
   const reload = async () => {
     setLoading(true);
@@ -223,6 +235,8 @@ export function UnitTab({
               className={"btn import-toggle" + (showImport ? " active" : "")}
               onClick={() => setShowImport((v) => !v)}
               aria-expanded={showImport}
+              aria-controls={importIds.body}
+              id={importIds.toggle}
             >
               <span>一括インポート</span>
             </button>
@@ -230,20 +244,46 @@ export function UnitTab({
 
           {showImport && (
             <div className="import-block">
-              <div className="import-body">
-                <p className="import-hint">
+              <fieldset
+                id={importIds.body}
+                className="import-body"
+                aria-busy={importing}
+              >
+                <legend className="import-legend">兵種データの取り込み</legend>
+                <p id={importIds.hint} className="import-hint">
                   兵種一覧の表をコピーして、そのまま貼り付けてください。名前が一致する兵種は上書き、無い兵種は新規追加します（一覧に無い既存の兵種は削除されません）。
                 </p>
+                <label className="import-label" htmlFor={importIds.input}>
+                  兵種一覧の表の貼り付け
+                </label>
                 <textarea
+                  id={importIds.input}
                   className="import-box"
                   value={importText}
                   aria-label="兵種一覧の表の貼り付け"
+                  aria-describedby={[
+                    importIds.hint,
+                    importText.trim() ? importIds.preview : "",
+                    importMsg ? importIds.result : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                   placeholder={
                     "兵種\t種類\t得意兵種\t攻撃\t防御\t雇用金\t技術\t年数\t必要能力値\t施設/国宝\t特殊攻撃\tボーナス\n（兵種一覧の表をタブ区切りのまま貼り付け）"
                   }
-                  onChange={(e) => setImportText(e.target.value)}
+                  onChange={(e) => {
+                    setImportText(e.target.value);
+                    setImportMsg(null);
+                  }}
                   spellCheck={false}
                 />
+                {importText.trim() && (
+                  <ImportPreview
+                    id={importIds.preview}
+                    parsed={importPreview.parsed}
+                    skipped={importPreview.skipped}
+                  />
+                )}
                 <div className="import-actions">
                   <button
                     type="button"
@@ -257,18 +297,12 @@ export function UnitTab({
                         ? `${importPreview.parsed.toLocaleString("ja-JP")}件を取り込む`
                         : "取り込む"}
                   </button>
-                  {importMsg && (
-                    <span
-                      className={
-                        "import-msg" +
-                        (importMsg.kind === "error" ? " error" : " ok")
-                      }
-                    >
-                      {importMsg.text}
-                    </span>
-                  )}
+                  <ImportMessage
+                    id={importIds.result}
+                    message={importMsg}
+                  />
                 </div>
-              </div>
+              </fieldset>
             </div>
           )}
         </>
