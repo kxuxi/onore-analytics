@@ -1591,6 +1591,87 @@ mark.hl {
   border-color: var(--danger, #ff6b6b);
 }
 
+/* ---------- Shared filter panel ---------- */
+.filter-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.filter-panel-fields[hidden] {
+  display: none;
+}
+
+.filter-panel-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+  flex-wrap: wrap;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--color-border-default) 70%, transparent);
+}
+
+.active-filter-chips {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.active-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 100%;
+  min-height: 30px;
+  padding: 4px 8px;
+  border: 1px solid
+    color-mix(in srgb, var(--accent) 34%, var(--color-border-default));
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface-subtle));
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+}
+
+.active-filter-chip:hover,
+.active-filter-chip:focus-visible {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 15%, var(--surface-subtle));
+}
+
+.active-filter-chip .icon {
+  width: 12px;
+  height: 12px;
+  color: var(--color-text-secondary);
+}
+
+.active-filter-label {
+  color: var(--color-text-secondary);
+}
+
+.active-filter-value {
+  overflow: hidden;
+  max-width: 28ch;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.filter-result {
+  flex: 0 0 auto;
+  margin: 0 0 0 auto;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* ---------- Battle history cards ---------- */
 .battle-list {
   list-style: none;
@@ -2554,6 +2635,17 @@ button.tag.faction-link:focus-visible {
   .page-header-actions {
     width: 100%;
     justify-content: flex-start;
+  }
+  .filter-panel-toolbar > .search-box {
+    flex-basis: 100%;
+    width: 100%;
+  }
+  .filter-panel-summary {
+    align-items: flex-start;
+  }
+  .filter-result {
+    width: 100%;
+    margin-left: 0;
   }
 }
 
@@ -4095,9 +4187,18 @@ button.tag.faction-link:focus-visible {
   border-bottom: 0.5px solid var(--border);
 }
 .metric-section-head h3 {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
   margin: 0;
   font-size: 16px;
   color: var(--text);
+}
+.metric-section-count {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
 }
 .metric-section .swi-list {
   margin-top: 12px;

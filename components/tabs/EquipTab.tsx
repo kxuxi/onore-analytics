@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { BattleRecord } from "@/lib/types";
 import { weaponStats, itemStats, formatWinRate } from "@/lib/stats";
-import { FilterIcon, CloseIcon } from "@/components/icons";
+import { FilterPanel, type ActiveFilter } from "@/components/FilterPanel";
 import { SearchBox } from "@/components/SearchBox";
 import { PageHeader } from "@/components/layout/PageHeader";
 
@@ -26,7 +26,6 @@ const VARIANT_COPY: Record<
     title: string;
     noun: string;
     slotLabel: string;
-    kindLabel: string;
     description: string;
     searchPlaceholder: string;
     emptyHint: string;
@@ -37,7 +36,6 @@ const VARIANT_COPY: Record<
     title: "武器図鑑",
     noun: "武器",
     slotLabel: "武将の持つ武器",
-    kindLabel: "武器の種類",
     description:
       "戦闘履歴の武将の持つ武器を集計し、使用回数・勝率・主な使用武将を表示します。勝率は勝敗が確定した戦闘のみで算出します。",
     searchPlaceholder: "武器名で絞り込み",
@@ -49,7 +47,6 @@ const VARIANT_COPY: Record<
     title: "品物図鑑",
     noun: "品物",
     slotLabel: "武将の持つ品物",
-    kindLabel: "品物の種類",
     description:
       "戦闘履歴の武将の持つ品物を集計し、使用回数・勝率・主な使用武将を表示します。勝率は勝敗が確定した戦闘のみで算出します。",
     searchPlaceholder: "品物名で絞り込み",
@@ -103,89 +100,79 @@ export function EquipTab({ log, onSelectWarlord, onSelectEquip, variant }: Props
     setSortKey("battles");
     setMinUses(1);
   };
+  const activeFilters: ActiveFilter[] = [];
+  if (sortKey !== "battles") {
+    activeFilters.push({
+      key: "sort",
+      label: "並べ替え",
+      value:
+        SORT_OPTIONS.find((option) => option.key === sortKey)?.label ?? sortKey,
+      onRemove: () => setSortKey("battles"),
+    });
+  }
+  if (minUses !== 1) {
+    activeFilters.push({
+      key: "min-uses",
+      label: "最低使用回数",
+      value: `${minUses}回以上`,
+      onRemove: () => setMinUses(1),
+    });
+  }
 
   return (
     <section className="panel">
       <PageHeader title={copy.title} description={copy.description} />
 
-      <div className="stat-grid">
-        <div className="stat">
-          <div className="label">{copy.kindLabel}</div>
-          <div className="value">{stats.length}</div>
-        </div>
-        <div className="stat">
-          <div className="label">絞り込み結果</div>
-          <div className="value">{view.length}</div>
-        </div>
-      </div>
-
-      <p className="sr-only" role="status" aria-live="polite">
-        絞り込み結果 {view.length.toLocaleString("ja-JP")}件
-      </p>
-
-      <div className="search-row">
-        <SearchBox
-          value={keyword}
-          onChange={setKeyword}
-          placeholder={copy.searchPlaceholder}
-        />
-        <button
-          type="button"
-          className={
-            "btn filter-toggle" +
-            (showFilter || hasDropdownFilter ? " active" : "")
-          }
-          onClick={() => setShowFilter((v) => !v)}
-          aria-expanded={showFilter}
-        >
-          <FilterIcon />
-          <span>フィルター</span>
-        </button>
-        {hasFilter && (
-          <button
-            type="button"
-            className="btn clear-filters"
-            onClick={clearFilters}
-            title="絞り込み条件をすべて解除"
+      <FilterPanel
+        id={`${variant}-catalog-filters`}
+        search={
+          <SearchBox
+            value={keyword}
+            onChange={setKeyword}
+            placeholder={copy.searchPlaceholder}
+          />
+        }
+        expanded={showFilter}
+        onToggle={() => setShowFilter((v) => !v)}
+        toggleActive={showFilter || hasDropdownFilter}
+        hasActiveFilters={hasFilter}
+        onClear={clearFilters}
+        activeFilters={activeFilters}
+        resultText={
+          hasFilter
+            ? `全${stats.length.toLocaleString("ja-JP")}件中 ${view.length.toLocaleString("ja-JP")}件`
+            : `全${stats.length.toLocaleString("ja-JP")}件`
+        }
+      >
+        <label className="filter">
+          <span>並べ替え</span>
+          <select
+            className="select"
+            value={sortKey}
+            onChange={(e) => setSortKey(e.target.value as SortKey)}
           >
-            <CloseIcon />
-            <span>解除</span>
-          </button>
-        )}
-      </div>
-
-      {showFilter && (
-        <div className="filter-grid">
-          <label className="filter">
-            <span>並べ替え</span>
-            <select
-              className="select"
-              value={sortKey}
-              onChange={(e) => setSortKey(e.target.value as SortKey)}
-            >
-              {SORT_OPTIONS.map((o) => (
-                <option key={o.key} value={o.key}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="filter">
-            <span>最低使用回数</span>
-            <select
-              className="select"
-              value={minUses}
-              onChange={(e) => setMinUses(Number(e.target.value))}
-            >
-              {MIN_USE_OPTIONS.map((v) => (
-                <option key={v} value={v}>
-                  {v}回以上
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      )}
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.key} value={o.key}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="filter">
+          <span>最低使用回数</span>
+          <select
+            className="select"
+            value={minUses}
+            onChange={(e) => setMinUses(Number(e.target.value))}
+          >
+            {MIN_USE_OPTIONS.map((v) => (
+              <option key={v} value={v}>
+                {v}回以上
+              </option>
+            ))}
+          </select>
+        </label>
+      </FilterPanel>
 
       {view.length === 0 ? (
         <div className="empty">
