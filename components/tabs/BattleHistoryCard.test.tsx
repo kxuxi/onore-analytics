@@ -125,15 +125,13 @@ describe("BattleHistoryCard", () => {
     );
   });
 
-  it("兵種・装備だけを開閉領域にし、カード全体の導線を実リンクで提供する", () => {
+  it("兵種・装備を常時表示し、カード全体の導線を実リンクで提供する", () => {
     const html = renderCard();
-    const controls = html.match(/aria-controls="([^"]+)"/)?.[1];
 
-    expect(controls).toBeTruthy();
-    expect(html).toContain('aria-expanded="false"');
-    expect(html).toContain(`id="${controls}"`);
-    expect(html).toContain('data-expanded="false"');
-    expect(html).toContain("兵種・装備を表示");
+    expect(html).not.toContain("bh-disclosure");
+    expect(html).not.toContain("aria-expanded");
+    expect(html).not.toContain("aria-controls");
+    expect(html).toContain('class="bh-secondary"');
     expect(html).toContain("出兵側の兵種・装備");
     expect(html).toContain("守備側の兵種・装備");
     expect(html).not.toContain('role="link"');
@@ -305,10 +303,10 @@ describe("BattleHistoryCard", () => {
     expect(html).not.toContain("旧形式の装備 の品物図鑑を見る");
   });
 
-  it("折りたたみ内の兵種・装備が検索に一致したことを示す", () => {
+  it("常時表示した兵種・装備の検索一致箇所を示す", () => {
     const html = renderCard(CARD, RECORD, "銀時計");
 
-    expect(html).toContain('class="bh-disclosure-match">検索一致</span>');
+    expect(html).not.toContain("bh-disclosure");
     expect(html).toContain(
       'class="bh-tag bh-tag--equip bh-tag--highlight bh-tag--interactive"'
     );
@@ -318,13 +316,13 @@ describe("BattleHistoryCard", () => {
   it("生データの記号付き検索語を表示名へ正規化して一致箇所を示す", () => {
     const html = renderCard(CARD, RECORD, "*名品(銀時計)");
 
-    expect(html).toContain('class="bh-disclosure-match">検索一致</span>');
+    expect(html).not.toContain("bh-disclosure");
     expect(html).toContain(
       '<mark class="bh-highlight">銀時計</mark>'
     );
   });
 
-  it("兵種・装備がない場合は空の開閉操作を表示しない", () => {
+  it("兵種・装備がない場合は空の詳細領域を表示しない", () => {
     const withoutDetails: BattleCard = {
       ...CARD,
       left: {
