@@ -99,6 +99,11 @@
   .filter-grid {
     grid-template-columns: 1fr 1fr;
   }
+  .ranking-panel
+    .filter-panel-fields
+    > .filter:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
   .unit-form {
     gap: 14px;
   }

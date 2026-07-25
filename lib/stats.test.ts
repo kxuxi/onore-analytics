@@ -46,6 +46,7 @@ import {
   buildAntiIndex,
   unitCountersBranch,
   assetMetricRanking,
+  factionsInYearRange,
 } from "./stats";
 import type { BattleRecord, UnitType, WarlordMap } from "./types";
 import { EMPTY_UNIT } from "./unitTypeForm";
@@ -733,6 +734,46 @@ function efficiencyLine(opts: {
 }): string {
   const { leftName, rightName, time, resultRaw, battleNo = 1 } = opts;
   return `【${battleNo}戦目】 1600年4月 ${time} 京都 自国 ${leftName} 某家 武特 騎馬隊 騎兵 槍 鎧 V.S. 敵国 ${rightName} 敵家 統特 騎馬隊 騎兵 馬 旗 ${resultRaw} 12`;
+}
+
+/** ランキングの国別集計用。左右の国・武将・兵種・装備を独立して指定する。 */
+function countryRankingLine(opts: {
+  time: string;
+  leftFaction: string;
+  leftName: string;
+  rightFaction: string;
+  rightName: string;
+  winner: "left" | "right" | "retreat";
+  year?: number;
+  battleNo?: number;
+  leftUnit?: string;
+  rightUnit?: string;
+  leftItem?: string;
+  rightItem?: string;
+  leftWeapon?: string;
+  rightWeapon?: string;
+}): string {
+  const {
+    time,
+    leftFaction,
+    leftName,
+    rightFaction,
+    rightName,
+    winner,
+    year = 1600,
+    battleNo = 1,
+    leftUnit = "赤備",
+    rightUnit = "青備",
+    leftItem = "赤飾",
+    rightItem = "青飾",
+    leftWeapon = "赤剣",
+    rightWeapon = "青剣",
+  } = opts;
+  const result =
+    winner === "retreat"
+      ? "撤退"
+      : `${winner === "left" ? leftName : rightName}の勝利`;
+  return `【${battleNo}戦目】 ${year}年4月 ${time} 京都 ${leftFaction} ${leftName} ${leftName}家 武特 ${leftUnit} 騎兵 ${leftItem} ${leftWeapon} V.S. ${rightFaction} ${rightName} ${rightName}家 統特 ${rightUnit} 歩兵 ${rightItem} ${rightWeapon} ${result} 12`;
 }
 
 describe("アシスト（warlordRanking）", () => {
@@ -2011,5 +2052,451 @@ describe("assetMetricRanking（兵種・武器・品物の指標）", () => {
         expect(metric.winRate).toBeCloseTo(legacy.winRate);
       }
     }
+  });
+});
+
+describe("ランキングの国フィルタ", () => {
+  const sideScopedLog: BattleRecord[] = [
+    rec(
+      countryRankingLine({
+        time: "06/01 10:00",
+        leftFaction: "赤国",
+        leftName: "赤攻",
+        rightFaction: "青国",
+        rightName: "青守",
+        winner: "left",
+      }),
+      1
+    ),
+    rec(
+      countryRankingLine({
+        time: "06/01 11:00",
+        leftFaction: "青国",
+        leftName: "青攻",
+        rightFaction: "赤国",
+        rightName: "赤守",
+        winner: "right",
+        leftUnit: "青備",
+        rightUnit: "赤備",
+        leftItem: "青飾",
+        rightItem: "赤飾",
+        leftWeapon: "青剣",
+        rightWeapon: "赤剣",
+      }),
+      2
+    ),
+  ];
+
+  it("国候補は期間内の左右陣営から収集し、未所属を除いて重複なく並べる", () => {
+    const log = [
+      rec(
+        countryRankingLine({
+          year: 1600,
+          time: "06/01 10:00",
+          leftFaction: "織田",
+          leftName: "信長",
+          rightFaction: "武田",
+          rightName: "勝頼",
+          winner: "left",
+        })
+      ),
+      rec(
+        countryRankingLine({
+          year: 1600,
+          time: "06/01 11:00",
+          leftFaction: "武田",
+          leftName: "信玄",
+          rightFaction: "織田",
+          rightName: "秀吉",
+          winner: "right",
+        })
+      ),
+      rec(
+        countryRankingLine({
+          year: 1700,
+          time: "06/01 12:00",
+          leftFaction: "なし",
+          leftName: "浪人",
+          rightFaction: "上杉",
+          rightName: "謙信",
+          winner: "right",
+        })
+      ),
+    ];
+
+    expect(factionsInYearRange(log)).toEqual(["上杉", "織田", "武田"]);
+    expect(
+      factionsInYearRange(log, { from: 1700, to: 1700 })
+    ).toEqual(["上杉"]);
+  });
+
+  it.each([
+    ["unit", "赤備", "青備"],
+    ["weapon", "赤剣", "青剣"],
+    ["item", "赤飾", "青飾"],
+  ] as const)(
+    "%s は選択国の左右陣営だけを再集計する",
+    (variant, selectedAsset, opponentAsset) => {
+      const rows = assetMetricRanking(
+        sideScopedLog,
+        variant,
+        undefined,
+        "赤国"
+      );
+      const selected = rows.find((row) => row.name === selectedAsset)!;
+
+      expect(selected.uses).toBe(2);
+      expect(selected.battles).toBe(2);
+      expect(selected.attackWins).toBe(1);
+      expect(selected.defenseWins).toBe(1);
+      expect(selected.winRate).toBe(1);
+      expect(selected.sorties).toBe(1);
+      expect(selected.breakthrough).toBe(1);
+      expect(
+        selected.topUsers.map((user) => [user.name, user.count])
+      ).toEqual([
+        ["赤攻", 1],
+        ["赤守", 1],
+      ]);
+      expect(rows.some((row) => row.name === opponentAsset)).toBe(false);
+    }
+  );
+
+  it("武将の各指標は出兵側・守備側とも選択国だけを対象にする", () => {
+    const ponta = pontaPointRanking(
+      sideScopedLog,
+      undefined,
+      undefined,
+      "赤国"
+    );
+    expect(new Set(ponta.map((row) => row.name))).toEqual(
+      new Set(["赤攻", "赤守"])
+    );
+    expect(ponta.find((row) => row.name === "赤攻")).toMatchObject({
+      faction: "赤国",
+      attackWins: 1,
+      defenseWins: 0,
+      battles: 1,
+    });
+    expect(ponta.find((row) => row.name === "赤守")).toMatchObject({
+      faction: "赤国",
+      attackWins: 0,
+      defenseWins: 1,
+      battles: 1,
+    });
+
+    const breakthrough = breakthroughRanking(
+      sideScopedLog,
+      undefined,
+      undefined,
+      "赤国"
+    );
+    expect(breakthrough).toHaveLength(1);
+    expect(breakthrough[0]).toMatchObject({
+      name: "赤攻",
+      faction: "赤国",
+      sorties: 1,
+      score: 1,
+    });
+
+    const ranking = warlordRanking(
+      sideScopedLog,
+      undefined,
+      undefined,
+      "赤国"
+    );
+    expect(new Set(ranking.map((row) => row.name))).toEqual(
+      new Set(["赤攻", "赤守"])
+    );
+    expect(ranking.find((row) => row.name === "赤攻")).toMatchObject({
+      faction: "赤国",
+      attackRounds: 1,
+      attackWinRounds: 1,
+      defenseRounds: 0,
+    });
+    expect(ranking.find((row) => row.name === "赤守")).toMatchObject({
+      faction: "赤国",
+      attackRounds: 0,
+      defenseRounds: 1,
+      defenseWinRounds: 1,
+    });
+  });
+
+  it("同じ国同士の対戦は左右を各1回だけ集計する", () => {
+    const log = [
+      rec(
+        countryRankingLine({
+          time: "06/01 12:00",
+          leftFaction: "赤国",
+          leftName: "赤攻",
+          rightFaction: "赤国",
+          rightName: "赤守",
+          winner: "left",
+          leftWeapon: "共通剣",
+          rightWeapon: "共通剣",
+        })
+      ),
+    ];
+
+    const asset = assetMetricRanking(
+      log,
+      "weapon",
+      undefined,
+      "赤国"
+    ).find((row) => row.name === "共通剣")!;
+    expect(asset).toMatchObject({
+      uses: 2,
+      battles: 2,
+      attackWins: 1,
+      defenseWins: 0,
+      winRate: 0.5,
+      sorties: 1,
+      breakthrough: 1,
+    });
+    expect(asset.topUsers).toEqual([
+      { name: "赤攻", count: 1 },
+      { name: "赤守", count: 1 },
+    ]);
+
+    const ponta = pontaPointRanking(
+      log,
+      undefined,
+      undefined,
+      "赤国"
+    );
+    expect(ponta).toHaveLength(2);
+    expect(ponta.find((row) => row.name === "赤攻")).toMatchObject({
+      battles: 1,
+      attackWins: 1,
+      defenseWins: 0,
+    });
+    expect(ponta.find((row) => row.name === "赤守")).toMatchObject({
+      battles: 1,
+      attackWins: 0,
+      defenseWins: 0,
+    });
+
+    const ranking = warlordRanking(
+      log,
+      undefined,
+      undefined,
+      "赤国"
+    );
+    expect(ranking).toHaveLength(2);
+    expect(ranking.find((row) => row.name === "赤攻")).toMatchObject({
+      attackRounds: 1,
+      defenseRounds: 0,
+    });
+    expect(ranking.find((row) => row.name === "赤守")).toMatchObject({
+      attackRounds: 0,
+      defenseRounds: 1,
+    });
+  });
+
+  it("移籍した同一武将は選択した国での戦績だけを返す", () => {
+    const log = [
+      rec(
+        countryRankingLine({
+          year: 1600,
+          time: "06/02 10:00",
+          leftFaction: "赤国",
+          leftName: "渡り鳥",
+          rightFaction: "敵国",
+          rightName: "敵A",
+          winner: "left",
+        })
+      ),
+      rec(
+        countryRankingLine({
+          year: 1700,
+          time: "06/02 11:00",
+          leftFaction: "青国",
+          leftName: "渡り鳥",
+          rightFaction: "敵国",
+          rightName: "敵B",
+          winner: "right",
+        })
+      ),
+    ];
+
+    const red = pontaPointRanking(
+      log,
+      undefined,
+      undefined,
+      "赤国"
+    ).find((row) => row.name === "渡り鳥")!;
+    const blue = pontaPointRanking(
+      log,
+      undefined,
+      undefined,
+      "青国"
+    ).find((row) => row.name === "渡り鳥")!;
+
+    expect(red).toMatchObject({
+      faction: "赤国",
+      battles: 1,
+      attackWins: 1,
+      pontaPoint: 1,
+    });
+    expect(blue).toMatchObject({
+      faction: "青国",
+      battles: 1,
+      attackWins: 0,
+      pontaPoint: 0,
+    });
+  });
+
+  it("期間と国を適用した後の回数を最低回数判定へ渡す", () => {
+    const recentRed = Array.from({ length: 9 }, (_, index) =>
+      rec(
+        countryRankingLine({
+          year: 1700,
+          time: `06/03 1${index}:00`,
+          leftFaction: "赤国",
+          leftName: "境界将",
+          rightFaction: "敵国",
+          rightName: `敵R${index}`,
+          winner: "left",
+        }),
+        index
+      )
+    );
+    const oldRed = Array.from({ length: 2 }, (_, index) =>
+      rec(
+        countryRankingLine({
+          year: 1600,
+          time: `06/04 1${index}:00`,
+          leftFaction: "赤国",
+          leftName: "境界将",
+          rightFaction: "敵国",
+          rightName: `敵O${index}`,
+          winner: "left",
+        }),
+        20 + index
+      )
+    );
+    const recentBlue = Array.from({ length: 2 }, (_, index) =>
+      rec(
+        countryRankingLine({
+          year: 1700,
+          time: `06/05 1${index}:00`,
+          leftFaction: "青国",
+          leftName: "境界将",
+          rightFaction: "敵国",
+          rightName: `敵B${index}`,
+          winner: "left",
+        }),
+        30 + index
+      )
+    );
+    const log = [...recentRed, ...oldRed, ...recentBlue];
+    const range = { from: 1700, to: 1700 };
+
+    const asset = assetMetricRanking(log, "weapon", range, "赤国").find(
+      (row) => row.name === "赤剣"
+    )!;
+    const ponta = pontaPointRanking(
+      log,
+      undefined,
+      range,
+      "赤国"
+    ).find((row) => row.name === "境界将")!;
+    const ranking = warlordRanking(
+      log,
+      undefined,
+      range,
+      "赤国"
+    ).find((row) => row.name === "境界将")!;
+
+    expect(asset.uses).toBe(9);
+    expect(ponta.battles).toBe(9);
+    expect(ranking.attackRounds).toBe(9);
+    expect(asset.uses).toBeLessThan(10);
+    expect(
+      assetMetricRanking(log, "weapon", undefined, "赤国").find(
+        (row) => row.name === "赤剣"
+      )!.uses
+    ).toBe(11);
+  });
+
+  it("未所属は全体集計には残し、特定国の集計から除外する", () => {
+    const log = [
+      rec(
+        countryRankingLine({
+          time: "06/06 10:00",
+          leftFaction: "なし",
+          leftName: "浪人",
+          rightFaction: "赤国",
+          rightName: "赤守",
+          winner: "left",
+          leftWeapon: "流浪剣",
+          rightWeapon: "赤剣",
+        })
+      ),
+    ];
+
+    expect(
+      assetMetricRanking(log, "weapon").some(
+        (row) => row.name === "流浪剣"
+      )
+    ).toBe(true);
+    expect(
+      assetMetricRanking(log, "weapon", undefined, "赤国").some(
+        (row) => row.name === "流浪剣"
+      )
+    ).toBe(false);
+    expect(
+      pontaPointRanking(log, undefined, undefined, "赤国").map(
+        (row) => row.name
+      )
+    ).toEqual(["赤守"]);
+  });
+
+  it("国で絞ってもアシスト判定用の後続敗北は期間内の全戦闘から探す", () => {
+    const log = [
+      rec(
+        countryRankingLine({
+          time: "06/07 10:00",
+          leftFaction: "赤国",
+          leftName: "援護役",
+          rightFaction: "青国",
+          rightName: "標的",
+          winner: "left",
+        })
+      ),
+      rec(
+        countryRankingLine({
+          time: "06/07 10:20",
+          leftFaction: "緑国",
+          leftName: "追撃役",
+          rightFaction: "青国",
+          rightName: "標的",
+          winner: "left",
+        })
+      ),
+    ];
+
+    const assisted = warlordRanking(
+      log,
+      undefined,
+      undefined,
+      "赤国"
+    ).find((row) => row.name === "援護役")!;
+    expect(assisted.assists).toBe(1);
+  });
+
+  it("国未指定と空文字は従来の全体集計を維持する", () => {
+    expect(
+      assetMetricRanking(sideScopedLog, "unit", undefined, " ")
+    ).toEqual(assetMetricRanking(sideScopedLog, "unit"));
+    expect(
+      pontaPointRanking(sideScopedLog, undefined, undefined, " ")
+    ).toEqual(pontaPointRanking(sideScopedLog));
+    expect(
+      breakthroughRanking(sideScopedLog, undefined, undefined, " ")
+    ).toEqual(breakthroughRanking(sideScopedLog));
+    expect(
+      warlordRanking(sideScopedLog, undefined, undefined, " ")
+    ).toEqual(warlordRanking(sideScopedLog));
   });
 });

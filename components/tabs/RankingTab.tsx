@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import type { BattleRecord } from "@/lib/types";
 import {
   assetMetricRanking,
+  factionsInYearRange,
   formatWinRate,
   rankingPeriods,
   type AssetMetricStat,
@@ -279,6 +280,7 @@ export function RankingTab({
   const [activeMetric, setActiveMetric] = useState<MetricKey | null>(null);
   const [keyword, setKeyword] = useState("");
   const [minUses, setMinUses] = useState(DEFAULT_MIN_USES);
+  const [faction, setFaction] = useState("");
   const [unitType, setUnitType] = useState("");
   const [showFilter, setShowFilter] = useState(DEFAULT_RANKING_FILTERS_OPEN);
   const [periodKey, setPeriodKey] = useState<string>(DEFAULT_PERIOD_KEY);
@@ -288,25 +290,45 @@ export function RankingTab({
     () => periods.find((period) => period.key === periodKey),
     [periodKey, periods]
   );
-  const rows = useMemo(
+  const availableFactions = useMemo(
+    () => factionsInYearRange(log, range),
+    [log, range]
+  );
+  const factionOptions = useMemo(() => {
+    if (!faction || availableFactions.includes(faction)) {
+      return availableFactions;
+    }
+    return [...availableFactions, faction].sort((a, b) =>
+      a.localeCompare(b, "ja")
+    );
+  }, [availableFactions, faction]);
+  const allRows = useMemo(
     () => assetMetricRanking(log, variant, range),
     [log, range, variant]
   );
+  const rows = useMemo(
+    () =>
+      faction
+        ? assetMetricRanking(log, variant, range, faction)
+        : allRows,
+    [allRows, faction, log, range, variant]
+  );
 
   // 兵種ランキングで選べる兵種タイプ。
-  const unitTypeOptions = useMemo(
-    () =>
-      variant === "unit"
-        ? Array.from(
-            new Set(
-              rows
-                .map((row) => row.branch?.trim())
-                .filter((value): value is string => !!value)
-            )
-          ).sort((a, b) => a.localeCompare(b, "ja"))
-        : [],
-    [rows, variant]
-  );
+  const unitTypeOptions = useMemo(() => {
+    if (variant !== "unit") return [];
+
+    const options = Array.from(
+      new Set(
+        rows
+          .map((row) => row.branch?.trim())
+          .filter((value): value is string => !!value)
+      )
+    ).sort((a, b) => a.localeCompare(b, "ja"));
+
+    if (!unitType || options.includes(unitType)) return options;
+    return [...options, unitType].sort((a, b) => a.localeCompare(b, "ja"));
+  }, [rows, unitType, variant]);
 
   // 一覧・詳細で共有する名前・最低使用回数・兵種タイプフィルター。
   const filteredRows = useMemo(() => {
@@ -344,6 +366,7 @@ export function RankingTab({
     ) || 1;
   const hasFilter =
     keyword.trim() !== "" ||
+    faction !== "" ||
     minUses !== 1 ||
     (variant === "unit" && unitType !== "");
 
@@ -359,10 +382,21 @@ export function RankingTab({
 
   const clearFilters = () => {
     setKeyword("");
+    setFaction("");
     setMinUses(1);
     setUnitType("");
   };
   const activeFilters: ActiveFilter[] = [
+    ...(faction
+      ? [
+          {
+            key: "faction",
+            label: "国",
+            value: faction,
+            onRemove: () => setFaction(""),
+          },
+        ]
+      : []),
     ...(minUses !== 1
       ? [
           {
@@ -427,8 +461,8 @@ export function RankingTab({
         activeFilters={activeFilters}
         resultText={
           hasFilter
-            ? `全${rows.length.toLocaleString("ja-JP")}件中 ${filteredRows.length.toLocaleString("ja-JP")}件`
-            : `全${rows.length.toLocaleString("ja-JP")}件`
+            ? `全${allRows.length.toLocaleString("ja-JP")}件中 ${filteredRows.length.toLocaleString("ja-JP")}件`
+            : `全${allRows.length.toLocaleString("ja-JP")}件`
         }
       >
         <>
@@ -450,6 +484,21 @@ export function RankingTab({
               </select>
             </label>
           )}
+          <label className="filter">
+            <span>国</span>
+            <select
+              className="select"
+              value={faction}
+              onChange={(event) => setFaction(event.target.value)}
+            >
+              <option value="">すべて</option>
+              {factionOptions.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="filter">
             <span>最低使用回数</span>
             <select
@@ -561,7 +610,7 @@ export function RankingTab({
                 条件を満たす{copy.noun}がありません
               </p>
               <p className="empty-hint">
-                集計期間、検索語、最低使用回数を見直してください。
+                集計期間や絞り込み条件を見直してください。
               </p>
             </div>
           ) : (
