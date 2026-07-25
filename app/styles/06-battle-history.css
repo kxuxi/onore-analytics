@@ -104,7 +104,7 @@
   padding: var(--space-1) var(--space-2);
   color: var(--medal-gold-fg);
   font-size: var(--font-size-sm);
-  font-weight: 800;
+  font-weight: var(--font-weight-bold);
   line-height: var(--line-height-tight);
   white-space: nowrap;
   background: var(--medal-gold-bg);
@@ -152,8 +152,9 @@
 .bh-time-label {
   padding: 2px 5px;
   color: var(--color-text-secondary);
-  font-size: 10px;
-  font-weight: 700;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-caption);
   letter-spacing: 0.02em;
   background: var(--surface-raised);
   border: 1px solid var(--color-border-default);
@@ -218,7 +219,7 @@
   padding: 0 var(--space-2);
   color: var(--color-interactive-text);
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: var(--font-weight-medium);
 }
 
 .bh-matchup {
@@ -262,8 +263,9 @@
 .bh-side-role {
   flex: 0 0 auto;
   color: var(--color-text-secondary);
-  font-size: 10px;
-  font-weight: 800;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-caption);
   letter-spacing: 0.08em;
 }
 
@@ -274,9 +276,9 @@
   min-height: 22px;
   padding: 2px 6px;
   color: var(--color-text-secondary);
-  font-size: 10px;
-  font-weight: 800;
-  line-height: var(--line-height-tight);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-caption);
   white-space: nowrap;
   background: var(--surface-raised);
   border: 1px solid var(--color-border-default);
@@ -403,8 +405,9 @@
   min-height: 22px;
   margin-left: auto;
   padding: 2px 7px;
-  font-size: 10px;
-  font-weight: 800;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-caption);
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-pill);
 }
@@ -433,7 +436,7 @@
   padding: var(--space-1) var(--space-2);
   overflow-wrap: anywhere;
   font-size: var(--font-size-body);
-  font-weight: 750;
+  font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
   text-align: left;
   background: transparent;
@@ -450,7 +453,7 @@
 }
 
 .bh-participant--winner {
-  font-weight: 850;
+  font-weight: var(--font-weight-bold);
 }
 
 .bh-winner-icon {
@@ -469,7 +472,7 @@
   height: 30px;
   color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
-  font-weight: 800;
+  font-weight: var(--font-weight-semibold);
   background: var(--surface-raised);
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-pill);
@@ -487,7 +490,7 @@
   padding: var(--space-1) var(--space-3);
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
-  font-weight: 650;
+  font-weight: var(--font-weight-medium);
   background: transparent;
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-md);
@@ -540,7 +543,7 @@
 
 .bh-battle-number {
   color: var(--color-interactive-text);
-  font-weight: 750;
+  font-weight: var(--font-weight-semibold);
   background: color-mix(in srgb, var(--accent) 10%, var(--surface-raised));
   border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
 }
@@ -553,13 +556,14 @@
   overflow-wrap: anywhere;
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
-  font-weight: 650;
+  font-weight: var(--font-weight-medium);
 }
 
 .bh-context-label {
   color: var(--color-text-secondary);
-  font-size: 10px;
-  font-weight: 700;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-caption);
 }
 
 .bh-team-details-grid {
@@ -587,16 +591,16 @@
 .bh-detail-title {
   margin: 0;
   color: var(--color-text-secondary);
-  font-size: 10px;
-  font-weight: 750;
-  line-height: var(--line-height-tight);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-caption);
 }
 
 .bh-faction {
   max-width: 100%;
   overflow-wrap: anywhere;
   font-size: var(--font-size-xs);
-  font-weight: 650;
+  font-weight: var(--font-weight-medium);
   line-height: var(--line-height-tight);
 }
 
@@ -628,8 +632,8 @@
   padding: 2px 7px;
   overflow-wrap: anywhere;
   color: var(--color-text-secondary);
-  font-size: 11px;
-  line-height: 1.35;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-caption);
   text-align: inherit;
   background: var(--surface-raised);
   border: 1px solid var(--color-border-default);
@@ -676,8 +680,9 @@
   margin-left: auto;
   padding: 2px 6px;
   color: var(--color-warning-text);
-  font-size: 10px;
-  font-weight: 750;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-caption);
   background: color-mix(in srgb, var(--warning) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
   border-radius: var(--radius-pill);
@@ -829,7 +834,8 @@
 
 /* Shared compact chips and text-style controls. */
 .pill {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-caption);
   padding: 2px 7px;
   border-radius: 20px;
   background: var(--panel);
@@ -846,8 +852,9 @@
 
 .pill-btn {
   cursor: pointer;
-  font-size: 11px;
-  line-height: 1.4;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-control);
   min-height: var(--target-size-minimum);
 }
 

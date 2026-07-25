@@ -31,8 +31,9 @@
 }
 .home-picker-title {
   margin: 0;
-  font-size: 20px;
-  font-weight: 800;
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-heading);
 }
 .home-warlord-search {
   display: flex;
@@ -43,7 +44,7 @@
 .home-search-label {
   color: var(--text);
   font-size: var(--font-size-sm);
-  font-weight: 700;
+  font-weight: var(--font-weight-medium);
 }
 .home-warlord-search .search-box {
   width: 100%;
@@ -139,7 +140,7 @@
   margin: var(--space-2) 0 var(--space-3);
   color: var(--color-text-primary);
   font-size: clamp(24px, 3vw, 32px);
-  font-weight: 800;
+  font-weight: var(--font-weight-bold);
   line-height: 1.2;
   letter-spacing: -0.025em;
   text-transform: none;
@@ -168,8 +169,8 @@
 .home-picker-card-title {
   margin: 0;
   color: var(--text);
-  font-size: 18px;
-  font-weight: 800;
+  font-size: var(--font-size-heading);
+  font-weight: var(--font-weight-bold);
   line-height: var(--line-height-tight);
 }
 .home-picker-card-description {
@@ -225,6 +226,7 @@
 .home-capability-item strong {
   color: var(--text);
   font-size: var(--font-size-control);
+  font-weight: var(--font-weight-semibold);
 }
 .home-capability-item > span:last-child > span {
   color: var(--muted);
@@ -243,7 +245,7 @@
   margin: 0;
   color: var(--text);
   font-size: var(--font-size-control);
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
 }
 .home-explore-description {
   margin: var(--space-1) 0 0;
@@ -288,7 +290,7 @@
 .home-card-title {
   margin: 0;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
   color: var(--text);
 }
 .home-grid {
@@ -319,12 +321,13 @@
 .home-hero-eyebrow {
   font-size: 13px;
   color: var(--muted);
-  font-weight: 600;
+  font-weight: var(--font-weight-medium);
 }
 .home-hero-name {
   margin: 2px 0 6px;
   font-size: 26px;
-  font-weight: 800;
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-heading);
 }
 .home-hero-name:focus-visible {
   outline: 2px solid var(--color-focus-ring);
@@ -366,7 +369,7 @@
 }
 .home-bigstat-val {
   font-size: 24px;
-  font-weight: 800;
+  font-weight: var(--font-weight-bold);
   line-height: 1.1;
 }
 .home-bigstat-val.good {
@@ -407,7 +410,7 @@
   border-color: var(--accent);
 }
 .home-series-check.active {
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
   color: var(--text);
   background: color-mix(in srgb, currentColor 8%, transparent);
 }
@@ -490,7 +493,7 @@
 .home-line-masklabel {
   fill: var(--muted);
   font-size: 9px;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 /* --- 最近の戦闘結果（表） --- */
@@ -505,11 +508,11 @@
 }
 .home-res-win {
   color: var(--color-success-text);
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
 }
 .home-res-loss {
   color: var(--color-danger-text);
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
 }
 .home-res-other {
   color: var(--muted);
@@ -521,7 +524,7 @@
   padding: 1px 7px;
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   background: color-mix(in srgb, var(--accent) 16%, transparent);
   color: var(--color-interactive-text);
 }
@@ -544,7 +547,7 @@
 }
 .home-watchlist-name {
   font-size: 15px;
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
   flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;

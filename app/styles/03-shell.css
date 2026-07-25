@@ -22,7 +22,7 @@
   min-width: 0;
   overflow: hidden;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   letter-spacing: 0.02em;
 }
 
@@ -123,7 +123,7 @@
 
 .header h1 .sub {
   color: var(--muted);
-  font-weight: 400;
+  font-weight: var(--font-weight-regular);
   margin-left: 6px;
   font-size: 12px;
 }
@@ -203,8 +203,8 @@
 
 .sidebar-term-label {
   display: block;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -267,7 +267,7 @@
   border-color: var(--accent-strong);
   background: var(--accent-strong);
   color: var(--color-on-accent);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .term-chip-sm {
@@ -276,8 +276,8 @@
 
 .term-chip-latest {
   margin-left: 3px;
-  font-size: 9px;
-  font-weight: 700;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
   opacity: 0.8;
 }
 
@@ -350,8 +350,8 @@
   color: var(--muted);
   padding: 12px 14px;
   border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--font-size-compact);
+  font-weight: var(--font-weight-medium);
   width: 100%;
 }
 
@@ -382,6 +382,7 @@
   background: var(--accent-strong);
   border-color: var(--accent-strong);
   color: var(--color-on-accent);
+  font-weight: var(--font-weight-semibold);
 }
 
 .sidebar-footer {
@@ -423,7 +424,7 @@
   background: transparent;
   color: var(--muted);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
@@ -438,6 +439,7 @@
   color: var(--text);
   border-color: var(--border);
   box-shadow: var(--shadow-sm);
+  font-weight: var(--font-weight-semibold);
 }
 
 .subtab:focus-visible {
@@ -526,7 +528,7 @@
   margin: 0 4px;
   color: var(--color-interactive-text);
   text-decoration: none;
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
 }
 
 .app-footer-link:hover,
@@ -554,6 +556,6 @@
   font-size: 14px;
   color: var(--muted);
   letter-spacing: 0.08em;
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
 }

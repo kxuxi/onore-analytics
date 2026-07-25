@@ -12,3 +12,8 @@ Rules:
 - Run the full test, lint, typecheck, production build, and visual matrix after changing shared tokens or broad selectors.
 
 The import and PostCSS order are guarded by `lib/cssArchitecture.test.ts`. Numeric prefixes are part of the maintenance contract; they describe source order, not visual elevation.
+
+## Japanese UI typography
+
+- 日本語UIのウェイトは `400 / 500 / 600 / 700` の4段階だけを使い、通常文・操作・見出し・KPIの順に強弱を付けます。
+- 補助的でないラベルは原則 `12px` を下限とします。チャート軸など、表示領域が固定されたデータ可視化は例外です。

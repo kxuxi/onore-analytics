@@ -113,7 +113,7 @@ export async function renderWarlordCardBlob(
 
   // 武将名（大）。
   ctx.fillStyle = "#f5f7ff";
-  ctx.font = `900 76px ${FONT}`;
+  ctx.font = `700 76px ${FONT}`;
   ctx.fillText(truncate(ctx, data.name, CARD_W - 300), 78, 218);
 
   // タグ（所属国／タイプ／兵種）。
@@ -137,7 +137,7 @@ export async function renderWarlordCardBlob(
   const rateText =
     data.decided > 0 ? `${Math.round(data.winRate * 100)}%` : "—";
   ctx.fillStyle = "#f5f7ff";
-  ctx.font = `900 150px ${FONT}`;
+  ctx.font = `700 150px ${FONT}`;
   ctx.fillText(rateText, 74, 470);
   ctx.fillStyle = "rgba(255,255,255,0.6)";
   ctx.font = `600 32px ${FONT}`;
@@ -146,7 +146,7 @@ export async function renderWarlordCardBlob(
   // 右下：勝敗と総戦闘数。
   ctx.textAlign = "right";
   ctx.fillStyle = "#22c55e";
-  ctx.font = `900 72px ${FONT}`;
+  ctx.font = `700 72px ${FONT}`;
   ctx.fillText(
     `${data.wins.toLocaleString("ja-JP")} - ${data.losses.toLocaleString(
       "ja-JP"

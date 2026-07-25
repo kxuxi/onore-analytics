@@ -98,13 +98,14 @@
   min-width: var(--target-size-minimum);
   padding: var(--space-2) 0;
   font-size: var(--font-size-body);
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
   text-align: left;
 }
 
 .catalog-equip-button {
   padding: var(--space-2) var(--space-3);
   font-size: var(--font-size-control);
+  font-weight: var(--font-weight-semibold);
   text-align: left;
 }
 
@@ -134,7 +135,8 @@
 .catalog-detail-list dt {
   color: var(--muted);
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-caption);
 }
 
 .catalog-primary-stats dd,
@@ -142,12 +144,12 @@
   min-width: 0;
   margin: var(--space-1) 0 0;
   color: var(--text);
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-semibold);
   overflow-wrap: anywhere;
 }
 
 .catalog-primary-stats dd {
-  font-size: var(--font-size-control);
-  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
@@ -169,7 +171,8 @@
   color: var(--muted);
   cursor: pointer;
   font-size: var(--font-size-sm);
-  font-weight: 700;
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-control);
   list-style: none;
 }
 
@@ -298,7 +301,8 @@
 }
 
 .equip-decided {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
   margin-left: 4px;
 }
 .equip-split {
@@ -311,11 +315,13 @@
   gap: 4px 10px;
 }
 .equip-users .link-like {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
 }
 .equip-users .link-like .muted {
   margin-left: 2px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
 }
 
 /* 装備シナジーの組み合わせ（武器 × 品物） */

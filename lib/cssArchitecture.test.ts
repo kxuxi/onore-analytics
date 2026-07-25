@@ -60,6 +60,33 @@ describe("global CSS architecture", () => {
     }
   });
 
+  it("日本語UIのタイポグラフィを意味のあるサイズとウェイトに限定する", () => {
+    const tokens = readFileSync(
+      join(stylesDirectory, "01-tokens-theme.css"),
+      "utf8"
+    );
+    expect(tokens).toMatch(/--font-size-2xs:\s*11px;/);
+    expect(tokens).toMatch(/--font-size-compact:\s*15px;/);
+    expect(tokens).toMatch(/--font-size-heading:\s*18px;/);
+    expect(tokens).toMatch(/--font-weight-regular:\s*400;/);
+    expect(tokens).toMatch(/--font-weight-medium:\s*500;/);
+    expect(tokens).toMatch(/--font-weight-semibold:\s*600;/);
+    expect(tokens).toMatch(/--font-weight-bold:\s*700;/);
+    expect(tokens).toMatch(/--line-height-caption:\s*1\.5;/);
+    expect(tokens).toMatch(/--line-height-control:\s*1\.4;/);
+    expect(tokens).toMatch(/--line-height-heading:\s*1\.3;/);
+    for (const filename of STYLE_FILES) {
+      const content = readFileSync(join(stylesDirectory, filename), "utf8");
+
+      expect(content, filename).not.toMatch(
+        /font-weight:\s*(?:650|750|800|850|900)\b/
+      );
+      if (filename !== "01-tokens-theme.css") {
+        expect(content, filename).not.toMatch(/font-weight:\s*\d+\b/);
+      }
+    }
+  });
+
   it("named containerの定義とqueryを同じ責務に保つ", () => {
     const battleHistory = readFileSync(
       join(stylesDirectory, "06-battle-history.css"),
