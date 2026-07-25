@@ -87,6 +87,12 @@ describe("BattleHistoryCard", () => {
     expect(html).toContain("8ターン");
     expect(html).toContain("東軍");
     expect(html).toContain("西軍");
+    expect(html).toContain(
+      '<span class="bh-faction" style="color:color-mix(in srgb, #116611 32%, var(--text))">東軍</span>'
+    );
+    expect(html).toContain(
+      '<span class="bh-faction" style="color:color-mix(in srgb, #881111 32%, var(--text))">西軍</span>'
+    );
 
     const unitIndex = html.indexOf("ライフル銃兵");
     const branchIndex = html.indexOf("歩兵");

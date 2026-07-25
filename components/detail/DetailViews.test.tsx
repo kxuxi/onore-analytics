@@ -131,6 +131,9 @@ describe("5種の詳細画面", () => {
     );
 
     expectCommonTemplate(markup, "国", "東軍");
+    expect(markup).toContain(
+      "color:color-mix(in srgb, #336699 32%, var(--text))"
+    );
     expect(markup).toContain("所属武将");
     expect(markup.indexOf("所属武将")).toBeLessThan(
       markup.indexOf("戦闘ログ")
