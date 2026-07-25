@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { BattleRecord } from "@/lib/types";
+import type { FactionColorMap } from "@/lib/factionColors";
 import {
   collectEquipBattles,
   summarize,
@@ -27,8 +28,10 @@ interface Props {
   /** 武将の持つ武器か武将の持つ品物か。 */
   slot: EquipSlot;
   log: BattleRecord[];
+  colors?: FactionColorMap;
   onSelectWarlord: (name: string) => void;
   onSelectUnit: (name: string) => void;
+  onSelectEquip?: (name: string, slot: "weapon" | "item") => void;
   onBack: () => void;
 }
 
@@ -36,8 +39,10 @@ export function EquipDetail({
   name,
   slot,
   log,
+  colors,
   onSelectWarlord,
   onSelectUnit,
+  onSelectEquip,
   onBack,
 }: Props) {
   const kind = slot === "weapon" ? "武器" : "品物";
@@ -99,8 +104,10 @@ export function EquipDetail({
           <DetailBattleLogSection
             count={`${outcomes.length}件`}
             outcomes={outcomes}
+            factionColors={colors}
             onSelectWarlord={onSelectWarlord}
             onSelectUnit={onSelectUnit}
+            onSelectEquip={onSelectEquip}
           />
         </>
       )}

@@ -33,8 +33,10 @@ const cases: { name: string; element: ReactElement }[] = [
     element: (
       <TraitMatrixTab
         log={EMPTY_LOG}
+        factionColors={{}}
         onSelectWarlord={vi.fn()}
         onSelectUnit={vi.fn()}
+        onSelectEquip={vi.fn()}
       />
     ),
   },

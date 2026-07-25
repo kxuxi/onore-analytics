@@ -108,9 +108,6 @@ input:focus {
 .bh-disclosure:focus-visible,
 .bh-raw-link:focus-visible,
 .pill-btn:focus-visible,
-.dl-name:focus-visible,
-.dl-unit:focus-visible,
-.dl-link:focus-visible,
 .pie-legend-name:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { BattleRecord, UnitType } from "@/lib/types";
+import type { FactionColorMap } from "@/lib/factionColors";
 import {
   collectUnitBattles,
   summarize,
@@ -29,16 +30,20 @@ import { UnitEditModal } from "@/components/tabs/UnitEditModal";
 interface Props {
   name: string;
   log: BattleRecord[];
+  colors?: FactionColorMap;
   onSelectWarlord: (name: string) => void;
   onSelectUnit: (name: string) => void;
+  onSelectEquip?: (name: string, slot: "weapon" | "item") => void;
   onBack: () => void;
 }
 
 export function UnitDetail({
   name,
   log,
+  colors,
   onSelectWarlord,
   onSelectUnit,
+  onSelectEquip,
   onBack,
 }: Props) {
   const outcomes = useMemo(() => collectUnitBattles(log, name), [log, name]);
@@ -194,9 +199,10 @@ export function UnitDetail({
           <DetailBattleLogSection
             count={`${outcomes.length}件`}
             outcomes={outcomes}
-            currentUnit={name}
+            factionColors={colors}
             onSelectWarlord={onSelectWarlord}
             onSelectUnit={onSelectUnit}
+            onSelectEquip={onSelectEquip}
           />
         </>
       )}

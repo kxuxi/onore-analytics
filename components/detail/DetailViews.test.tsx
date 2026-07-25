@@ -46,6 +46,7 @@ const DB: WarlordMap = {
 const callbacks = {
   onSelectWarlord: vi.fn(),
   onSelectUnit: vi.fn(),
+  onSelectEquip: vi.fn(),
   onBack: vi.fn(),
 };
 
@@ -65,6 +66,8 @@ function expectCommonTemplate(
   expect(markup).toContain("戦績サマリー");
   expect(markup).toContain("戦闘数");
   expect(markup).toContain("戦闘ログ");
+  expect(markup).toContain('<ul class="battle-list">');
+  expect(markup).toContain('<li class="bh-card');
   expect(markup.indexOf("戦績サマリー")).toBeLessThan(
     markup.indexOf("戦闘ログ")
   );
@@ -99,7 +102,7 @@ describe("5種の詳細画面", () => {
 
   it("兵種は共通テンプレート内に既存の戦績と戦闘ログを保つ", () => {
     const markup = renderToStaticMarkup(
-      <UnitDetail name="重騎兵" log={LOG} {...callbacks} />
+      <UnitDetail name="重騎兵" log={LOG} colors={{}} {...callbacks} />
     );
 
     expectCommonTemplate(markup, "兵種", "重騎兵");
@@ -111,7 +114,13 @@ describe("5種の詳細画面", () => {
     { kind: "品物", slot: "item" as const, name: "金の宝珠" },
   ])("$kind は同じテンプレートでも集計対象を維持する", ({ kind, slot, name }) => {
     const markup = renderToStaticMarkup(
-      <EquipDetail name={name} slot={slot} log={LOG} {...callbacks} />
+      <EquipDetail
+        name={name}
+        slot={slot}
+        log={LOG}
+        colors={{}}
+        {...callbacks}
+      />
     );
 
     expectCommonTemplate(markup, kind, name);
@@ -154,13 +163,14 @@ describe("5種の詳細画面", () => {
         />
       ),
       renderToStaticMarkup(
-        <UnitDetail name="不明兵種" log={[]} {...callbacks} />
+        <UnitDetail name="不明兵種" log={[]} colors={{}} {...callbacks} />
       ),
       renderToStaticMarkup(
         <EquipDetail
           name="不明武器"
           slot="weapon"
           log={[]}
+          colors={{}}
           {...callbacks}
         />
       ),
@@ -169,6 +179,7 @@ describe("5種の詳細画面", () => {
           name="不明品物"
           slot="item"
           log={[]}
+          colors={{}}
           {...callbacks}
         />
       ),

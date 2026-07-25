@@ -795,8 +795,10 @@ export default function HomePage() {
         return (
           <TraitMatrixTab
             log={filteredBattleLog}
+            factionColors={factionColors}
             onSelectWarlord={selectWarlordNormalized}
             onSelectUnit={selectUnit}
+            onSelectEquip={selectEquip}
           />
         );
       case "metaenv":
@@ -917,6 +919,7 @@ export default function HomePage() {
           yearRankTags={warlordYearRankTags(yearRankings, repName)}
           onSelectWarlord={selectWarlordNormalized}
           onSelectUnit={selectUnit}
+          onSelectEquip={selectEquip}
           onSelectFaction={selectFaction}
           onBack={backDetail}
         />
@@ -926,8 +929,10 @@ export default function HomePage() {
         <UnitDetail
           name={detail.name}
           log={filteredBattleLog}
+          colors={factionColors}
           onSelectWarlord={selectWarlordNormalized}
           onSelectUnit={selectUnit}
+          onSelectEquip={selectEquip}
           onBack={backDetail}
         />
       );
@@ -941,6 +946,7 @@ export default function HomePage() {
           canViewLatestUnits={isAdmin}
           onSelectWarlord={selectWarlordNormalized}
           onSelectUnit={selectUnit}
+          onSelectEquip={selectEquip}
           onBack={backDetail}
         />
       );
@@ -950,8 +956,10 @@ export default function HomePage() {
           name={detail.name}
           slot={detail.kind}
           log={filteredBattleLog}
+          colors={factionColors}
           onSelectWarlord={selectWarlordNormalized}
           onSelectUnit={selectUnit}
+          onSelectEquip={selectEquip}
           onBack={backDetail}
         />
       );

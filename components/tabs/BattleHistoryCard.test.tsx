@@ -72,6 +72,7 @@ describe("BattleHistoryCard", () => {
     const matchupIndex = html.indexOf('class="bh-matchup"');
     const primaryHtml = html.slice(primaryIndex, matchupIndex);
 
+    expect(html).not.toContain("bh-card--subdued");
     expect(primaryHtml.indexOf("出兵側の勝利")).toBeLessThan(
       primaryHtml.indexOf("1600年4月")
     );
@@ -190,6 +191,66 @@ describe("BattleHistoryCard", () => {
     }
   });
 
+  it.each([
+    {
+      side: "left" as const,
+      result: "win" as const,
+      sideLabel: "出兵側",
+      name: "武将甲",
+      resultLabel: "勝利",
+    },
+    {
+      side: "right" as const,
+      result: "loss" as const,
+      sideLabel: "守備側",
+      name: "武将乙",
+      resultLabel: "敗北",
+    },
+  ])(
+    "詳細一覧では$sideLabelを対象側として可視化し、対象視点の$resultLabelを読み上げられる",
+    ({ side, result, sideLabel, name, resultLabel }) => {
+      const html = renderToStaticMarkup(
+        <BattleHistoryCard
+          record={RECORD}
+          card={CARD}
+          factionColors={{ 東軍: "#116611", 西軍: "#881111" }}
+          highlight=""
+          antiIndex={new Map()}
+          onSelectWarlord={vi.fn()}
+          onSelectUnit={vi.fn()}
+          onSelectEquip={vi.fn()}
+          perspective={{ side, result }}
+        />
+      );
+
+      expect(html).toContain(
+        `aria-label="${sideLabel}：${name}、このページの対象、${resultLabel}"`
+      );
+      expect(html).toContain(
+        `<span class="bh-perspective bh-perspective--${result}">${resultLabel}</span>`
+      );
+    }
+  );
+
+  it("削除権限が指定されても削除処理がなければ削除操作を表示しない", () => {
+    const html = renderToStaticMarkup(
+      <BattleHistoryCard
+        record={RECORD}
+        card={CARD}
+        factionColors={{}}
+        highlight=""
+        antiIndex={new Map()}
+        onSelectWarlord={vi.fn()}
+        onSelectUnit={vi.fn()}
+        onSelectEquip={vi.fn()}
+        canDelete
+      />
+    );
+
+    expect(html).not.toContain("bh-action--delete");
+    expect(html).not.toContain("戦闘履歴を削除");
+  });
+
   it("品物と武器を正しい図鑑詳細へ移動できるボタンとして表示する", () => {
     const html = renderCard();
 
@@ -205,6 +266,25 @@ describe("BattleHistoryCard", () => {
     expect(html).toMatch(
       /<button[^>]+class="bh-tag bh-tag--equip bh-tag--interactive"[^>]+title="太刀 の武器図鑑を見る"/
     );
+  });
+
+  it("装備選択処理を渡さない既存の呼び出しでは、装備を非操作テキストとして保つ", () => {
+    const html = renderToStaticMarkup(
+      <BattleHistoryCard
+        record={RECORD}
+        card={CARD}
+        highlight=""
+        antiIndex={new Map()}
+        onSelectWarlord={vi.fn()}
+        onSelectUnit={vi.fn()}
+      />
+    );
+
+    expect(html).toContain(">銀時計</span>");
+    expect(html).toContain(">火縄銃</span>");
+    expect(html).not.toContain("bh-tag--interactive");
+    expect(html).not.toContain("品物図鑑を見る");
+    expect(html).not.toContain("武器図鑑を見る");
   });
 
   it("装備枠を判別できない旧形式は誤った図鑑へ案内せず表示を維持する", () => {

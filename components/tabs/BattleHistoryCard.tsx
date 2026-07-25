@@ -27,6 +27,7 @@ import {
   isStaticUnitTypeLabelTarget,
   STATIC_UNIT_TYPE_LABEL_VALUE,
 } from "@/lib/unitTypeLabel";
+import type { OutcomeResult, SideKey } from "@/lib/stats";
 import { AntiArrows } from "@/components/AntiArrows";
 import {
   CheckIcon,
@@ -38,17 +39,26 @@ import {
   TrophyIcon,
 } from "@/components/icons";
 
+const EMPTY_FACTION_COLORS: FactionColorMap = {};
+
 export interface BattleHistoryCardProps {
   record: BattleRecord;
   card: BattleCard | null;
-  factionColors: FactionColorMap;
+  factionColors?: FactionColorMap;
   highlight: string;
   antiIndex: Map<string, Set<string>>;
   onSelectWarlord: (name: string) => void;
   onSelectUnit: (name: string) => void;
-  onSelectEquip: (name: string, slot: "weapon" | "item") => void;
-  onDelete: (id: number) => Promise<void>;
+  onSelectEquip?: (name: string, slot: "weapon" | "item") => void;
+  onDelete?: (id: number) => Promise<void>;
   canDelete?: boolean;
+  /** 一覧内で国色の面積と強調色を抑えた表示にする。 */
+  subdued?: boolean;
+  /** 詳細ページで、このページの集計対象になった側と対象視点の結果を示す。 */
+  perspective?: {
+    side: SideKey;
+    result: OutcomeResult;
+  };
 }
 
 interface SideTag {
@@ -197,6 +207,8 @@ export function BattleHistoryCard({
   onSelectEquip,
   onDelete,
   canDelete = false,
+  subdued = false,
+  perspective,
 }: BattleHistoryCardProps) {
   const [copied, setCopied] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -218,16 +230,23 @@ export function BattleHistoryCard({
     return <RawBattleHistoryCard record={record} highlight={highlight} />;
   }
 
+  const resolvedFactionColors = factionColors ?? EMPTY_FACTION_COLORS;
   const leftColor = resolveFactionColor(
     card.left.faction,
     DEFAULT_WIN_LEFT,
-    factionColors
+    resolvedFactionColors
   );
   const rightColor = resolveFactionColor(
     card.right.faction,
     DEFAULT_WIN_RIGHT,
-    factionColors
+    resolvedFactionColors
   );
+  const leftEdgeColor = subdued
+    ? `color-mix(in srgb, ${leftColor} 38%, var(--border))`
+    : leftColor;
+  const rightEdgeColor = subdued
+    ? `color-mix(in srgb, ${rightColor} 38%, var(--border))`
+    : rightColor;
   const resultLabel =
     card.winner === "left"
       ? "出兵側の勝利"
@@ -241,11 +260,22 @@ export function BattleHistoryCard({
   const displayTime = card.battleAt ?? record.time;
   const displayBattleTime = splitDisplayBattleTime(displayTime);
   const matchupLabel = `${card.left.name} 対 ${card.right.name}`;
-  const hasActions = Boolean(card.url || canDelete);
+  const hasActions = Boolean(card.url || (canDelete && onDelete));
   const hasContext = Boolean(card.battleNo || card.place || card.turns);
   const hasTeamDetails = leftTags.length > 0 || rightTags.length > 0;
   const hasDecidedWinner =
     card.winner === "left" || card.winner === "right";
+  const perspectiveResultLabel = perspective
+    ? perspective.result === "win"
+      ? "勝利"
+      : perspective.result === "loss"
+        ? "敗北"
+        : card.winner === "draw"
+          ? "引分"
+          : card.winner === "retreat"
+            ? "撤退"
+            : "結果不明"
+    : null;
 
   const openUrl = () => {
     if (card.url) {
@@ -278,7 +308,7 @@ export function BattleHistoryCard({
 
   const handleDelete = async (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    if (!record.id) return;
+    if (!record.id || !onDelete) return;
     if (
       !window.confirm(
         "この戦闘履歴を削除してよろしいですか？（取り消せません）"
@@ -299,6 +329,7 @@ export function BattleHistoryCard({
 
   const renderSideSummary = (
     side: BattleSide,
+    sideKey: SideKey,
     sideLabel: "出兵側" | "守備側",
     sideClass: "attacker" | "defender",
     color: string,
@@ -309,6 +340,24 @@ export function BattleHistoryCard({
       : hasDecidedWinner
         ? "loser"
         : null;
+    const isFocusedSide = perspective?.side === sideKey;
+    const accessibilityStatus =
+      isFocusedSide && perspectiveResultLabel
+        ? `、このページの対象、${perspectiveResultLabel}`
+        : sideOutcome === "winner"
+          ? "、勝者"
+          : sideOutcome === "loser"
+            ? "、敗者"
+            : "";
+    const sideBorderStrength = subdued ? 26 : 48;
+    const sideBackgroundStrength = subdued
+      ? isWinner
+        ? 4
+        : 2
+      : isWinner
+        ? 12
+        : 6;
+    const participantTintStrength = subdued ? 20 : 32;
 
     return (
       <div
@@ -316,22 +365,15 @@ export function BattleHistoryCard({
           "bh-side",
           `bh-side--${sideClass}`,
           sideOutcome ? `bh-side--${sideOutcome}` : "",
+          isFocusedSide ? "bh-side--focused" : "",
         ]
           .filter(Boolean)
           .join(" ")}
         role="group"
-        aria-label={`${sideLabel}：${side.name}${
-          sideOutcome === "winner"
-            ? "、勝者"
-            : sideOutcome === "loser"
-              ? "、敗者"
-              : ""
-        }`}
+        aria-label={`${sideLabel}：${side.name}${accessibilityStatus}`}
         style={{
-          borderColor: `color-mix(in srgb, ${color} 48%, var(--border))`,
-          background: `color-mix(in srgb, ${color} ${
-            isWinner ? 12 : 6
-          }%, var(--surface-raised))`,
+          borderColor: `color-mix(in srgb, ${color} ${sideBorderStrength}%, var(--border))`,
+          background: `color-mix(in srgb, ${color} ${sideBackgroundStrength}%, var(--surface-raised))`,
         }}
       >
         <div className="bh-side-head">
@@ -339,12 +381,12 @@ export function BattleHistoryCard({
           {side.faction && (
             <span
               className="bh-faction"
-              style={factionNameStyle(side.faction, factionColors)}
+              style={factionNameStyle(side.faction, resolvedFactionColors)}
             >
               {highlightMatch(side.faction, highlight)}
             </span>
           )}
-          {sideOutcome && (
+          {sideOutcome && !isFocusedSide && (
             <span
               className={`bh-side-status bh-side-status--${sideOutcome}`}
             >
@@ -354,6 +396,13 @@ export function BattleHistoryCard({
               {sideOutcome === "winner" ? "勝者" : "敗者"}
             </span>
           )}
+          {isFocusedSide && perspectiveResultLabel && (
+            <span
+              className={`bh-perspective bh-perspective--${perspective?.result ?? "other"}`}
+            >
+              {perspectiveResultLabel}
+            </span>
+          )}
         </div>
         <button
           type="button"
@@ -361,7 +410,7 @@ export function BattleHistoryCard({
             isWinner ? " bh-participant--winner" : ""
           }`}
           style={{
-            color: `color-mix(in srgb, ${color} 32%, var(--text))`,
+            color: `color-mix(in srgb, ${color} ${participantTintStrength}%, var(--text))`,
           }}
           onClick={(event) => {
             event.stopPropagation();
@@ -418,13 +467,13 @@ export function BattleHistoryCard({
               "bh-tag",
               `bh-tag--${tag.kind}`,
               tag.highlight ? "bh-tag--highlight" : "",
-              tag.slot ? "bh-tag--interactive" : "",
+              tag.slot && onSelectEquip ? "bh-tag--interactive" : "",
             ]
               .filter(Boolean)
               .join(" ");
             const content = highlightMatch(tag.text, highlight);
 
-            if (tag.kind === "equip" && tag.slot) {
+            if (tag.kind === "equip" && tag.slot && onSelectEquip) {
               const slot = tag.slot;
               const slotLabel = slot === "weapon" ? "武器" : "品物";
               return (
@@ -465,14 +514,20 @@ export function BattleHistoryCard({
 
   return (
     <li
-      className={`bh-card${card.url ? " bh-card--link" : ""}`}
+      className={[
+        "bh-card",
+        card.url ? "bh-card--link" : "",
+        subdued ? "bh-card--subdued" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       style={{
         borderLeftWidth: 2,
         borderLeftStyle: "solid",
-        borderLeftColor: leftColor,
+        borderLeftColor: leftEdgeColor,
         borderRightWidth: 2,
         borderRightStyle: "solid",
-        borderRightColor: rightColor,
+        borderRightColor: rightEdgeColor,
       }}
       onClick={card.url ? handleCardClick : undefined}
     >
@@ -554,7 +609,7 @@ export function BattleHistoryCard({
                 <span>詳細</span>
               </a>
             )}
-            {canDelete && (
+            {canDelete && onDelete && (
               <button
                 type="button"
                 className="bh-action bh-action--delete"
@@ -596,6 +651,7 @@ export function BattleHistoryCard({
       <div className="bh-matchup">
         {renderSideSummary(
           card.left,
+          "left",
           "出兵側",
           "attacker",
           leftColor,
@@ -606,6 +662,7 @@ export function BattleHistoryCard({
         </span>
         {renderSideSummary(
           card.right,
+          "right",
           "守備側",
           "defender",
           rightColor,
