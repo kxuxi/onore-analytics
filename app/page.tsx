@@ -732,6 +732,7 @@ export default function HomePage() {
             factionColors={factionColors}
             onSelectWarlord={selectWarlordNormalized}
             onSelectUnit={selectUnit}
+            onSelectEquip={selectEquip}
             onDelete={handleDeleteBattle}
             onBulkDelete={handleBulkDeleteBattles}
           />

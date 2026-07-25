@@ -12,6 +12,7 @@ const callbacks = {
   }),
   onSelectWarlord: vi.fn(),
   onSelectUnit: vi.fn(),
+  onSelectEquip: vi.fn(),
   onDelete: vi.fn().mockResolvedValue(undefined),
   onBulkDelete: vi.fn().mockResolvedValue(undefined),
 };

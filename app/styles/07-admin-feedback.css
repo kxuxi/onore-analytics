@@ -151,7 +151,7 @@
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   font-weight: 600;
   background: var(--panel-2);
@@ -160,7 +160,11 @@
 }
 
 .tag.type { color: var(--label-type-fg); border-color: var(--label-type-border); background: var(--label-type-bg); }
-.tag.branch { color: var(--label-branch-fg); border-color: var(--label-branch-border); background: var(--label-branch-bg); }
+.tag.branch {
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-default);
+  background: var(--surface-subtle);
+}
 .tag.unit { color: var(--label-unit-fg); border-color: var(--label-unit-border); background: var(--label-unit-bg); }
 .tag.faction { color: var(--label-faction-fg); border-color: var(--label-faction-border); background: var(--label-faction-bg); }
 .tag.warn { color: var(--label-warn-fg); border-color: var(--label-warn-border); background: var(--label-warn-bg); }

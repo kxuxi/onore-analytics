@@ -58,6 +58,7 @@ function renderCard(
       antiIndex={new Map([["ライフル銃兵", new Set(["騎兵"])]])}
       onSelectWarlord={vi.fn()}
       onSelectUnit={vi.fn()}
+      onSelectEquip={vi.fn()}
       onDelete={vi.fn().mockResolvedValue(undefined)}
       canDelete
     />
@@ -183,13 +184,49 @@ describe("BattleHistoryCard", () => {
     }
   });
 
+  it("品物と武器を正しい図鑑詳細へ移動できるボタンとして表示する", () => {
+    const html = renderCard();
+
+    expect(html).toMatch(
+      /<button[^>]+class="bh-tag bh-tag--equip bh-tag--highlight bh-tag--interactive"[^>]+title="銀時計 の品物図鑑を見る"/
+    );
+    expect(html).toMatch(
+      /<button[^>]+class="bh-tag bh-tag--equip bh-tag--interactive"[^>]+title="火縄銃 の武器図鑑を見る"/
+    );
+    expect(html).toMatch(
+      /<button[^>]+class="bh-tag bh-tag--equip bh-tag--interactive"[^>]+title="軍配 の品物図鑑を見る"/
+    );
+    expect(html).toMatch(
+      /<button[^>]+class="bh-tag bh-tag--equip bh-tag--interactive"[^>]+title="太刀 の武器図鑑を見る"/
+    );
+  });
+
+  it("装備枠を判別できない旧形式は誤った図鑑へ案内せず表示を維持する", () => {
+    const html = renderCard({
+      ...CARD,
+      left: {
+        ...CARD.left,
+        equips: ["旧形式の装備"],
+        equip1: undefined,
+        equip2: undefined,
+      },
+    });
+
+    expect(html).toContain(
+      '<span class="bh-tag bh-tag--equip">旧形式の装備</span>'
+    );
+    expect(html).not.toContain("旧形式の装備 の武器図鑑を見る");
+    expect(html).not.toContain("旧形式の装備 の品物図鑑を見る");
+  });
+
   it("折りたたみ内の兵種・装備が検索に一致したことを示す", () => {
     const html = renderCard(CARD, RECORD, "銀時計");
 
     expect(html).toContain('class="bh-disclosure-match">検索一致</span>');
     expect(html).toContain(
-      '<span class="bh-tag bh-tag--equip bh-tag--highlight"><mark class="bh-highlight">銀時計</mark></span>'
+      'class="bh-tag bh-tag--equip bh-tag--highlight bh-tag--interactive"'
     );
+    expect(html).toContain('<mark class="bh-highlight">銀時計</mark>');
   });
 
   it("生データの記号付き検索語を表示名へ正規化して一致箇所を示す", () => {
@@ -251,6 +288,7 @@ describe("BattleHistoryCard", () => {
         antiIndex={new Map()}
         onSelectWarlord={vi.fn()}
         onSelectUnit={vi.fn()}
+        onSelectEquip={vi.fn()}
         onDelete={vi.fn().mockResolvedValue(undefined)}
       />
     );
