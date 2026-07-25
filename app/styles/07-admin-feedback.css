@@ -189,7 +189,6 @@ button.tag.faction-link {
 }
 button.tag.faction-link:hover,
 button.tag.faction-link:focus-visible {
-  filter: brightness(1.18);
   text-decoration: underline;
   text-underline-offset: 2px;
 }

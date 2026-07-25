@@ -49,25 +49,19 @@ describe("factionNameStyle / factionBadgeStyle", () => {
 
   it("色設定済みなら文字・枠線・背景を国色に依存させる", () => {
     const style = factionNameStyle("織田家", { 織田家: "#CC3333" });
-    expect(style?.color).toBe(
-      "color-mix(in srgb, #CC3333 32%, var(--text))"
-    );
+    expect(style?.color).toBe("#CC3333");
 
     const badge = factionBadgeStyle("織田家", { 織田家: "#CC3333" });
-    expect(badge?.color).toBe(
-      "color-mix(in srgb, #CC3333 32%, var(--text))"
-    );
+    expect(badge?.color).toBe("#CC3333");
     expect(badge?.borderColor).toContain("#CC3333");
     expect(badge?.background).toContain("#CC3333");
   });
 
   it.each(["#FFFFFF", "#111111"])(
-    "明暗の極端な国色 %s もテーマ文字色と混ぜる",
+    "明暗の極端な国色 %s も設定値をそのまま使う",
     (hex) => {
       const style = factionNameStyle("対象国", { 対象国: hex });
-      expect(style?.color).toBe(
-        `color-mix(in srgb, ${hex} 32%, var(--text))`
-      );
+      expect(style?.color).toBe(hex);
     }
   );
 
@@ -81,8 +75,6 @@ describe("factionNameStyle / factionBadgeStyle", () => {
   );
 
   it("短縮HEXも有効な国色として扱う", () => {
-    expect(factionNameStyle("織田家", { 織田家: "#c33" })?.color).toContain(
-      "#c33 32%"
-    );
+    expect(factionNameStyle("織田家", { 織田家: "#c33" })?.color).toBe("#c33");
   });
 });

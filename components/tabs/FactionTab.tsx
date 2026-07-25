@@ -142,7 +142,7 @@ export function FactionTab({
         )}
       </div>
       <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-        国（勢力）ごとに色を設定します。戦闘履歴カードの左右ボーダー（各国の色）と勝者名の色に反映されます。
+        国（勢力）ごとに色を設定します。国名の文字には設定色をそのまま使用し、戦闘履歴カードの枠や背景にも国色を反映します。
         上の「対象の期」に応じて、その期に登場する国だけを表示します。国名をクリックすると、その国の成績ページを開けます。
         未設定の国は既定色（左側
         <span className="swatch" style={{ background: DEFAULT_WIN_LEFT }} />

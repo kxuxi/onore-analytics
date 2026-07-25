@@ -7,8 +7,6 @@ export type FactionColorMap = Record<string, string>;
 export const DEFAULT_WIN_LEFT = "#1D9E75";
 /** 右チーム（防衛側）勝利時の既定色 */
 export const DEFAULT_WIN_RIGHT = "#D85A30";
-/** 国名の文字へ残す国色の割合。可読性を保つため残りはテーマ文字色と混ぜる。 */
-const FACTION_NAME_COLOR_WEIGHT = 32;
 
 /** 国に割り当てられる色見本（名前付き固定パレット） */
 export interface PaletteColor {
@@ -74,19 +72,15 @@ function isValidHexColor(hex: string): boolean {
   return /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex.trim());
 }
 
-/**
- * 国色を識別でき、かつ Light / Dark のどちらでも読みやすい文字色を返す。
- * 原色をそのまま使うと白・黄・黒などでコントラストが不足するため、
- * テーマの本文色を基準に国色を混ぜる。
- */
+/** 設定済みの国色を、テーマ色と混ぜず国名の文字色として返す。 */
 function factionTextColor(hex: string | undefined): string | undefined {
   if (!hex || !isValidHexColor(hex)) return undefined;
-  return `color-mix(in srgb, ${hex} ${FACTION_NAME_COLOR_WEIGHT}%, var(--text))`;
+  return hex.trim();
 }
 
 /**
  * 国名をテキストとして表示する箇所用の色スタイル。
- * その国に有効な色が設定されているときだけ国色由来の文字色を返し、
+ * その国に有効な色が設定されているときだけ設定色そのものを返し、
  * 未設定なら undefined（既定色のまま）。
  */
 export function factionNameStyle(
@@ -100,7 +94,7 @@ export function factionNameStyle(
 
 /**
  * 国名をバッジ（`.tag.faction` などのピル）で表示する箇所用の色スタイル。
- * 文字は可読性を保った国色、枠線・背景はその国色の半透明でチントする。
+ * 文字は設定色そのもの、枠線・背景はその国色の半透明でチントする。
  * 未設定なら undefined（既定のピンクピルのまま）。
  */
 export function factionBadgeStyle(
