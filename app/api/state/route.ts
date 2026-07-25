@@ -50,8 +50,13 @@ function warlordToRow(w: Warlord) {
   };
 }
 
-async function loadMap(): Promise<WarlordMap> {
-  const rows = await prisma.warlord.findMany();
+async function loadMap(names?: ReadonlySet<string>): Promise<WarlordMap> {
+  if (names?.size === 0) return {};
+  const rows = names
+    ? await prisma.warlord.findMany({
+        where: { name: { in: Array.from(names) } },
+      })
+    : await prisma.warlord.findMany();
   const map: WarlordMap = {};
   for (const r of rows as WarlordRow[]) map[r.name] = rowToWarlord(r);
   return map;
@@ -135,6 +140,7 @@ export async function POST(req: Request) {
   try {
     const denied = requireAdmin();
     if (denied) return denied;
+    const responseTerm = parseTermParam(req);
     const bodyResult = await readJsonBody(req);
     if (!bodyResult.ok) {
       return badRequest("リクエストボディが不正な JSON です");
@@ -143,11 +149,11 @@ export async function POST(req: Request) {
     if ("error" in parsed) return badRequest(parsed.error);
     const { warlords, records } = parsed;
 
-    // 武将のマージ（既存DBを読み込んでサーバ側で統合）
-    const existing = await loadMap();
+    const changedNames = new Set(warlords.map((w) => w.name));
+    // マージが参照するのは入力と同名の武将だけ。登録前の全件読み込みを避ける。
+    const existing = await loadMap(changedNames);
     const { map, added, updated } = mergeWarlords(existing, warlords);
 
-    const changedNames = new Set(warlords.map((w) => w.name));
     await prisma.$transaction(
       Array.from(changedNames).map((name) => {
         const row = warlordToRow(map[name]);
@@ -198,7 +204,9 @@ export async function POST(req: Request) {
       skipped = data.length - logAdded;
     }
 
-    const [db, log] = await Promise.all([loadMap(), loadLog()]);
+    // term 未指定時は従来どおり全期間を返す。登録画面は登録先の期を指定し、
+    // 数万件の無関係な履歴を再送しない。
+    const [db, log] = await Promise.all([loadMap(), loadLog(responseTerm)]);
     return NextResponse.json({ db, log, added, updated, logAdded, skipped });
   } catch (err) {
     return errorResponse("POST", err);

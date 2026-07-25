@@ -6,6 +6,7 @@ import {
   fetchUnitTypes,
   importWarlordStats,
   invalidateUnitTypesCache,
+  registerState,
   upsertUnitType,
 } from "./api";
 
@@ -90,6 +91,42 @@ describe("importWarlordStats", () => {
       "管理者権限が必要です"
     );
   });
+});
+
+describe("registerState", () => {
+  const apiResponse = {
+    db: {},
+    log: [],
+    added: 1,
+    updated: 0,
+    logAdded: 1,
+    skipped: 0,
+  };
+
+  it("登録期を指定すると、その期だけを返すクエリを付ける", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(apiResponse));
+
+    await expect(registerState([], [], 147)).resolves.toEqual(apiResponse);
+    expect(fetchMock).toHaveBeenCalledWith("/api/state?term=147", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ warlords: [], records: [] }),
+    });
+  });
+
+  it.each([undefined, "all" as const])(
+    "期を %s にすると従来どおりクエリを付けない",
+    async (term) => {
+      fetchMock.mockResolvedValueOnce(jsonResponse(apiResponse));
+
+      await expect(registerState([], [], term)).resolves.toEqual(apiResponse);
+      expect(fetchMock).toHaveBeenCalledWith("/api/state", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ warlords: [], records: [] }),
+      });
+    }
+  );
 });
 
 describe("upsertUnitType", () => {

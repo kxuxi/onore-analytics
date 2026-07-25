@@ -75,12 +75,18 @@ export async function importWarlordStats(
   return res.json();
 }
 
-/** 解析済みの武将・戦闘履歴を登録 */
+/**
+ * 解析済みの武将・戦闘履歴を登録する。
+ * responseTerm を数値で渡すと、レスポンスの log はその期だけになる。
+ * 省略または "all" は従来どおり全期間を返す。
+ */
 export async function registerState(
   warlords: Warlord[],
-  records: BattleRecord[]
+  records: BattleRecord[],
+  responseTerm?: number | "all"
 ): Promise<RegisterResponse> {
-  const res = await fetch("/api/state", {
+  const q = typeof responseTerm === "number" ? `?term=${responseTerm}` : "";
+  const res = await fetch(`/api/state${q}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ warlords, records }),

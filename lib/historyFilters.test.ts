@@ -5,6 +5,7 @@ import {
   filterAndSortBattleHistory,
   formatGameMonthOrder,
   parseGameMonthOrder,
+  replaceBattleRecordsForTerm,
   type BattleHistoryFilterCriteria,
 } from "./historyFilters";
 import { parseBattleCard } from "./parser";
@@ -162,6 +163,89 @@ describe("buildBattleHistoryItems", () => {
     expect(items).toHaveLength(1);
     expect(items[0].record).toBe(first);
     expect(items[0].card).toBeNull();
+  });
+
+  it("同じレコード参照の表示用解析結果を再利用する", () => {
+    const target = makeRecord({
+      id: 31,
+      line: makeBattleLine({ battleNo: 3 }),
+      savedAt: 30,
+    });
+
+    const first = buildBattleHistoryItems([target]);
+    const second = buildBattleHistoryItems([target]);
+
+    expect(second[0]).toBe(first[0]);
+  });
+
+  it("同じレコードの行テキストが変わった場合は解析結果を更新する", () => {
+    const target = makeRecord({
+      id: 32,
+      line: makeBattleLine({ battleNo: 3, leftName: "信長" }),
+      savedAt: 30,
+    });
+    const first = buildBattleHistoryItems([target]);
+    target.line = makeBattleLine({ battleNo: 3, leftName: "秀吉" });
+
+    const second = buildBattleHistoryItems([target]);
+
+    expect(second[0]).not.toBe(first[0]);
+    expect(second[0].search).toContain("秀吉");
+  });
+});
+
+describe("replaceBattleRecordsForTerm", () => {
+  it("対象期だけを完全に置き換え、他期とID昇順を維持する", () => {
+    const otherTerm = makeRecord({
+      id: 1,
+      line: makeBattleLine({ battleNo: 1 }),
+      term: 146,
+      savedAt: 10,
+    });
+    const replaced = makeRecord({
+      id: 2,
+      line: makeBattleLine({ battleNo: 2 }),
+      term: 147,
+      savedAt: 20,
+    });
+    const unchanged = makeRecord({
+      id: 3,
+      line: makeBattleLine({ battleNo: 3 }),
+      term: 147,
+      savedAt: 30,
+    });
+    const added = makeRecord({
+      id: 4,
+      line: makeBattleLine({ battleNo: 4 }),
+      term: 147,
+      savedAt: 40,
+    });
+    const current = [otherTerm, replaced, unchanged];
+
+    const result = replaceBattleRecordsForTerm(current, 147, [
+      { ...unchanged },
+      added,
+    ]);
+
+    expect(result).toEqual([otherTerm, unchanged, added]);
+    expect(result[0]).toBe(otherTerm);
+    expect(result[1]).toBe(unchanged);
+    expect(current).toEqual([otherTerm, replaced, unchanged]);
+  });
+
+  it("同じIDでも内容が変わったレコードは新しい値を採用する", () => {
+    const previous = makeRecord({
+      id: 10,
+      line: makeBattleLine({ battleNo: 1 }),
+      term: 147,
+      savedAt: 10,
+    });
+    const updated = { ...previous, savedAt: 20 };
+
+    const result = replaceBattleRecordsForTerm([previous], 147, [updated]);
+
+    expect(result).toEqual([updated]);
+    expect(result[0]).toBe(updated);
   });
 });
 
