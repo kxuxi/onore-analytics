@@ -51,7 +51,7 @@ model Warlord {
 // 戦闘履歴
 model BattleRecord {
   id      Int     @id @default(autoincrement())
-  line    String  @unique // 重複排除キー(戦闘時刻・場所・武将・勝敗から生成。ターン/URLの差異は無視)
+  line    String  @unique // 重複排除キー(戦闘時刻・都市・武将・勝敗から生成。ターン/URLの差異は無視)
   raw     String  @default("") // 元の行（表示・再解析に使用）
   time    String? // 戦闘時刻
   term    Int     @default(145) // 期番号（145期など）

@@ -252,7 +252,7 @@ export function HistoryTab({
       ? [
           {
             key: "fromYm",
-            label: "年月（開始）",
+            label: "ゲーム内年月（開始）",
             value: formatGameMonthOrder(fromYm),
             onRemove: () => setFromYm(null),
           },
@@ -262,7 +262,7 @@ export function HistoryTab({
       ? [
           {
             key: "toYm",
-            label: "年月（終了）",
+            label: "ゲーム内年月（終了）",
             value: formatGameMonthOrder(toYm),
             onRemove: () => setToYm(null),
           },
@@ -272,7 +272,7 @@ export function HistoryTab({
       ? [
           {
             key: "fromDate",
-            label: "日付（開始）",
+            label: "実日付（開始）",
             value: fromDate,
             onRemove: () => setFromDate(""),
           },
@@ -282,7 +282,7 @@ export function HistoryTab({
       ? [
           {
             key: "toDate",
-            label: "日付（終了）",
+            label: "実日付（終了）",
             value: toDate,
             onRemove: () => setToDate(""),
           },
@@ -351,7 +351,7 @@ export function HistoryTab({
         <p className="muted" style={{ margin: 0, fontSize: 13 }}>
           ゲームの戦闘履歴をブラウザからコピーして貼り付け、「登録する」を押してください。
           リンク付き（各戦の詳細ページ URL）も自動で保持されます。
-          出兵側・防衛側どちらの武将も自動で抽出され、同じ内容の行は重複登録されません。
+          出兵側・守備側どちらの武将も自動で抽出され、同じ内容の行は重複登録されません。
         </p>
         <textarea
           value={text}
@@ -445,7 +445,7 @@ export function HistoryTab({
         {!canRegister && (
           <PageHeader
             title="戦闘履歴"
-            description="登録済みの戦闘結果を期間・国・武将名などで検索できます。"
+            description="勝敗と出兵側・守備側を見比べながら、期間・国・武将名などで検索できます。"
           />
         )}
         <div className="history-head" ref={listTopRef}>
@@ -458,7 +458,7 @@ export function HistoryTab({
             <SearchBox
               value={keyword}
               onChange={setKeyword}
-              placeholder="履歴を絞り込み（武将名など）"
+              placeholder="武将・国・兵種・装備を検索"
             />
           }
           expanded={showFilter}
@@ -536,7 +536,7 @@ export function HistoryTab({
             </select>
           </label>
           <label className="filter">
-            <span>年月（開始）</span>
+            <span>ゲーム内年月（開始）</span>
             <select
               className="select"
               value={fromYm ?? ""}
@@ -553,7 +553,7 @@ export function HistoryTab({
             </select>
           </label>
           <label className="filter">
-            <span>年月（終了）</span>
+            <span>ゲーム内年月（終了）</span>
             <select
               className="select"
               value={toYm ?? ""}
@@ -570,7 +570,7 @@ export function HistoryTab({
             </select>
           </label>
           <label className="filter">
-            <span>日付（開始）</span>
+            <span>実日付（開始）</span>
             <input
               type="date"
               className="text-input"
@@ -580,7 +580,7 @@ export function HistoryTab({
             />
           </label>
           <label className="filter">
-            <span>日付（終了）</span>
+            <span>実日付（終了）</span>
             <input
               type="date"
               className="text-input"
@@ -605,7 +605,7 @@ export function HistoryTab({
             <div className="empty">
               <p className="empty-title">条件に一致する履歴がありません</p>
               <p className="empty-hint">
-                キーワードや国フィルターを変更・解除してください。
+                武将・国・兵種・装備の検索語や、期間・国の条件を変更してください。
               </p>
             </div>
           )
