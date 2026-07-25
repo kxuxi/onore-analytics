@@ -23,6 +23,85 @@ export interface BattleHistoryFilterCriteria {
   sortOrder: "newest" | "oldest";
 }
 
+type CachedBattleHistoryItem = {
+  line: string;
+  key: string;
+  item: BattleHistoryItem;
+};
+
+// 登録後は大半の BattleRecord オブジェクトがそのまま残るため、解析結果も再利用する。
+// WeakMap なので、履歴から外れたレコードをメモリに保持し続けない。
+const battleHistoryItemCache = new WeakMap<
+  BattleRecord,
+  CachedBattleHistoryItem
+>();
+
+function cachedBattleHistoryItem(
+  record: BattleRecord
+): CachedBattleHistoryItem {
+  const cached = battleHistoryItemCache.get(record);
+  if (cached?.line === record.line) return cached;
+
+  const card = parseBattleCard(record.line);
+  const result = {
+    line: record.line,
+    key: battleKey(record.line),
+    item: {
+      record,
+      card,
+      search: buildBattleSearchText(record, card),
+    },
+  };
+  battleHistoryItemCache.set(record, result);
+  return result;
+}
+
+function sameBattleRecord(
+  left: BattleRecord,
+  right: BattleRecord
+): boolean {
+  return (
+    left.id === right.id &&
+    left.line === right.line &&
+    left.time === right.time &&
+    left.term === right.term &&
+    left.savedAt === right.savedAt
+  );
+}
+
+/**
+ * サーバーから返された1期分の完全な履歴で、その期だけを置き換える。
+ * 値が変わらないレコードは参照を維持し、表示用解析キャッシュを再利用する。
+ */
+export function replaceBattleRecordsForTerm(
+  current: readonly BattleRecord[],
+  term: number,
+  termRecords: readonly BattleRecord[]
+): BattleRecord[] {
+  const previousTermRecords = new Map<number, BattleRecord>();
+  const recordsFromOtherTerms: BattleRecord[] = [];
+
+  for (const record of current) {
+    if (record.term !== term) {
+      recordsFromOtherTerms.push(record);
+    } else if (record.id != null) {
+      previousTermRecords.set(record.id, record);
+    }
+  }
+
+  const nextTermRecords = termRecords.map((record) => {
+    if (record.id == null) return record;
+    const previous = previousTermRecords.get(record.id);
+    return previous && sameBattleRecord(previous, record) ? previous : record;
+  });
+
+  return [...recordsFromOtherTerms, ...nextTermRecords].sort(
+    (left, right) =>
+      (left.id ?? Number.MAX_SAFE_INTEGER) -
+      (right.id ?? Number.MAX_SAFE_INTEGER)
+  );
+}
+
 export function buildBattleSearchText(
   record: BattleRecord,
   card: BattleCard | null
@@ -68,16 +147,12 @@ export function buildBattleHistoryItems(
   const items: BattleHistoryItem[] = [];
 
   for (const record of log) {
-    const key = battleKey(record.line);
+    const cached = cachedBattleHistoryItem(record);
+    const { key } = cached;
     if (key && seenBattleKeys.has(key)) continue;
     if (key) seenBattleKeys.add(key);
 
-    const card = parseBattleCard(record.line);
-    items.push({
-      record,
-      card,
-      search: buildBattleSearchText(record, card),
-    });
+    items.push(cached.item);
   }
 
   return items;

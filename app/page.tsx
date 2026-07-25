@@ -52,6 +52,7 @@ import {
   toggleWatched,
   isWatched,
 } from "@/lib/watchlist";
+import { replaceBattleRecordsForTerm } from "@/lib/historyFilters";
 
 function renderPageLoading() {
   return <PageLoading announce={false} />;
@@ -205,6 +206,10 @@ export default function HomePage() {
   // 認証状態（管理者ログイン）
   const { user, ready: authReady, isAdmin, logout } = useAuth();
   const [selectedTerm, setSelectedTerm] = useState<SelectedTerm>(null);
+  const selectedTermRef = useRef<SelectedTerm>(selectedTerm);
+  useEffect(() => {
+    selectedTermRef.current = selectedTerm;
+  }, [selectedTerm]);
   // 共有DB・戦闘履歴・国の色設定の取得・更新（戦闘履歴は selectedTerm の期だけ取得）
   const {
     db,
@@ -646,14 +651,17 @@ export default function HomePage() {
         savedAt: now,
       }));
       try {
-        const res = await registerState(warlordsWithTerm, records);
+        const selectionAtRegistration = selectedTerm;
+        const res = await registerState(warlordsWithTerm, records, term);
         setDb(res.db);
-        // battleLog は選択期のみ保持する。登録レスポンス（全期間）から選択期分だけ反映する。
-        setBattleLog(
-          selectedTerm === "all"
-            ? res.log
-            : res.log.filter((r) => r.term === (selectedTerm ?? term))
-        );
+        // 登録中に期が切り替わった場合は、切替側の取得結果を優先する。
+        if (selectedTermRef.current === selectionAtRegistration) {
+          // レスポンスは登録期の完全な履歴。全期間表示では他期を残したまま
+          // 登録期だけを置き換え、期指定表示では現在の1期分を置き換える。
+          setBattleLog((current) =>
+            replaceBattleRecordsForTerm(current, term, res.log)
+          );
+        }
         if (rejectedCount > 0) {
           pushToast(
             "error",
