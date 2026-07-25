@@ -23,6 +23,10 @@ import {
   type FactionColorMap,
 } from "@/lib/factionColors";
 import { copyText } from "@/lib/copyText";
+import {
+  isStaticUnitTypeLabelTarget,
+  STATIC_UNIT_TYPE_LABEL_VALUE,
+} from "@/lib/unitTypeLabel";
 import { AntiArrows } from "@/components/AntiArrows";
 import {
   CheckIcon,
@@ -252,7 +256,12 @@ export function BattleHistoryCard({
   const handleCardClick = (event: MouseEvent<HTMLLIElement>) => {
     if (!card.url) return;
     const target = event.target;
-    if (target instanceof Element && target.closest("a, button")) return;
+    if (
+      (target instanceof Element && target.closest("a, button")) ||
+      isStaticUnitTypeLabelTarget(target)
+    ) {
+      return;
+    }
     openUrl();
   };
 
@@ -439,6 +448,11 @@ export function BattleHistoryCard({
               <span
                 key={`${tag.kind}-${tag.text}-${index}`}
                 className={className}
+                data-unit-type-label={
+                  tag.kind === "branch"
+                    ? STATIC_UNIT_TYPE_LABEL_VALUE
+                    : undefined
+                }
               >
                 {content}
               </span>

@@ -116,6 +116,12 @@ describe("BattleHistoryCard", () => {
     expect(html).toContain(
       'class="anti-arrow anti-arrow--up" role="img"'
     );
+    expect(html).toContain(
+      '<span class="bh-tag bh-tag--branch" data-unit-type-label="static">歩兵</span>'
+    );
+    expect(html).toContain(
+      '<span class="bh-tag bh-tag--branch" data-unit-type-label="static">騎兵</span>'
+    );
   });
 
   it("兵種・装備だけを開閉領域にし、カード全体の導線を実リンクで提供する", () => {

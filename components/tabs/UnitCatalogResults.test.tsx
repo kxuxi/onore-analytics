@@ -71,6 +71,17 @@ describe("UnitCatalogResults", () => {
     expect(html).toContain('class="sr-only">：テスト騎兵</span>');
   });
 
+  it("兵種タイプを詳細導線を持たない静的ラベルとして表示する", () => {
+    const html = renderResults();
+
+    expect(
+      html.match(
+        /<span class="tag branch" data-unit-type-label="static">騎兵<\/span>/g
+      )
+    ).toHaveLength(2);
+    expect(html).not.toMatch(/<(?:a|button)[^>]*>騎兵<\/(?:a|button)>/);
+  });
+
   it("現在の並び順をDesktop見出しと狭幅用コントロールのARIAへ反映する", () => {
     const html = renderResults("attack", "desc");
 
