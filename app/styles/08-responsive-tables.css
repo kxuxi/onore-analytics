@@ -89,6 +89,7 @@
   .header h1 { font-size: 15px; }
   .header h1 .sub { display: none; }
   .main { padding: 12px 10px 80px; }
+  .main:has(> #main-panel > .subtabs) { padding-top: 0; }
   .app-footer { padding: 12px 10px; }
   .app-footer-text { font-size: 12px; }
   .panel { padding: 12px; border-radius: var(--radius-lg); }
