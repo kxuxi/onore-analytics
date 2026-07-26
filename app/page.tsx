@@ -757,6 +757,7 @@ export default function HomePage() {
         return (
           <DamageTab
             db={filteredDb}
+            log={filteredBattleLog}
             colors={factionColors}
             onSelectWarlord={selectWarlordNormalized}
           />

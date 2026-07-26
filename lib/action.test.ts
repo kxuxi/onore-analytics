@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { getActionInfo, parseActionDate, NO_REST_EVOLVE_STREAK } from "./action";
+import {
+  ACTION_LABEL,
+  getActionInfo,
+  parseActionDate,
+  NO_REST_EVOLVE_STREAK,
+} from "./action";
 import type { Warlord } from "./types";
 
 /** "MM/DD HH:mm" を組み立てる。基準日 06/15 を使う。 */
@@ -127,5 +132,18 @@ describe("getActionInfo の末尾固定判定", () => {
     const info = getActionInfo(warlord(acts), NOW);
     expect(info.noRestStreak).toBeGreaterThanOrEqual(NO_REST_EVOLVE_STREAK);
     expect(info.noRestLabel).toBe("固定分");
+  });
+});
+
+describe("getActionInfo の兵力減判定", () => {
+  it("守備敗北で兵力減なら経過時間にかかわらず行動可にしない", () => {
+    const info = getActionInfo(warlord([at(9, 0)]), NOW, {
+      depletedByDefenseLoss: true,
+      defenseLossAt: at(10, 0),
+    });
+
+    expect(info.status).toBe("depleted");
+    expect(ACTION_LABEL[info.status]).toBe("兵力減");
+    expect(info.actionAt).toBe(at(10, 0));
   });
 });

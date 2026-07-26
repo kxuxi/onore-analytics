@@ -24,7 +24,8 @@ export function mergeWarlords(
     // lastActionAt は出兵・守備どちらの時刻も取り込む。
     // actions の末尾と w.lastActionAt を独立して比較し、新しい方を採用する。
     const lastActionAt = pickLatestAction(
-      actions.length > 0 ? actions[actions.length - 1] : prev?.lastActionAt,
+      prev?.lastActionAt,
+      actions.length > 0 ? actions[actions.length - 1] : undefined,
       w.lastActionAt
     );
 
@@ -137,16 +138,17 @@ function mergeActions(
 }
 
 /**
- * 2 つの行動時刻（"06/15 09:30" 形式）のうち新しい方を返す。
+ * 行動時刻（"06/15 09:30" 形式）のうち最も新しいものを返す。
  * ゼロ埋め固定長 (MM/DD HH:mm) のため辞書順比較で時刻順になる。
  */
 function pickLatestAction(
-  a: string | undefined,
-  b: string | undefined
+  ...timestamps: Array<string | undefined>
 ): string | undefined {
-  if (!a) return b;
-  if (!b) return a;
-  return b >= a ? b : a;
+  let latest: string | undefined;
+  for (const timestamp of timestamps) {
+    if (timestamp && (!latest || timestamp > latest)) latest = timestamp;
+  }
+  return latest;
 }
 
 /** 武将名で DB を引く（前後の空白除去・全角空白許容） */

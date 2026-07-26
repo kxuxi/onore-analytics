@@ -391,6 +391,11 @@ button.tag.faction-link:focus-visible {
   background: var(--label-type-bg);
   border-color: var(--label-type-border);
 }
+.status.depleted {
+  color: var(--label-warn-fg);
+  background: var(--label-warn-bg);
+  border-color: var(--label-warn-border);
+}
 .status.none {
   color: var(--muted);
   background: transparent;
@@ -400,6 +405,7 @@ button.tag.faction-link:focus-visible {
 .status.ready,
 .status.done,
 .status.unknown,
+.status.depleted,
 .status.none {
   min-width: 64px;
 }

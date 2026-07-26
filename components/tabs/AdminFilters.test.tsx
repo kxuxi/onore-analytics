@@ -83,7 +83,7 @@ describe("DbTab", () => {
 describe("DamageTab", () => {
   it("共通フィルターでも既定openと3条件を維持する", () => {
     const markup = renderToStaticMarkup(
-      <DamageTab db={DB} colors={{}} onSelectWarlord={vi.fn()} />
+      <DamageTab db={DB} log={[]} colors={{}} onSelectWarlord={vi.fn()} />
     );
 
     expect(markup).toContain('aria-expanded="true"');
@@ -91,6 +91,7 @@ describe("DamageTab", () => {
     expect(markup).toContain("ステータス</span><select");
     expect(markup).toContain("国</span><select");
     expect(markup).toContain("役割</span><select");
+    expect(markup).toContain('<option value="depleted">兵力減</option>');
     expect(markup).toContain(">表示 0件</p>");
     expect(markup).toContain("表示できる行動データがありません");
   });
