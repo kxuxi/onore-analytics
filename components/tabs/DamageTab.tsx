@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { Warlord, WarlordMap } from "@/lib/types";
+import type { BattleRecord, Warlord, WarlordMap } from "@/lib/types";
 import { FilterPanel, type ActiveFilter } from "@/components/FilterPanel";
 import { SearchBox } from "@/components/SearchBox";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -15,6 +15,7 @@ import {
   STATUS_ORDER,
   type ActionStatus,
 } from "@/lib/action";
+import { buildActionAvailability } from "@/lib/actionObservation";
 
 /**
  * 家督名（household）が同じ武将（＝同一人物の旧名）の行動時刻をすべて合算する。
@@ -31,6 +32,7 @@ function mergeAliasActions(aliases: (Warlord | undefined)[]): string[] {
 
 interface Props {
   db: WarlordMap;
+  log: BattleRecord[];
   colors: FactionColorMap;
   onSelectWarlord: (name: string) => void;
 }
@@ -39,13 +41,19 @@ const STATUS_CLASS: Record<ActionStatus, string> = {
   done: "status done",
   ready: "status ready",
   unknown: "status unknown",
+  depleted: "status depleted",
   none: "status none",
 };
 
 // 集計・フィルタに表示するステータス（none を除く）。ラベルは ACTION_LABEL から導出。
-const STATUS_SUMMARY_ORDER = ["ready", "unknown", "done"] as const;
+const STATUS_SUMMARY_ORDER = [
+  "ready",
+  "unknown",
+  "done",
+  "depleted",
+] as const;
 
-export function DamageTab({ db, colors, onSelectWarlord }: Props) {
+export function DamageTab({ db, log, colors, onSelectWarlord }: Props) {
   const [now, setNow] = useState<Date | null>(null);
   const [statusFilter, setStatusFilter] = useState<"" | ActionStatus>("");
   const [factionFilter, setFactionFilter] = useState("");
@@ -84,6 +92,13 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
     };
   }, []);
 
+  const canonicalNames = useMemo(() => normalizationMap(db), [db]);
+  // 戦闘ログの解析はログ変更時だけ行い、30秒ごとの時刻更新では再計算しない。
+  const availabilityByWarlord = useMemo(
+    () => buildActionAvailability(log, canonicalNames),
+    [log, canonicalNames]
+  );
+
   const rows = useMemo(() => {
     if (!now) return [];
     const q = nameQuery.trim().toLowerCase();
@@ -93,11 +108,10 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
     // 旧名側も含めて合算した最新値を使う。
     // （旧名の行が別枠で残り続け、そちらは更新されないまま経過時間だけ
     // 増え続けて見える＝「最新の時間が取れない」不具合の修正）
-    const canonMap = normalizationMap(db);
     const seen = new Set<string>();
     const merged: { w: Warlord; info: ReturnType<typeof getActionInfo> }[] = [];
     for (const w of Object.values(db)) {
-      const canonical = canonMap[w.name] ?? w.name;
+      const canonical = canonicalNames[w.name] ?? w.name;
       if (seen.has(canonical)) continue;
       seen.add(canonical);
       const base = db[canonical];
@@ -107,7 +121,8 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
       );
       const info = getActionInfo(
         { ...base, actions, lastActionAt: actions[actions.length - 1] },
-        now
+        now,
+        availabilityByWarlord.get(canonical)
       );
       merged.push({ w: base, info });
     }
@@ -129,7 +144,16 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
         if (so !== 0) return so;
         return (a.info.minutes ?? 0) - (b.info.minutes ?? 0);
       });
-  }, [db, now, statusFilter, factionFilter, roleFilter, nameQuery]);
+  }, [
+    db,
+    now,
+    statusFilter,
+    factionFilter,
+    roleFilter,
+    nameQuery,
+    canonicalNames,
+    availabilityByWarlord,
+  ]);
 
   // 国の選択肢（行動時刻を持つ武将の勢力名）
   const factionOptions = useMemo(() => {
@@ -144,11 +168,18 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
   }, [db]);
 
   const counts = useMemo(() => {
-    const c = { done: 0, ready: 0, unknown: 0, defenseOnly: 0 };
+    const c = {
+      done: 0,
+      ready: 0,
+      unknown: 0,
+      depleted: 0,
+      defenseOnly: 0,
+    };
     for (const { info, w } of rows) {
       if (info.status === "done") c.done++;
       else if (info.status === "ready") c.ready++;
       else if (info.status === "unknown") c.unknown++;
+      else if (info.status === "depleted") c.depleted++;
       if ((w.actions?.length ?? 0) === 0) c.defenseOnly++;
     }
     return c;
@@ -202,9 +233,10 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
         title="被弾表（行動状況）"
         description={
           <>
-            出兵・守備のどちらで登場した武将も行動時刻から行動状況を判定します。
+            出兵・守備の観測時刻と勝敗から行動状況を判定します。
             40分以内={ACTION_LABEL.done} / 40分〜1時間20分=
             {ACTION_LABEL.ready} / 1時間20分以上={ACTION_LABEL.unknown}。
+            守備敗北後は、次の出兵が確認できるまで{ACTION_LABEL.depleted}です。
           </>
         }
       />
@@ -230,6 +262,12 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
       <details className="badge-legend">
         <summary>バッジの見方</summary>
         <ul className="badge-legend-list">
+          <li>
+            <span className="status depleted">{ACTION_LABEL.depleted}</span>
+            <span className="muted">
+              直近の出兵以降に守備で敗北しています。行動可の対象には含めません。
+            </span>
+          </li>
           <li>
             <span className="status defense-only">守備のみ</span>
             <span className="muted">
@@ -335,7 +373,7 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
         ) : (
           <table className="table-card">
             <caption className="sr-only">
-              武将ごとの行動状況、所属国、タイプ、兵種、最終行動時刻の一覧
+              武将ごとの行動状況、所属国、タイプ、兵種、判定時刻の一覧
             </caption>
             <thead>
               <tr>
@@ -345,7 +383,7 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
                 <th>タイプ</th>
                 <th>兵種タイプ</th>
                 <th>兵種名</th>
-                <th>行動時刻</th>
+                <th>判定時刻</th>
                 <th>経過</th>
               </tr>
             </thead>
@@ -416,8 +454,17 @@ export function DamageTab({ db, colors, onSelectWarlord }: Props) {
                       <span className="muted">-</span>
                     )}
                   </td>
-                  <td className="muted" data-label="行動時刻" style={{ fontSize: 12 }}>
-                    {w.lastActionAt ?? "-"}
+                  <td
+                    className="muted"
+                    data-label="判定時刻"
+                    style={{ fontSize: 12 }}
+                    title={
+                      info.status === "depleted"
+                        ? "兵力減の原因となった守備敗北時刻"
+                        : "行動状況の判定に使用した時刻"
+                    }
+                  >
+                    {info.actionAt ?? "-"}
                   </td>
                   <td className="muted" data-label="経過" style={{ fontSize: 12 }}>
                     {formatElapsed(info.minutes)}

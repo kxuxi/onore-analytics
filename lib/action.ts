@@ -1,11 +1,20 @@
 import type { Warlord } from "./types";
 
-export type ActionStatus = "done" | "ready" | "unknown" | "none";
+import type { ActionAvailability } from "./actionObservation";
+
+export type ActionStatus =
+  | "done"
+  | "ready"
+  | "unknown"
+  | "depleted"
+  | "none";
 
 export interface ActionInfo {
   status: ActionStatus;
-  /** 行動時刻からの経過分（行動時刻が無い場合は null） */
+  /** 判定に使用した観測時刻からの経過分（時刻が無い場合は null） */
   minutes: number | null;
+  /** 状況判定と経過時間に使用した観測時刻。 */
+  actionAt: string | null;
   /** 直近の行動が「末尾固定」（分の1の位が動かず連続行動）か */
   noRest: boolean;
   /** 末尾から連続して「末尾固定」（分の1の位が一致）で行動した戦数（2未満は 0） */
@@ -27,15 +36,17 @@ export const ACTION_LABEL: Record<ActionStatus, string> = {
   done: "行動済み",
   ready: "未行動",
   unknown: "行動可",
+  depleted: "兵力減",
   none: "データなし",
 };
 
-/** ステータスの並び順の重み（小さいほど上）。行動可→不明→行動済み。 */
+/** ステータスの並び順の重み（小さいほど上）。行動候補を先に表示する。 */
 export const STATUS_ORDER: Record<ActionStatus, number> = {
   ready: 0,
   unknown: 1,
   done: 2,
-  none: 3,
+  depleted: 3,
+  none: 4,
 };
 
 /**
@@ -86,16 +97,29 @@ export function parseActionDate(
 /**
  * 行動時刻からの経過時間でステータスを判定する。
  *  - 40分以内            … 行動済み (done)
- *  - 40分〜1時間20分     … 行動可  (ready)
- *  - 1時間20分以上       … 不明    (unknown)
+ *  - 40分〜1時間20分     … 未行動   (ready)
+ *  - 1時間20分以上       … 行動可   (unknown)
+ *  - 最新状態が守備敗北  … 兵力減   (depleted)
  *  - 行動時刻なし        … データなし (none)
  */
-export function getActionInfo(w: Warlord, now: Date): ActionInfo {
-  const d = parseActionDate(w.lastActionAt, now);
+export function getActionInfo(
+  w: Warlord,
+  now: Date,
+  availability?: Pick<
+    ActionAvailability,
+    "depletedByDefenseLoss" | "defenseLossAt"
+  >
+): ActionInfo {
+  const actionAt =
+    availability?.depletedByDefenseLoss && availability.defenseLossAt
+      ? availability.defenseLossAt
+      : w.lastActionAt;
+  const d = parseActionDate(actionAt, now);
   if (!d)
     return {
-      status: "none",
+      status: availability?.depletedByDefenseLoss ? "depleted" : "none",
       minutes: null,
+      actionAt: actionAt ?? null,
       noRest: false,
       noRestStreak: 0,
       strictStreak: 0,
@@ -103,7 +127,8 @@ export function getActionInfo(w: Warlord, now: Date): ActionInfo {
     };
   const minutes = Math.max(0, Math.floor((now.getTime() - d.getTime()) / 60000));
   let status: ActionStatus;
-  if (minutes < 40) status = "done";
+  if (availability?.depletedByDefenseLoss) status = "depleted";
+  else if (minutes < 40) status = "done";
   else if (minutes < 80) status = "ready";
   else status = "unknown";
   const noRestStreak = computeNoRestStreak(w, now);
@@ -112,6 +137,7 @@ export function getActionInfo(w: Warlord, now: Date): ActionInfo {
   return {
     status,
     minutes,
+    actionAt: actionAt ?? null,
     noRest: noRestStreak >= 2,
     noRestStreak,
     strictStreak,

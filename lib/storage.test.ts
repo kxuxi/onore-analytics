@@ -71,6 +71,23 @@ describe("mergeWarlords", () => {
     // actions（出兵履歴）はそのまま保持される
     expect(map["A"].actions).toEqual(["06/15 10:00"]);
   });
+
+  it("新しい守備時刻の後に古い守備を取り込んでも lastActionAt を戻さない", () => {
+    const { map } = mergeWarlords(
+      {
+        A: wl({
+          name: "A",
+          actions: ["06/15 10:00"],
+          lastActionAt: "06/15 12:00",
+          updatedAt: 200,
+        }),
+      },
+      [wl({ name: "A", lastActionAt: "06/15 11:00", updatedAt: 300 })]
+    );
+
+    expect(map["A"].lastActionAt).toBe("06/15 12:00");
+    expect(map["A"].actions).toEqual(["06/15 10:00"]);
+  });
 });
 
 describe("mergeWarlords のプロフィール採用（在ゲーム年月での新旧判定）", () => {
