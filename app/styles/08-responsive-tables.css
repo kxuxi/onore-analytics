@@ -9,6 +9,7 @@
     height: auto;
     z-index: 35;
     width: min(74vw, 260px);
+    padding-top: 0;
     box-shadow: 6px 0 24px rgba(0, 0, 0, 0.4);
     transform: translateX(0);
   }

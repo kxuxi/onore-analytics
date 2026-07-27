@@ -114,6 +114,17 @@ describe("global CSS architecture", () => {
     );
   });
 
+  it("スマホのメニュードロワーをヘッダー下端へ隙間なく接続する", () => {
+    const responsive = readFileSync(
+      join(stylesDirectory, "08-responsive-tables.css"),
+      "utf8"
+    );
+
+    expect(responsive).toMatch(
+      /@media \(max-width: 767px\)\s*\{[\s\S]*?\.sidebar\s*\{[^}]*padding-top:\s*0;[^}]*\}/
+    );
+  });
+
   it("データタグを角丸長方形にし、兵種タイプだけを中立色で表示する", () => {
     const battleHistory = readFileSync(
       join(stylesDirectory, "06-battle-history.css"),
