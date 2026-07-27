@@ -94,6 +94,23 @@ export function parseActionDate(
   return d;
 }
 
+function latestObservedAt(
+  storedAt: string | undefined,
+  derivedAttackAt: string | undefined,
+  now: Date
+): string | undefined {
+  if (!storedAt) return derivedAttackAt;
+  if (!derivedAttackAt) return storedAt;
+
+  const storedDate = parseActionDate(storedAt, now);
+  const derivedDate = parseActionDate(derivedAttackAt, now);
+  if (!storedDate) return derivedDate ? derivedAttackAt : storedAt;
+  if (!derivedDate) return storedAt;
+  return derivedDate.getTime() >= storedDate.getTime()
+    ? derivedAttackAt
+    : storedAt;
+}
+
 /**
  * 行動時刻からの経過時間でステータスを判定する。
  *  - 40分以内            … 行動済み (done)
@@ -107,13 +124,18 @@ export function getActionInfo(
   now: Date,
   availability?: Pick<
     ActionAvailability,
-    "depletedByDefenseLoss" | "defenseLossAt"
+    "depletedByDefenseLoss" | "defenseLossAt" | "latestAttackAt"
   >
 ): ActionInfo {
+  const latestActionAt = latestObservedAt(
+    w.lastActionAt,
+    availability?.latestAttackAt,
+    now
+  );
   const actionAt =
     availability?.depletedByDefenseLoss && availability.defenseLossAt
       ? availability.defenseLossAt
-      : w.lastActionAt;
+      : latestActionAt;
   const d = parseActionDate(actionAt, now);
   if (!d)
     return {

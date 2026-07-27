@@ -146,4 +146,27 @@ describe("getActionInfo の兵力減判定", () => {
     expect(ACTION_LABEL[info.status]).toBe("兵力減");
     expect(info.actionAt).toBe(at(10, 0));
   });
+
+  it("壁に負けた最新出兵から40分以内なら行動済みにする", () => {
+    const now = new Date(2026, 5, 15, 10, 20, 0);
+    const info = getActionInfo(warlord([at(9, 0)]), now, {
+      depletedByDefenseLoss: false,
+      latestAttackAt: at(10, 0),
+    });
+
+    expect(info.status).toBe("done");
+    expect(ACTION_LABEL[info.status]).toBe("行動済み");
+    expect(info.actionAt).toBe(at(10, 0));
+  });
+
+  it("古い壁戦時刻で新しい観測時刻を巻き戻さない", () => {
+    const now = new Date(2026, 5, 15, 12, 20, 0);
+    const info = getActionInfo(warlord([at(12, 0)]), now, {
+      depletedByDefenseLoss: false,
+      latestAttackAt: at(11, 0),
+    });
+
+    expect(info.status).toBe("done");
+    expect(info.actionAt).toBe(at(12, 0));
+  });
 });

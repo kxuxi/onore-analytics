@@ -1,4 +1,9 @@
-import { normalizeWidth, parseBattleCard } from "./parser";
+import {
+  normalizeWidth,
+  parseBattleCard,
+  parseWallAttackEvents,
+  type WallAttackProfile,
+} from "./parser";
 import type { BattleRecord } from "./types";
 
 interface BattleEventPosition {
@@ -10,6 +15,7 @@ interface BattleEventPosition {
 interface AvailabilityAccumulator {
   term: number;
   latestAttack?: BattleEventPosition;
+  latestAttackProfile?: WallAttackProfile;
   latestDefenseLoss?: BattleEventPosition;
 }
 
@@ -18,6 +24,10 @@ const ACTION_TIME_YEAR_MINUTES = 12 * 32 * 24 * 60;
 export interface ActionAvailability {
   term: number;
   depletedByDefenseLoss: boolean;
+  /** 通常戦・壁戦を合わせた最新の出兵時刻。 */
+  latestAttackAt?: string;
+  /** 最新の出兵が壁戦だった場合に、壁戦から読み取った現在プロフィール。 */
+  latestAttackProfile?: WallAttackProfile;
   /** 兵力減の原因になった守備敗北時刻（例: 06/15 12:51）。 */
   defenseLossAt?: string;
 }
@@ -117,6 +127,22 @@ function keepLatest(
     : current;
 }
 
+function keepLatestAttack(
+  accumulator: AvailabilityAccumulator,
+  candidate: BattleEventPosition,
+  profile?: WallAttackProfile
+): void {
+  if (
+    accumulator.latestAttack &&
+    compareEventPosition(candidate, accumulator.latestAttack) < 0
+  ) {
+    return;
+  }
+  accumulator.latestAttack = candidate;
+  // 通常戦の方が新しい場合はDBへ取り込まれたプロフィールを使うため未設定に戻す。
+  accumulator.latestAttackProfile = profile;
+}
+
 /**
  * 戦闘履歴から、人物ごとの現在の兵力減状態を導出する。
  *
@@ -128,7 +154,8 @@ function keepLatest(
  */
 export function buildActionAvailability(
   log: readonly BattleRecord[],
-  canonicalNames: Readonly<Record<string, string>> = {}
+  canonicalNames: Readonly<Record<string, string>> = {},
+  canonicalHouseholds: Readonly<Record<string, string>> = {}
 ): Map<string, ActionAvailability> {
   const accumulators = new Map<string, AvailabilityAccumulator>();
   let latestTerm: number | null = null;
@@ -141,30 +168,71 @@ export function buildActionAvailability(
     // 全期間表示でも、前期の兵力減は新期へ持ち越さない。
     if (record.term !== latestTerm) continue;
     const card = parseBattleCard(record.line);
-    if (!card) continue;
-    const position = eventPosition(record.time ?? card.battleAt);
-    const attackerName = canonicalNames[card.left.name] ?? card.left.name;
-    const defenderName = canonicalNames[card.right.name] ?? card.right.name;
+    if (card) {
+      const position = eventPosition(record.time ?? card.battleAt);
+      const attackerName =
+        canonicalNames[card.left.name] ??
+        (card.left.family
+          ? canonicalHouseholds[card.left.family]
+          : undefined) ??
+        card.left.name;
+      const defenderName =
+        canonicalNames[card.right.name] ??
+        (card.right.family
+          ? canonicalHouseholds[card.right.family]
+          : undefined) ??
+        card.right.name;
 
-    const attacker = currentTermAccumulator(
-      accumulators,
-      attackerName,
-      record.term
-    );
-    if (attacker) {
-      attacker.latestAttack = keepLatest(attacker.latestAttack, position);
+      const attacker = currentTermAccumulator(
+        accumulators,
+        attackerName,
+        record.term
+      );
+      if (attacker) {
+        keepLatestAttack(attacker, position);
+      }
+
+      const defender = currentTermAccumulator(
+        accumulators,
+        defenderName,
+        record.term
+      );
+      if (defender && card.winner === "left") {
+        defender.latestDefenseLoss = keepLatest(
+          defender.latestDefenseLoss,
+          position
+        );
+      }
     }
 
-    const defender = currentTermAccumulator(
-      accumulators,
-      defenderName,
-      record.term
-    );
-    if (defender && card.winner === "left") {
-      defender.latestDefenseLoss = keepLatest(
-        defender.latestDefenseLoss,
-        position
+    for (const wallAttack of parseWallAttackEvents(record.line)) {
+      // 壁戦は同じレコード内の通常戦とは別の時刻を持つ。壁戦自身の時刻を
+      // 取得できない場合に通常戦の時刻で補うと、誤った行動済み判定になる。
+      if (!wallAttack.battleAt) continue;
+      const position = eventPosition(wallAttack.battleAt);
+      // 行動済み判定には実時刻が必須。在ゲーム年月だけで守備敗北を解除しない。
+      if (position.actionTimeOrder == null) continue;
+      const attackerName =
+        canonicalNames[wallAttack.name] ??
+        (wallAttack.household
+          ? canonicalHouseholds[wallAttack.household]
+          : undefined) ??
+        wallAttack.name;
+      const attacker = currentTermAccumulator(
+        accumulators,
+        attackerName,
+        record.term
       );
+      if (attacker) {
+        keepLatestAttack(attacker, position, {
+          name: wallAttack.name,
+          household: wallAttack.household,
+          faction: wallAttack.faction,
+          type: wallAttack.type,
+          branch: wallAttack.branch,
+          unit: wallAttack.unit,
+        });
+      }
     }
   }
 
@@ -178,6 +246,8 @@ export function buildActionAvailability(
     result.set(name, {
       term: state.term,
       depletedByDefenseLoss,
+      latestAttackAt: state.latestAttack?.actionAt,
+      latestAttackProfile: state.latestAttackProfile,
       defenseLossAt: depletedByDefenseLoss
         ? defenseLoss?.actionAt
         : undefined,

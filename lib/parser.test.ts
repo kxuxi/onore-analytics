@@ -10,11 +10,29 @@ import {
   isSpecialToken,
   battleKey,
   isSkewedSide,
+  parseWallAttackEvents,
 } from "./parser";
 
 // スペース区切りでも parser は [\s\u3000]+ で分割するためタブ無しで再現できる。
 const LINE_PLAIN =
   "【1戦目】 1583年4月 04/10 10:23 京都 織田 信長 織田家 武特 騎馬隊 騎兵 槍 鎧 V.S. 武田 勝頼 武田家 統特 騎馬隊 騎兵 馬 旗 信長の勝利 12";
+
+const WALL_LOSS_LINE =
+  "【壁戦】 1606年4月 07/25 21:03 久留米 ななせ国 風真いろは 風真いろは家 統特 剣兵 歩兵 銀の護符 ピコピコハンマー V.S. 己鯖冷笑プレイヤー族 久留米の守備隊 精鋭城壁兵 壁 なし なし 久留米の守備隊の勝利 6";
+
+const WALL_LOSS_MARKDOWN = `【壁戦】
+
+1606年4月
+
+07/25 21:03
+
+久留米
+
+[ななせ国 風真いろは 風真いろは家 統特 剣兵 歩兵 銀の護符 ピコピコハンマー V.S. 己鯖冷笑プレイヤー族 久留米の守備隊 精鋭城壁兵 壁 なし なし](https://example.com/battle/wall)
+
+久留米の守備隊の勝利
+
+6ターンで終了`;
 
 describe("splitBattleSegments", () => {
   it("【N戦目】マーカーで複数戦に分割する", () => {
@@ -72,6 +90,74 @@ describe("extractBattleUrl", () => {
     expect(card!.left.name).toBe("【大空】ユニ");
     expect(card!.left.family).toBe("ミルフィオーレファミリー");
     expect(card!.winner).toBe("left");
+  });
+});
+
+describe("parseWallAttackEvents", () => {
+  it("壁に負けた出兵側の武将名と時刻を取り出す", () => {
+    expect(parseWallAttackEvents(WALL_LOSS_LINE)).toEqual([
+      {
+        name: "風真いろは",
+        household: "風真いろは家",
+        faction: "ななせ国",
+        type: "統特",
+        branch: "歩兵",
+        unit: "剣兵",
+        battleAt: "1606年4月 07/25 21:03",
+        actionAt: "07/25 21:03",
+      },
+    ]);
+  });
+
+  it("実データ同様のMarkdown形式から壁への出兵を取り出す", () => {
+    expect(parseWallAttackEvents(WALL_LOSS_MARKDOWN)[0]).toMatchObject({
+      name: "風真いろは",
+      battleAt: "1606年4月 07/25 21:03",
+      actionAt: "07/25 21:03",
+    });
+  });
+
+  it("通常戦に複数の壁戦が連結されていても全件を取り出す", () => {
+    const secondWall = WALL_LOSS_LINE.replace(
+      "07/25 21:03",
+      "07/25 21:06"
+    ).replaceAll("風真いろは", "秀吉");
+
+    expect(
+      parseWallAttackEvents(
+        `${LINE_PLAIN}\n${WALL_LOSS_LINE}\n${secondWall}\n${LINE_PLAIN}`
+      )
+    ).toHaveLength(2);
+  });
+
+  it("壁側の情報や勝敗が欠けていても出兵側を保持する", () => {
+    const partialWall =
+      "【壁戦】 1606年4月 07/25 21:03 久留米 ななせ国 風真いろは 風真いろは家 統特 剣兵 歩兵 銀の護符 ピコピコハンマー V.S. 中立 久留米の守備隊 なし なし";
+
+    expect(parseWallAttackEvents(partialWall)[0]).toMatchObject({
+      name: "風真いろは",
+      actionAt: "07/25 21:03",
+    });
+  });
+
+  it("特殊な城壁名で兵種欄が壁でなくても壁戦として扱う", () => {
+    const specialWall = WALL_LOSS_LINE.replace(
+      "精鋭城壁兵 壁",
+      "トゥールハンマー 雷神"
+    );
+
+    expect(parseWallAttackEvents(specialWall)[0]?.name).toBe("風真いろは");
+  });
+
+  it("スマホで壁戦マーカー・年月・都市が詰まっても時刻を保持する", () => {
+    const mobileGlued =
+      "【壁戦】1606年4月07/25 21:03久留米ななせ国 風真いろは 風真いろは家 統特 剣兵 歩兵 銀の護符 ピコピコハンマー V.S. 己鯖冷笑プレイヤー族 久留米の守備隊 精鋭城壁兵 壁 なし なし久留米の守備隊の勝利6ターンで終了";
+
+    expect(parseWallAttackEvents(mobileGlued)[0]).toMatchObject({
+      name: "風真いろは",
+      battleAt: "1606年4月 07/25 21:03",
+      actionAt: "07/25 21:03",
+    });
   });
 });
 
