@@ -3,13 +3,13 @@
   /* モバイル: サイドバーはオーバーレイ式ドロワー */
   .sidebar {
     position: fixed;
-    top: var(--sticky-header-offset);
+    top: 0;
     left: 0;
     bottom: 0;
     height: auto;
     z-index: 35;
     width: min(74vw, 260px);
-    padding-top: 0;
+    padding-top: calc(var(--space-2) + env(safe-area-inset-top, 0px));
     box-shadow: 6px 0 24px rgba(0, 0, 0, 0.4);
     transform: translateX(0);
   }

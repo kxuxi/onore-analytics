@@ -114,14 +114,14 @@ describe("global CSS architecture", () => {
     );
   });
 
-  it("スマホのメニュードロワーをヘッダー下端へ隙間なく接続する", () => {
+  it("スマホのメニューは画面上端から表示し、ノッチの安全領域を保つ", () => {
     const responsive = readFileSync(
       join(stylesDirectory, "08-responsive-tables.css"),
       "utf8"
     );
 
     expect(responsive).toMatch(
-      /@media \(max-width: 767px\)\s*\{[\s\S]*?\.sidebar\s*\{[^}]*padding-top:\s*0;[^}]*\}/
+      /@media \(max-width: 767px\)\s*\{[\s\S]*?\.sidebar\s*\{[^}]*top:\s*0;[^}]*padding-top:\s*calc\(var\(--space-2\) \+ env\(safe-area-inset-top, 0px\)\);[^}]*\}/
     );
   });
 
