@@ -6,7 +6,7 @@ import { FilterPanel, type ActiveFilter } from "@/components/FilterPanel";
 import { SearchBox } from "@/components/SearchBox";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
-import { normalizationMap, householdAliases } from "@/lib/storage";
+import { normalizationMap } from "@/lib/storage";
 import { displayWarlordType } from "@/lib/warlordType";
 import {
   ACTION_LABEL,
@@ -15,7 +15,10 @@ import {
   STATUS_ORDER,
   type ActionStatus,
 } from "@/lib/action";
-import { buildActionAvailability } from "@/lib/actionObservation";
+import {
+  buildActionAvailability,
+  type ActionAvailability,
+} from "@/lib/actionObservation";
 
 /**
  * 家督名（household）が同じ武将（＝同一人物の旧名）の行動時刻をすべて合算する。
@@ -31,10 +34,142 @@ function mergeAliasActions(aliases: (Warlord | undefined)[]): string[] {
 }
 
 interface Props {
+  /** 表示期に登録された武将。 */
   db: WarlordMap;
+  /**
+   * 全件の武将。表示期の壁戦で観測されたものの、プロフィールの最終更新期が
+   * 前期のままの武将を行へ補完するために使う。
+   */
+  allDb?: WarlordMap;
   log: BattleRecord[];
   colors: FactionColorMap;
   onSelectWarlord: (name: string) => void;
+}
+
+interface DamageCandidate {
+  /** 名前・国・兵種など、行に表示するプロフィール。 */
+  warlord: Warlord;
+  /** 表示対象になった別名の保存済み観測を統合した行動判定用データ。 */
+  actionWarlord: Warlord;
+  availability?: ActionAvailability;
+  hasAttack: boolean;
+  canOpenDetail: boolean;
+}
+
+function warlordFromWallProfile(
+  profile: NonNullable<ActionAvailability["latestAttackProfile"]>,
+  term: number,
+  fallback?: Warlord
+): Warlord {
+  return {
+    ...fallback,
+    ...profile,
+    term,
+    updatedAt: fallback?.updatedAt ?? 0,
+  };
+}
+
+/**
+ * 表示期の武将を基本に、同じ期のログで観測された人物だけを全DBから補う。
+ *
+ * 壁戦は通常戦のプロフィール取り込み対象ではないため、壁戦だけに登場した人物は
+ * Warlord.term が前期のままになることがある。その補完行には前期の保存時刻を
+ * 持ち込まず、今期の壁戦時刻だけを判定に使う。
+ */
+export function buildDamageCandidates(
+  db: WarlordMap,
+  allDb: WarlordMap,
+  log: readonly BattleRecord[]
+): DamageCandidate[] {
+  const canonicalNames = normalizationMap(allDb);
+  const scopedCanonicalNames = normalizationMap(db);
+  const canonicalHouseholds: Record<string, string> = {};
+  for (const warlord of Object.values(allDb)) {
+    if (!warlord.household) continue;
+    canonicalHouseholds[warlord.household] =
+      canonicalNames[warlord.name] ?? warlord.name;
+  }
+  const availabilityByWarlord = buildActionAvailability(
+    log,
+    canonicalNames,
+    canonicalHouseholds
+  );
+  const candidates: DamageCandidate[] = [];
+  const aliasesByCanonical = new Map<string, Warlord[]>();
+
+  // householdAliases をグループごとに全件走査せず、一度の走査でまとめる。
+  for (const warlord of Object.values(allDb)) {
+    const canonical = canonicalNames[warlord.name] ?? warlord.name;
+    const aliases = aliasesByCanonical.get(canonical);
+    if (aliases) aliases.push(warlord);
+    else aliasesByCanonical.set(canonical, [warlord]);
+  }
+
+  for (const [canonical, allAliases] of aliasesByCanonical) {
+    const scopedAliases = allAliases.filter((w) => db[w.name] != null);
+    const availability = availabilityByWarlord.get(canonical);
+
+    // 表示期のDBにもログにも存在しない人物は、従来どおり対象外。
+    if (scopedAliases.length === 0 && !availability) continue;
+
+    const scopedRepresentative = scopedAliases[0]
+      ? db[scopedCanonicalNames[scopedAliases[0].name] ?? scopedAliases[0].name]
+      : undefined;
+    const fallbackWarlord =
+      scopedRepresentative ?? allDb[canonical] ?? allAliases[0];
+    const hasProfileForObservedTerm =
+      availability == null ||
+      scopedAliases.some((alias) => alias.term === availability.term);
+    // ログの期に一致するDBプロフィールが無い場合は、現在の壁戦に含まれる
+    // 国・タイプ・兵種を優先する。全期間表示でも前期の国で絞り込まれない。
+    const warlord =
+      !hasProfileForObservedTerm && availability?.latestAttackProfile
+        ? warlordFromWallProfile(
+            availability.latestAttackProfile,
+            availability.term,
+            fallbackWarlord
+          )
+        : fallbackWarlord;
+    const actions = mergeAliasActions(scopedAliases);
+    const actionWarlord: Warlord = {
+      ...warlord,
+      actions,
+      // 前期のプロフィールだけを補った場合、前期の時刻は今期判定へ流用しない。
+      lastActionAt: actions[actions.length - 1],
+    };
+    const hasAttack =
+      scopedAliases.some((alias) => (alias.actions?.length ?? 0) > 0) ||
+      availability?.latestAttackAt != null;
+
+    candidates.push({
+      warlord,
+      actionWarlord,
+      availability,
+      hasAttack,
+      // 表示期の詳細データが無い補完行は、空の詳細ページへ遷移させない。
+      canOpenDetail: db[warlord.name] != null,
+    });
+  }
+
+  // 壁戦にしか登場せず、Warlord DBへまだ一度も登録されていない人物も表示する。
+  for (const [canonical, availability] of availabilityByWarlord) {
+    if (aliasesByCanonical.has(canonical) || !availability.latestAttackProfile) {
+      continue;
+    }
+    const warlord = warlordFromWallProfile(
+      availability.latestAttackProfile,
+      availability.term
+    );
+    candidates.push({
+      warlord,
+      actionWarlord: warlord,
+      availability,
+      hasAttack: true,
+      canOpenDetail: false,
+    });
+  }
+
+  return candidates;
 }
 
 const STATUS_CLASS: Record<ActionStatus, string> = {
@@ -53,7 +188,13 @@ const STATUS_SUMMARY_ORDER = [
   "depleted",
 ] as const;
 
-export function DamageTab({ db, log, colors, onSelectWarlord }: Props) {
+export function DamageTab({
+  db,
+  allDb,
+  log,
+  colors,
+  onSelectWarlord,
+}: Props) {
   const [now, setNow] = useState<Date | null>(null);
   const [statusFilter, setStatusFilter] = useState<"" | ActionStatus>("");
   const [factionFilter, setFactionFilter] = useState("");
@@ -92,48 +233,42 @@ export function DamageTab({ db, log, colors, onSelectWarlord }: Props) {
     };
   }, []);
 
-  const canonicalNames = useMemo(() => normalizationMap(db), [db]);
-  // 戦闘ログの解析はログ変更時だけ行い、30秒ごとの時刻更新では再計算しない。
-  const availabilityByWarlord = useMemo(
-    () => buildActionAvailability(log, canonicalNames),
-    [log, canonicalNames]
+  const candidates = useMemo(
+    () => buildDamageCandidates(db, allDb ?? db, log),
+    [db, allDb, log]
   );
 
   const rows = useMemo(() => {
     if (!now) return [];
     const q = nameQuery.trim().toLowerCase();
 
-    // 家督名が同じ武将（＝改名前後の同一人物）は1人として統合する。
-    // 代表名（正規化マップ上の最新名）のみを1行とし、行動時刻は
-    // 旧名側も含めて合算した最新値を使う。
-    // （旧名の行が別枠で残り続け、そちらは更新されないまま経過時間だけ
-    // 増え続けて見える＝「最新の時間が取れない」不具合の修正）
-    const seen = new Set<string>();
-    const merged: { w: Warlord; info: ReturnType<typeof getActionInfo> }[] = [];
-    for (const w of Object.values(db)) {
-      const canonical = canonicalNames[w.name] ?? w.name;
-      if (seen.has(canonical)) continue;
-      seen.add(canonical);
-      const base = db[canonical];
-      if (!base) continue;
-      const actions = mergeAliasActions(
-        householdAliases(db, canonical).map((n) => db[n])
-      );
-      const info = getActionInfo(
-        { ...base, actions, lastActionAt: actions[actions.length - 1] },
-        now,
-        availabilityByWarlord.get(canonical)
-      );
-      merged.push({ w: base, info });
-    }
+    const merged: {
+      w: Warlord;
+      info: ReturnType<typeof getActionInfo>;
+      hasAttack: boolean;
+      canOpenDetail: boolean;
+    }[] = candidates.map(
+      ({
+        warlord,
+        actionWarlord,
+        availability,
+        hasAttack,
+        canOpenDetail,
+      }) => ({
+        w: warlord,
+        info: getActionInfo(actionWarlord, now, availability),
+        hasAttack,
+        canOpenDetail,
+      })
+    );
 
     return merged
       .filter((r) => r.info.status !== "none")
       .filter((r) => (statusFilter ? r.info.status === statusFilter : true))
       .filter((r) => (factionFilter ? r.w.faction === factionFilter : true))
       .filter((r) => {
-        if (roleFilter === "attack") return (r.w.actions?.length ?? 0) > 0;
-        if (roleFilter === "defense-only") return (r.w.actions?.length ?? 0) === 0;
+        if (roleFilter === "attack") return r.hasAttack;
+        if (roleFilter === "defense-only") return !r.hasAttack;
         return true;
       })
       .filter((r) => (q ? r.w.name.toLowerCase().includes(q) : true))
@@ -145,27 +280,28 @@ export function DamageTab({ db, log, colors, onSelectWarlord }: Props) {
         return (a.info.minutes ?? 0) - (b.info.minutes ?? 0);
       });
   }, [
-    db,
+    candidates,
     now,
     statusFilter,
     factionFilter,
     roleFilter,
     nameQuery,
-    canonicalNames,
-    availabilityByWarlord,
   ]);
 
   // 国の選択肢（行動時刻を持つ武将の勢力名）
   const factionOptions = useMemo(() => {
     return Array.from(
       new Set(
-        Object.values(db)
-          .filter((w) => w.lastActionAt)
-          .map((w) => w.faction?.trim())
+        candidates
+          .filter(
+            ({ actionWarlord, availability }) =>
+              actionWarlord.lastActionAt || availability?.latestAttackAt
+          )
+          .map(({ warlord }) => warlord.faction?.trim())
           .filter((v): v is string => !!v)
       )
     ).sort((a, b) => a.localeCompare(b, "ja"));
-  }, [db]);
+  }, [candidates]);
 
   const counts = useMemo(() => {
     const c = {
@@ -175,12 +311,12 @@ export function DamageTab({ db, log, colors, onSelectWarlord }: Props) {
       depleted: 0,
       defenseOnly: 0,
     };
-    for (const { info, w } of rows) {
+    for (const { info, hasAttack } of rows) {
       if (info.status === "done") c.done++;
       else if (info.status === "ready") c.ready++;
       else if (info.status === "unknown") c.unknown++;
       else if (info.status === "depleted") c.depleted++;
-      if ((w.actions?.length ?? 0) === 0) c.defenseOnly++;
+      if (!hasAttack) c.defenseOnly++;
     }
     return c;
   }, [rows]);
@@ -234,9 +370,10 @@ export function DamageTab({ db, log, colors, onSelectWarlord }: Props) {
         description={
           <>
             出兵・守備の観測時刻と勝敗から行動状況を判定します。
-            40分以内={ACTION_LABEL.done} / 40分〜1時間20分=
+            出兵後は40分未満={ACTION_LABEL.done} / 40分以上1時間20分未満=
             {ACTION_LABEL.ready} / 1時間20分以上={ACTION_LABEL.unknown}。
-            守備敗北後は、次の出兵が確認できるまで{ACTION_LABEL.depleted}です。
+            守備敗北後は40分未満={ACTION_LABEL.depleted} / 40分以上=
+            {ACTION_LABEL.unknown}です。
           </>
         }
       />
@@ -265,7 +402,7 @@ export function DamageTab({ db, log, colors, onSelectWarlord }: Props) {
           <li>
             <span className="status depleted">{ACTION_LABEL.depleted}</span>
             <span className="muted">
-              直近の出兵以降に守備で敗北しています。行動可の対象には含めません。
+              直近の守備敗北から40分未満です。40分経過後は行動可になります。
             </span>
           </li>
           <li>
@@ -388,14 +525,14 @@ export function DamageTab({ db, log, colors, onSelectWarlord }: Props) {
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ w, info }) => (
+              {rows.map(({ w, info, hasAttack, canOpenDetail }) => (
                 <tr key={w.name}>
                   <td className="cell-block" data-label="状況">
                     <span className="status-stack">
                       <span className={STATUS_CLASS[info.status]}>
                         {ACTION_LABEL[info.status]}
                       </span>
-                      {(w.actions?.length ?? 0) === 0 && (
+                      {!hasAttack && (
                         <span
                           className="status defense-only"
                           title="守備でのみ観測されています"
@@ -432,14 +569,18 @@ export function DamageTab({ db, log, colors, onSelectWarlord }: Props) {
                     )}
                   </td>
                   <td className="cell-title">
-                    <button
-                      type="button"
-                      className="link-like"
-                      onClick={() => onSelectWarlord(w.name)}
-                      title={`${w.name} の戦績を見る`}
-                    >
-                      {w.name}
-                    </button>
+                    {canOpenDetail ? (
+                      <button
+                        type="button"
+                        className="link-like"
+                        onClick={() => onSelectWarlord(w.name)}
+                        title={`${w.name} の戦績を見る`}
+                      >
+                        {w.name}
+                      </button>
+                    ) : (
+                      <span>{w.name}</span>
+                    )}
                   </td>
                   <td data-label="タイプ">
                     <span className="tag type">{displayWarlordType(w)}</span>

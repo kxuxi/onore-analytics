@@ -56,9 +56,9 @@ export function extractBattleUrl(line: string): { line: string; url?: string } {
   }
 
   const normalized = work
-    // 【N戦目】 と直後の年月の境界（マーカーの 】 のみ。武将名に含まれる
-    // 【大空】 のような 】 まで区切ると名前が割れてしまうため、戦目】 に限定する。
-    .replace(/(戦目】)/g, "$1 ")
+    // 【N戦目】/【壁戦】 と直後の年月の境界（マーカーの 】 のみ。武将名に含まれる
+    // 【大空】 のような 】 まで区切ると名前が割れてしまうため、戦闘マーカーに限定する。
+    .replace(/((?:戦目|壁戦)】)/g, "$1 ")
     // 年月 と 月日 の境界
     .replace(/(\d+年\d+月)/g, "$1 ")
     // 時刻(HH:mm) と 都市 の境界
@@ -153,6 +153,64 @@ export function parseBattleLine(line: string): Warlord[] {
     result.push({ ...attacker, ...shared, actions: actionAt ? [actionAt] : undefined });
   if (defender) result.push({ ...defender, ...shared });
   return result;
+}
+
+export interface WallAttackProfile {
+  /** 壁へ出兵した武将名。 */
+  name: string;
+  household?: string;
+  faction?: string;
+  type: string;
+  branch: string;
+  unit?: string;
+}
+
+export interface WallAttackEvent extends WallAttackProfile {
+  /** 在ゲーム年月を含む戦闘時刻。 */
+  battleAt?: string;
+  /** 被弾表の時間判定に使う実時刻。 */
+  actionAt?: string;
+}
+
+/**
+ * 通常戦の末尾へ連結保存される `【壁戦】` から、出兵した武将と時刻を取り出す。
+ *
+ * 壁側は通常の武将より項目が2つ少ないため、通常戦用の parseBattleCard では
+ * 解析できない。被弾表では勝敗にかかわらず出兵済みとして扱うため、必要な
+ * 出兵側8項目と時刻だけを専用に読み取る。
+ */
+export function parseWallAttackEvents(line: string): WallAttackEvent[] {
+  const events: WallAttackEvent[] = [];
+  const segments = line
+    .replace(/\r/g, "")
+    .split(/(?=【(?:[^】]*戦目|壁戦)】)/)
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.startsWith("【壁戦】"));
+
+  for (const segment of segments) {
+    const { line: raw } = extractBattleUrl(segment);
+    const tokens = tokenizeBattleLine(raw);
+    const vsIndex = tokens.findIndex((token) => /^v\.?s\.?$/i.test(token));
+    if (vsIndex < 8) continue;
+
+    const attacker = sliceWarlord(tokens.slice(vsIndex - 8, vsIndex));
+    if (!attacker) continue;
+
+    const meta = tokens.slice(1, vsIndex - 8);
+    const { battleAt } = splitMeta(meta);
+    events.push({
+      name: attacker.name,
+      household: attacker.household,
+      faction: attacker.faction,
+      type: attacker.type,
+      branch: attacker.branch,
+      unit: attacker.unit,
+      battleAt: battleAt || undefined,
+      actionAt: extractActionTime(battleAt),
+    });
+  }
+
+  return events;
 }
 
 /** "1687年5月 06/15 09:30" などから "06/15 09:30" を抽出する。 */
@@ -587,4 +645,3 @@ export function battleKey(line: string): string {
     card.winner,
   ].join("|");
 }
-

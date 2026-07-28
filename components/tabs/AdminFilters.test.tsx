@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import type { WarlordMap } from "@/lib/types";
-import { DamageTab } from "./DamageTab";
+import { getActionInfo } from "@/lib/action";
+import type { BattleRecord, WarlordMap } from "@/lib/types";
+import { buildDamageCandidates, DamageTab } from "./DamageTab";
 import { DbTab } from "./DbTab";
 
 const DB: WarlordMap = {
@@ -94,5 +95,161 @@ describe("DamageTab", () => {
     expect(markup).toContain('<option value="depleted">兵力減</option>');
     expect(markup).toContain(">表示 0件</p>");
     expect(markup).toContain("表示できる行動データがありません");
+  });
+
+  it("表示期の壁戦だけで観測された前期プロフィールの武将も行動済みにする", () => {
+    const scopedDb: WarlordMap = {
+      現期武将: {
+        name: "現期武将",
+        faction: "東軍",
+        type: "武特",
+        branch: "騎兵",
+        term: 147,
+        updatedAt: 200,
+      },
+    };
+    const allDb: WarlordMap = {
+      ...scopedDb,
+      壁出兵者: {
+        name: "壁出兵者",
+        faction: "旧所属国",
+        type: "知特",
+        branch: "弓兵",
+        unit: "旧弓兵",
+        term: 146,
+        lastActionAt: "07/14 14:38",
+        actions: ["07/14 14:38"],
+        updatedAt: 100,
+      },
+    };
+    const log: BattleRecord[] = [
+      {
+        id: 1,
+        term: 147,
+        savedAt: 1,
+        line:
+          "【1戦目】 1583年4月 07/25 20:00 京都 " +
+          "東軍 現期武将 現期家 武特 騎馬隊 騎兵 槍 鎧 V.S. " +
+          "中立 守備武将 守備家 知特 弓兵隊 弓兵 弓 旗 現期武将の勝利 5\n" +
+          "【壁戦】 1583年4月 07/25 20:28 京都 " +
+          "西軍 壁出兵者 壁家 統特 歩兵隊 歩兵 刀 盾 V.S. " +
+          "中立 京都の守備隊 精鋭城壁兵 壁 なし なし 京都の守備隊の勝利 6",
+      },
+    ];
+
+    const candidate = buildDamageCandidates(scopedDb, allDb, log).find(
+      ({ warlord }) => warlord.name === "壁出兵者"
+    );
+
+    expect(candidate).toBeDefined();
+    expect(candidate?.actionWarlord.lastActionAt).toBeUndefined();
+    expect(candidate?.availability?.latestAttackAt).toBe("07/25 20:28");
+    expect(candidate?.hasAttack).toBe(true);
+    expect(candidate?.canOpenDetail).toBe(false);
+    expect(candidate?.warlord).toMatchObject({
+      faction: "西軍",
+      type: "統特",
+      branch: "歩兵",
+      unit: "歩兵隊",
+      term: 147,
+    });
+    expect(
+      getActionInfo(
+        candidate!.actionWarlord,
+        new Date(2026, 6, 25, 20, 40),
+        candidate?.availability
+      ).status
+    ).toBe("done");
+
+    const allPeriodCandidate = buildDamageCandidates(allDb, allDb, log).find(
+      ({ warlord }) => warlord.name === "壁出兵者"
+    );
+    expect(allPeriodCandidate).toMatchObject({
+      canOpenDetail: true,
+      warlord: {
+        faction: "西軍",
+        type: "統特",
+        branch: "歩兵",
+        unit: "歩兵隊",
+        term: 147,
+      },
+    });
+  });
+
+  it("DB未登録でも壁戦プロフィールから行を補い、詳細リンクは無効にする", () => {
+    const scopedDb: WarlordMap = {
+      現期武将: {
+        name: "現期武将",
+        faction: "東軍",
+        type: "武特",
+        branch: "騎兵",
+        term: 147,
+        updatedAt: 200,
+      },
+    };
+    const log: BattleRecord[] = [
+      {
+        id: 1,
+        term: 147,
+        savedAt: 1,
+        line:
+          "【1戦目】 1583年4月 07/25 20:00 京都 " +
+          "東軍 現期武将 現期家 武特 騎馬隊 騎兵 槍 鎧 V.S. " +
+          "中立 守備武将 守備家 知特 弓兵隊 弓兵 弓 旗 現期武将の勝利 5\n" +
+          "【壁戦】 1583年4月 07/25 20:28 京都 " +
+          "西軍 未登録武将 未登録家 統特 歩兵隊 歩兵 刀 盾 V.S. " +
+          "中立 京都の守備隊 精鋭城壁兵 壁 なし なし 京都の守備隊の勝利 6",
+      },
+    ];
+
+    const candidate = buildDamageCandidates(scopedDb, scopedDb, log).find(
+      ({ warlord }) => warlord.name === "未登録武将"
+    );
+
+    expect(candidate).toMatchObject({
+      hasAttack: true,
+      canOpenDetail: false,
+      warlord: {
+        faction: "西軍",
+        type: "統特",
+        branch: "歩兵",
+        unit: "歩兵隊",
+        term: 147,
+      },
+      availability: {
+        latestAttackAt: "07/25 20:28",
+      },
+    });
+
+    const dbWithOldAlias: WarlordMap = {
+      ...scopedDb,
+      旧名: {
+        name: "旧名",
+        household: "未登録家",
+        faction: "旧所属国",
+        type: "知特",
+        branch: "弓兵",
+        term: 146,
+        updatedAt: 100,
+      },
+    };
+    const aliases = buildDamageCandidates(
+      dbWithOldAlias,
+      dbWithOldAlias,
+      log
+    ).filter(
+      ({ warlord }) =>
+        warlord.name === "旧名" || warlord.name === "未登録武将"
+    );
+    expect(aliases).toHaveLength(1);
+    expect(aliases[0]).toMatchObject({
+      canOpenDetail: false,
+      warlord: {
+        name: "未登録武将",
+        household: "未登録家",
+        faction: "西軍",
+        term: 147,
+      },
+    });
   });
 });

@@ -24,6 +24,26 @@ function battleLine({
   );
 }
 
+function wallBattleLine({
+  gameYear = 1583,
+  gameMonth = 4,
+  time,
+  attacker = "勝頼",
+  result = "京都の守備隊の勝利",
+}: {
+  gameYear?: number;
+  gameMonth?: number;
+  time: string;
+  attacker?: string;
+  result?: string;
+}): string {
+  return (
+    `【壁戦】 ${gameYear}年${gameMonth}月 ${time} 京都 ` +
+    `武田 ${attacker} 武田家 統特 騎馬隊 騎兵 馬 旗 V.S. ` +
+    `中立 京都の守備隊 精鋭城壁兵 壁 なし なし ${result} 6`
+  );
+}
+
 function record(
   line: string,
   term = 147,
@@ -97,6 +117,168 @@ describe("buildActionAvailability", () => {
     ]);
 
     expect(availability.get("勝頼")?.depletedByDefenseLoss).toBe(false);
+  });
+
+  it("壁に負けた出兵も最新の出兵時刻として保持する", () => {
+    const availability = buildActionAvailability([
+      record(
+        `${battleLine({
+          time: "04/10 10:30",
+          left: "秀吉",
+          right: "家康",
+          result: "秀吉の勝利",
+        })}\n${wallBattleLine({ time: "04/10 11:00" })}`
+      ),
+    ]);
+
+    expect(availability.get("勝頼")).toMatchObject({
+      depletedByDefenseLoss: false,
+      latestAttackAt: "04/10 11:00",
+      latestAttackProfile: {
+        name: "勝頼",
+        faction: "武田",
+        type: "統特",
+        branch: "騎兵",
+        unit: "騎馬隊",
+      },
+    });
+  });
+
+  it("実時刻が欠けた壁戦を同じレコードの通常戦時刻で補完しない", () => {
+    const availability = buildActionAvailability([
+      record(
+        `${battleLine({
+          time: "04/10 10:30",
+          left: "秀吉",
+          right: "家康",
+          result: "秀吉の勝利",
+        })}\n` +
+          "【壁戦】 1583年4月 京都 武田 勝頼 武田家 統特 騎馬隊 騎兵 馬 旗 V.S. " +
+          "中立 京都の守備隊 精鋭城壁兵 壁 なし なし 京都の守備隊の勝利 6"
+      ),
+    ]);
+
+    expect(availability.get("勝頼")).toBeUndefined();
+  });
+
+  it("同じレコードの複数壁戦から最も新しい出兵を選ぶ", () => {
+    const availability = buildActionAvailability([
+      record(
+        `${wallBattleLine({ time: "04/10 10:00" })}\n` +
+          wallBattleLine({ time: "04/10 11:00" })
+      ),
+    ]);
+
+    expect(availability.get("勝頼")?.latestAttackAt).toBe("04/10 11:00");
+  });
+
+  it("壁戦の旧名を代表名へ統合する", () => {
+    const availability = buildActionAvailability(
+      [record(wallBattleLine({ time: "04/10 11:00", attacker: "旧名" }))],
+      { 旧名: "新名", 新名: "新名" }
+    );
+
+    expect(availability.has("旧名")).toBe(false);
+    expect(availability.get("新名")).toMatchObject({
+      latestAttackAt: "04/10 11:00",
+      latestAttackProfile: { name: "旧名" },
+    });
+  });
+
+  it("DB未登録の新名も家督名から既存の代表名へ統合する", () => {
+    const availability = buildActionAvailability(
+      [record(wallBattleLine({ time: "04/10 11:00", attacker: "新名" }))],
+      { 旧名: "旧名" },
+      { 武田家: "旧名" }
+    );
+
+    expect(availability.has("新名")).toBe(false);
+    expect(availability.get("旧名")).toMatchObject({
+      latestAttackAt: "04/10 11:00",
+      latestAttackProfile: { name: "新名", household: "武田家" },
+    });
+  });
+
+  it("守備敗北後に壁へ出兵して負けても兵力減を解除する", () => {
+    const availability = buildActionAvailability([
+      record(
+        battleLine({
+          time: "04/10 10:23",
+          result: "信長の勝利",
+        }),
+        147,
+        1
+      ),
+      record(wallBattleLine({ time: "04/10 11:00" }), 147, 2),
+    ]);
+
+    expect(availability.get("勝頼")).toMatchObject({
+      depletedByDefenseLoss: false,
+      latestAttackAt: "04/10 11:00",
+    });
+  });
+
+  it("壁戦より後の守備敗北は兵力減を優先する", () => {
+    const availability = buildActionAvailability([
+      record(wallBattleLine({ time: "04/10 10:00" }), 147, 1),
+      record(
+        battleLine({
+          time: "04/10 11:00",
+          result: "信長の勝利",
+        }),
+        147,
+        2
+      ),
+    ]);
+
+    expect(availability.get("勝頼")).toMatchObject({
+      depletedByDefenseLoss: true,
+      latestAttackAt: "04/10 10:00",
+      defenseLossAt: "04/10 11:00",
+    });
+  });
+
+  it("壁戦と守備敗北が同時刻なら安全側の兵力減を優先する", () => {
+    const availability = buildActionAvailability([
+      record(wallBattleLine({ time: "04/10 11:00" }), 147, 1),
+      record(
+        battleLine({
+          time: "04/10 11:00",
+          result: "信長の勝利",
+        }),
+        147,
+        2
+      ),
+    ]);
+
+    expect(availability.get("勝頼")?.depletedByDefenseLoss).toBe(true);
+  });
+
+  it("壁戦と守備敗北の前後は実日時より在ゲーム年月を優先する", () => {
+    const availability = buildActionAvailability([
+      record(
+        wallBattleLine({
+          gameYear: 1584,
+          time: "04/10 10:00",
+        }),
+        147,
+        1
+      ),
+      record(
+        battleLine({
+          gameYear: 1583,
+          time: "04/11 11:00",
+          result: "信長の勝利",
+        }),
+        147,
+        2
+      ),
+    ]);
+
+    expect(availability.get("勝頼")).toMatchObject({
+      depletedByDefenseLoss: false,
+      latestAttackAt: "04/10 10:00",
+    });
   });
 
   it("古い守備敗北を後から登録しても新しい出兵を上書きしない", () => {
