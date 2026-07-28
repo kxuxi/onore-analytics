@@ -65,6 +65,7 @@ export const TAB_PATH: Record<TabKey, string[]> = {
   weapons: ["encyclopedia", "weapons"],
   items: ["encyclopedia", "items"],
   nations: ["nations"],
+  wiki: ["wiki"],
   factions: ["settings"],
 };
 

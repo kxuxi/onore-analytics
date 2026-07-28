@@ -94,6 +94,10 @@ const SettingsTab = dynamic(
   () => import("@/components/tabs/SettingsTab").then((m) => m.SettingsTab),
   { loading: renderPageLoading }
 );
+const WikiTab = dynamic(
+  () => import("@/components/tabs/WikiTab").then((m) => m.WikiTab),
+  { loading: renderPageLoading }
+);
 const RankingTab = dynamic(
   () => import("@/components/tabs/RankingTab").then((m) => m.RankingTab),
   { loading: renderPageLoading }
@@ -149,6 +153,7 @@ const TAB_ICONS: Record<TabKey, ReactNode> = {
   weapons: <SwordIcon />,
   items: <PackageIcon />,
   nations: <FlagIcon />,
+  wiki: <BookIcon />,
   factions: <SlidersIcon />,
 };
 
@@ -161,6 +166,7 @@ const GROUP_ICONS: Record<TabGroupKey, ReactNode> = {
   meta: <GridIcon />,
   encyclopedia: <BookIcon />,
   nations: <FlagIcon />,
+  wiki: <BookIcon />,
   settings: <SlidersIcon />,
 };
 
@@ -184,6 +190,7 @@ const DATA_LAYOUT_TABS = new Set<TabKey>([
   "weapons",
   "items",
   "nations",
+  "wiki",
   "factions",
 ]);
 
@@ -256,6 +263,15 @@ export default function HomePage() {
   const closeMobileSidebar = useCallback(() => {
     setSidebarOpen(false);
   }, [setSidebarOpen]);
+  const [wikiDirty, setWikiDirty] = useState(false);
+  const confirmWikiNavigation = useCallback(
+    () =>
+      !wikiDirty ||
+      window.confirm(
+        "管理Wikiに未保存の変更があります。変更を破棄して移動しますか？"
+      ),
+    [wikiDirty]
+  );
   // 未ログイン（管理者以外）が見られるのは公開タブのみ。認証確認中（!authReady）と
   // 管理者は全タブ許可（undefined）にし、保護タブの URL を不用意にフォールバックしない。
   const allowedTabs = useMemo(
@@ -284,7 +300,11 @@ export default function HomePage() {
     selectEquip,
     selectFaction,
     backDetail,
-  } = useAppNavigation({ onCloseSidebar: closeSidebarOnMobile, allowedTabs });
+  } = useAppNavigation({
+    onCloseSidebar: closeSidebarOnMobile,
+    allowedTabs,
+    confirmNavigation: confirmWikiNavigation,
+  });
   const sidebarRef = useModalA11y<HTMLDivElement>(
     isMobile && sidebarOpen,
     closeMobileSidebar,
@@ -487,13 +507,14 @@ export default function HomePage() {
   }, []);
 
   const handleLogout = useCallback(async () => {
+    if (!confirmWikiNavigation()) return;
     try {
       await logout();
       pushToast("success", "ログアウトしました");
     } catch {
       pushToast("error", "ログアウトに失敗しました");
     }
-  }, [logout, pushToast]);
+  }, [confirmWikiNavigation, logout, pushToast]);
 
   const handleDeleteBattle = useCallback(
     async (id: number) => {
@@ -859,6 +880,10 @@ export default function HomePage() {
             onSelectFaction={selectFaction}
           />
         );
+      case "wiki":
+        return (
+          <WikiTab onNotify={pushToast} onDirtyChange={setWikiDirty} />
+        );
       case "factions":
         return (
           <SettingsTab
@@ -909,6 +934,7 @@ export default function HomePage() {
     selectUnit,
     selectEquip,
     selectFaction,
+    pushToast,
   ]);
 
   let detailView: React.ReactNode = null;
@@ -1124,7 +1150,25 @@ export default function HomePage() {
             aria-labelledby={`group-${activeGroup}`}
             tabIndex={-1}
           >
-          {!hydrated ||
+          {tab === "wiki" ? (
+            !authReady ? (
+              <PageLoading />
+            ) : isAdmin ? (
+              content
+            ) : (
+              <div className="panel">
+                <h2>管理者ログインが必要です</h2>
+                <p className="muted">
+                  管理Wikiの閲覧・編集は管理者だけが利用できます。
+                </p>
+                <div className="row">
+                  <a className="btn btn-primary" href="/login">
+                    ログインする
+                  </a>
+                </div>
+              </div>
+            )
+          ) : !hydrated ||
           (!loadError && (selectedTerm == null || logLoading)) ? (
             <PageLoading />
           ) : loadError ? (

@@ -29,8 +29,8 @@ export interface AppNavigationState {
   hasSubtabs: boolean;
   tabRefs: MutableRefObject<(HTMLButtonElement | null)[]>;
   subTabRefs: MutableRefObject<(HTMLButtonElement | null)[]>;
-  selectTab: (key: TabKey) => void;
-  selectGroup: (g: TabGroupKey) => void;
+  selectTab: (key: TabKey) => boolean;
+  selectGroup: (g: TabGroupKey) => boolean;
   onTabKeyDown: (e: KeyboardEvent<HTMLElement>) => void;
   onSubTabKeyDown: (e: KeyboardEvent<HTMLElement>) => void;
   openDetail: (kind: DetailView["kind"], name: string) => void;
@@ -53,6 +53,11 @@ interface UseAppNavigationOptions {
    * undefined（既定）はすべてのタブを許可する（＝管理者 / 認証確認中）。
    */
   allowedTabs?: TabKey[];
+  /**
+   * 未保存フォームなどがある場合の遷移確認。
+   * false を返したときはタブ・詳細・ブラウザ履歴の移動を取り消す。
+   */
+  confirmNavigation?: () => boolean;
 }
 
 /**
@@ -67,6 +72,7 @@ interface UseAppNavigationOptions {
 export function useAppNavigation({
   onCloseSidebar,
   allowedTabs,
+  confirmNavigation,
 }: UseAppNavigationOptions = {}): AppNavigationState {
   const [tab, setTab] = useState<TabKey>("home");
   const [detailStack, setDetailStack] = useState<DetailView[]>([]);
@@ -86,12 +92,22 @@ export function useAppNavigation({
   const justRestored = useRef(false);
   const fromPopState = useRef(false);
   const firstUrlSync = useRef(true);
+  const currentNavigation = useRef({ tab, detailStack });
+  const confirmNavigationRef = useRef(confirmNavigation);
 
   const detail = detailStack[detailStack.length - 1] ?? null;
   const activeGroup = GROUP_OF_TAB[tab];
   const activeGroupDef = TAB_GROUPS.find((g) => g.key === activeGroup)!;
   const groupTabs = activeGroupDef.tabs;
   const hasSubtabs = groupTabs.length > 1;
+
+  useEffect(() => {
+    currentNavigation.current = { tab, detailStack };
+  }, [tab, detailStack]);
+
+  useEffect(() => {
+    confirmNavigationRef.current = confirmNavigation;
+  }, [confirmNavigation]);
 
   // サイドバーに表示するグループ。allowedTabs があれば公開グループのみに絞る。
   const navGroups = useMemo(
@@ -157,10 +173,11 @@ export function useAppNavigation({
   // ブラウザ／端末の戻る・進むでタブ・詳細を行き来する。
   useEffect(() => {
     const onPop = (e: PopStateEvent) => {
-      fromPopState.current = true;
       const st = e.state as
         | { tab?: TabKey | "swi" | "equips"; detailStack?: DetailView[] }
         | null;
+      let nextTab: TabKey;
+      let nextDetailStack: DetailView[];
       if (st && typeof st.tab === "string") {
         const restoredTab =
           st.tab === "swi"
@@ -168,16 +185,39 @@ export function useAppNavigation({
             : st.tab === "equips"
               ? "weapons"
               : st.tab;
-        setTab(ALL_TAB_KEYS.includes(restoredTab) ? restoredTab : "home");
-        setDetailStack(Array.isArray(st.detailStack) ? st.detailStack : []);
+        nextTab = ALL_TAB_KEYS.includes(restoredTab) ? restoredTab : "home";
+        nextDetailStack = Array.isArray(st.detailStack) ? st.detailStack : [];
       } else {
         // state を持たないエントリ（直リンク初期エントリ等）は URL から復元。
         const { tab: t, detailStack: stack } = navStateFromLocation(
           window.location
         );
-        setTab(t);
-        setDetailStack(stack);
+        nextTab = t;
+        nextDetailStack = stack;
       }
+
+      const current = currentNavigation.current;
+      const changesPage =
+        nextTab !== current.tab ||
+        JSON.stringify(nextDetailStack) !== JSON.stringify(current.detailStack);
+      if (
+        changesPage &&
+        confirmNavigationRef.current &&
+        !confirmNavigationRef.current()
+      ) {
+        const currentDetail =
+          current.detailStack[current.detailStack.length - 1] ?? null;
+        window.history.pushState(
+          current,
+          "",
+          buildPath(current.tab, currentDetail)
+        );
+        return;
+      }
+
+      fromPopState.current = true;
+      setTab(nextTab);
+      setDetailStack(nextDetailStack);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -185,17 +225,22 @@ export function useAppNavigation({
 
   const selectTab = useCallback(
     (key: TabKey) => {
+      const changesPage = key !== tab || detailStack.length > 0;
+      if (changesPage && confirmNavigation && !confirmNavigation()) {
+        return false;
+      }
       setTab(key);
       setDetailStack([]);
       onCloseSidebar?.();
+      return true;
     },
-    [onCloseSidebar]
+    [confirmNavigation, detailStack.length, onCloseSidebar, tab]
   );
 
   const selectGroup = useCallback(
     (g: TabGroupKey) => {
       const def = TAB_GROUPS.find((x) => x.key === g)!;
-      selectTab(lastLeaf[g] ?? def.tabs[0]);
+      return selectTab(lastLeaf[g] ?? def.tabs[0]);
     },
     [lastLeaf, selectTab]
   );
@@ -212,8 +257,9 @@ export function useAppNavigation({
       else if (e.key === "End") next = navGroups.length - 1;
       else return;
       e.preventDefault();
-      selectGroup(navGroups[next].key);
-      tabRefs.current[next]?.focus();
+      if (selectGroup(navGroups[next].key)) {
+        tabRefs.current[next]?.focus();
+      }
     },
     [navGroups, activeGroup, selectGroup]
   );
@@ -230,8 +276,9 @@ export function useAppNavigation({
       else if (e.key === "End") next = groupTabs.length - 1;
       else return;
       e.preventDefault();
-      selectTab(groupTabs[next]);
-      subTabRefs.current[next]?.focus();
+      if (selectTab(groupTabs[next])) {
+        subTabRefs.current[next]?.focus();
+      }
     },
     [groupTabs, tab, selectTab]
   );

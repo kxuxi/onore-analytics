@@ -4,6 +4,9 @@ import type {
   UnitType,
   Warlord,
   WarlordMap,
+  WikiPage,
+  WikiPageInput,
+  WikiPageSummary,
 } from "./types";
 import type { FactionColorMap } from "./factionColors";
 import {
@@ -292,4 +295,59 @@ export async function login(
 /** ログアウトする（セッション Cookie を失効）。 */
 export async function logout(): Promise<void> {
   await fetch("/api/auth/logout", { method: "POST" });
+}
+
+/** 管理者Wikiのページ一覧を更新日時の新しい順で取得する。 */
+export async function fetchWikiPages(): Promise<WikiPageSummary[]> {
+  const response = await fetch("/api/wiki-pages", { cache: "no-store" });
+  await throwIfResponseFailed(response, "Wikiページ一覧の取得に失敗しました");
+  return response.json();
+}
+
+/** 管理者Wikiの本文を含む1ページを取得する。 */
+export async function fetchWikiPage(id: number): Promise<WikiPage> {
+  const response = await fetch(`/api/wiki-pages/${id}`, {
+    cache: "no-store",
+  });
+  await throwIfResponseFailed(response, "Wikiページの取得に失敗しました");
+  return response.json();
+}
+
+/** 管理者Wikiに新しいページを作成する。 */
+export async function createWikiPage(
+  input: WikiPageInput
+): Promise<WikiPage> {
+  const response = await fetch("/api/wiki-pages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  await throwIfResponseFailed(response, "Wikiページの作成に失敗しました");
+  return response.json();
+}
+
+/** 管理者Wikiの既存ページを更新する。 */
+export async function updateWikiPage(
+  id: number,
+  input: WikiPageInput,
+  expectedUpdatedAt: string
+): Promise<WikiPage> {
+  const response = await fetch(`/api/wiki-pages/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Wiki-Updated-At": expectedUpdatedAt,
+    },
+    body: JSON.stringify(input),
+  });
+  await throwIfResponseFailed(response, "Wikiページの保存に失敗しました");
+  return response.json();
+}
+
+/** 管理者Wikiのページを完全に削除する。 */
+export async function deleteWikiPage(id: number): Promise<void> {
+  const response = await fetch(`/api/wiki-pages/${id}`, {
+    method: "DELETE",
+  });
+  await throwIfResponseFailed(response, "Wikiページの削除に失敗しました");
 }

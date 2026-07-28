@@ -126,6 +126,7 @@ describe("buildPath", () => {
     expect(buildPath("damage", null)).toBe("/warlords/damage");
     expect(buildPath("units", null)).toBe("/encyclopedia/units");
     expect(buildPath("metrics", null)).toBe("/ranking");
+    expect(buildPath("wiki", null)).toBe("/wiki");
   });
 
   it.each(DETAIL_ROUTE_CASES)(
@@ -194,6 +195,10 @@ describe("navStateFromPath", () => {
     });
     expect(navStateFromPath("/metrics")).toEqual({
       tab: "metrics",
+      detailStack: [],
+    });
+    expect(navStateFromPath("/wiki")).toEqual({
+      tab: "wiki",
       detailStack: [],
     });
   });

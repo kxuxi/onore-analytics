@@ -27,12 +27,12 @@ describe("PageLoading", () => {
 describe("ページ読込フォールバックの構造契約", () => {
   const pageSource = readFileSync(join(process.cwd(), "app/page.tsx"), "utf8");
 
-  it("18個すべてのdynamic importで共通フォールバックを使う", () => {
+  it("19個すべてのdynamic importで共通フォールバックを使う", () => {
     const declarations = [
       ...pageSource.matchAll(/const\s+(\w+)\s*=\s*dynamic\(/g),
     ];
 
-    expect(declarations).toHaveLength(18);
+    expect(declarations).toHaveLength(19);
 
     declarations.forEach((declaration, index) => {
       const start = declaration.index ?? 0;
