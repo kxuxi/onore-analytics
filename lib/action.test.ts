@@ -136,8 +136,9 @@ describe("getActionInfo の末尾固定判定", () => {
 });
 
 describe("getActionInfo の兵力減判定", () => {
-  it("守備敗北で兵力減なら経過時間にかかわらず行動可にしない", () => {
-    const info = getActionInfo(warlord([at(9, 0)]), NOW, {
+  it("守備敗北から40分未満は兵力減にする", () => {
+    const now = new Date(2026, 5, 15, 10, 39, 59);
+    const info = getActionInfo(warlord([at(9, 0)]), now, {
       depletedByDefenseLoss: true,
       defenseLossAt: at(10, 0),
     });
@@ -145,9 +146,32 @@ describe("getActionInfo の兵力減判定", () => {
     expect(info.status).toBe("depleted");
     expect(ACTION_LABEL[info.status]).toBe("兵力減");
     expect(info.actionAt).toBe(at(10, 0));
+    expect(info.minutes).toBe(39);
   });
 
-  it("壁に負けた最新出兵から40分以内なら行動済みにする", () => {
+  it("守備敗北から40分経過したら行動可にする", () => {
+    const now = new Date(2026, 5, 15, 10, 40, 0);
+    const info = getActionInfo(warlord([at(9, 0)]), now, {
+      depletedByDefenseLoss: true,
+      defenseLossAt: at(10, 0),
+    });
+
+    expect(info.status).toBe("unknown");
+    expect(ACTION_LABEL[info.status]).toBe("行動可");
+    expect(info.actionAt).toBe(at(10, 0));
+    expect(info.minutes).toBe(40);
+  });
+
+  it("守備敗北時刻を取得できない場合は安全側の兵力減を維持する", () => {
+    const info = getActionInfo(warlord([at(9, 0)]), NOW, {
+      depletedByDefenseLoss: true,
+    });
+
+    expect(info.status).toBe("depleted");
+    expect(info.minutes).toBeNull();
+  });
+
+  it("壁に負けた最新出兵から40分未満なら行動済みにする", () => {
     const now = new Date(2026, 5, 15, 10, 20, 0);
     const info = getActionInfo(warlord([at(9, 0)]), now, {
       depletedByDefenseLoss: false,

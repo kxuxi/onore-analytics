@@ -30,7 +30,8 @@ export type NoRestLabel = "固定分" | "休養なし" | "末尾固定";
 
 /** この戦数以上の連続「末尾固定」で表示が「固定分」へ進化する閾値。 */
 export const NO_REST_EVOLVE_STREAK = 5;
-
+const ACTION_DONE_MINUTES = 40;
+const ACTION_READY_MINUTES = 80;
 
 export const ACTION_LABEL: Record<ActionStatus, string> = {
   done: "行動済み",
@@ -113,10 +114,11 @@ function latestObservedAt(
 
 /**
  * 行動時刻からの経過時間でステータスを判定する。
- *  - 40分以内            … 行動済み (done)
+ *  - 40分未満            … 行動済み (done)
  *  - 40分〜1時間20分     … 未行動   (ready)
  *  - 1時間20分以上       … 行動可   (unknown)
- *  - 最新状態が守備敗北  … 兵力減   (depleted)
+ *  - 守備敗北から40分未満 … 兵力減   (depleted)
+ *  - 守備敗北から40分以上 … 行動可   (unknown)
  *  - 行動時刻なし        … データなし (none)
  */
 export function getActionInfo(
@@ -132,10 +134,10 @@ export function getActionInfo(
     availability?.latestAttackAt,
     now
   );
-  const actionAt =
-    availability?.depletedByDefenseLoss && availability.defenseLossAt
-      ? availability.defenseLossAt
-      : latestActionAt;
+  // 守備敗北時刻が不明な兵力減を、古い出兵時刻から誤って回復させない。
+  const actionAt = availability?.depletedByDefenseLoss
+    ? availability.defenseLossAt
+    : latestActionAt;
   const d = parseActionDate(actionAt, now);
   if (!d)
     return {
@@ -149,9 +151,10 @@ export function getActionInfo(
     };
   const minutes = Math.max(0, Math.floor((now.getTime() - d.getTime()) / 60000));
   let status: ActionStatus;
-  if (availability?.depletedByDefenseLoss) status = "depleted";
-  else if (minutes < 40) status = "done";
-  else if (minutes < 80) status = "ready";
+  if (availability?.depletedByDefenseLoss) {
+    status = minutes < ACTION_DONE_MINUTES ? "depleted" : "unknown";
+  } else if (minutes < ACTION_DONE_MINUTES) status = "done";
+  else if (minutes < ACTION_READY_MINUTES) status = "ready";
   else status = "unknown";
   const noRestStreak = computeNoRestStreak(w, now);
   const strictStreak = computeStrictStreak(w, now);

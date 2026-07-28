@@ -23,6 +23,10 @@ const ACTION_TIME_YEAR_MINUTES = 12 * 32 * 24 * 60;
 
 export interface ActionAvailability {
   term: number;
+  /**
+   * 最新の出兵と守備敗北を比較した結果、守備敗北が優勢か。
+   * 表示上の40分経過による回復は getActionInfo で判定する。
+   */
   depletedByDefenseLoss: boolean;
   /** 通常戦・壁戦を合わせた最新の出兵時刻。 */
   latestAttackAt?: string;
@@ -144,13 +148,16 @@ function keepLatestAttack(
 }
 
 /**
- * 戦闘履歴から、人物ごとの現在の兵力減状態を導出する。
+ * 戦闘履歴から、人物ごとの兵力減判定に必要な最新イベントを導出する。
  *
  * - 守備敗北: 兵力減にする
  * - 後の出兵: 兵を再び用意した証拠として解除する
  * - 守備勝利・撤退・引分: 状態を変えない
  * - 新しい期: 前期の状態を持ち越さない
  * - 同時刻の出兵と守備敗北: 守備敗北を優先する
+ *
+ * UI上は守備敗北から40分経過すると行動可になる。時刻依存の表示判定は
+ * getActionInfo が担当し、ここでは最新イベントの前後関係だけを保持する。
  */
 export function buildActionAvailability(
   log: readonly BattleRecord[],

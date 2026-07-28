@@ -370,9 +370,10 @@ export function DamageTab({
         description={
           <>
             出兵・守備の観測時刻と勝敗から行動状況を判定します。
-            40分以内={ACTION_LABEL.done} / 40分〜1時間20分=
+            出兵後は40分未満={ACTION_LABEL.done} / 40分以上1時間20分未満=
             {ACTION_LABEL.ready} / 1時間20分以上={ACTION_LABEL.unknown}。
-            守備敗北後は、次の出兵が確認できるまで{ACTION_LABEL.depleted}です。
+            守備敗北後は40分未満={ACTION_LABEL.depleted} / 40分以上=
+            {ACTION_LABEL.unknown}です。
           </>
         }
       />
@@ -401,7 +402,7 @@ export function DamageTab({
           <li>
             <span className="status depleted">{ACTION_LABEL.depleted}</span>
             <span className="muted">
-              直近の出兵以降に守備で敗北しています。行動可の対象には含めません。
+              直近の守備敗北から40分未満です。40分経過後は行動可になります。
             </span>
           </li>
           <li>
