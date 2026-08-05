@@ -45,6 +45,12 @@ describe("splitBattleSegments", () => {
   it("空文字は空配列を返す", () => {
     expect(splitBattleSegments("   ")).toEqual([]);
   });
+
+  it("【壁戦】マーカーの直前でも分割する", () => {
+    const segs = splitBattleSegments("【1戦目】あ 【壁戦】い 【2戦目】う");
+    expect(segs).toHaveLength(3);
+    expect(segs[1].startsWith("【壁戦】")).toBe(true);
+  });
 });
 
 describe("extractBattleUrl", () => {
@@ -175,6 +181,36 @@ describe("parseBattleCard", () => {
     expect(card!.right.faction).toBe("武田");
     expect(card!.right.name).toBe("勝頼");
     expect(card!.winner).toBe("left");
+  });
+
+  it("「〇〇への遠征 海戦」のように都市欄が2トークンでも全体を都市として扱う", () => {
+    const line = LINE_PLAIN.replace("京都", "平戸への遠征 海戦");
+    const card = parseBattleCard(line);
+    expect(card).not.toBeNull();
+    expect(card!.place).toBe("平戸への遠征 海戦");
+    expect(card!.battleAt).toBe("1583年4月 04/10 10:23");
+  });
+
+  it("【壁戦】単独行も守備側（壁）を6項目として解析する", () => {
+    const line =
+      "【壁戦】\t1666年12月\t08/04 23:59\t平戸への遠征 海戦\tエロゲソング同好会 SINCLAIR キャラメルBOX 統特 モニター艦 特殊船 龍の護符 攻城櫓 V.S. ななせ国 平戸の守備隊 下級城壁兵 壁 なし なし\tSINCLAIRの勝利\t3ターンで終了";
+    const card = parseBattleCard(line);
+    expect(card).not.toBeNull();
+    expect(card!.battleNo).toBe("壁戦");
+    expect(card!.place).toBe("平戸への遠征 海戦");
+    expect(card!.turns).toBe("3");
+    expect(card!.left.name).toBe("SINCLAIR");
+    expect(card!.right).toMatchObject({
+      faction: "ななせ国",
+      name: "平戸の守備隊",
+      type: "下級城壁兵",
+      branch: "壁",
+      family: undefined,
+      unit: undefined,
+    });
+    expect(card!.winner).toBe("left");
+    expect(isSkewedSide(card!.left)).toBe(false);
+    expect(isSkewedSide(card!.right)).toBe(false);
   });
 
   it("守備側の勝利を判定する", () => {
@@ -454,6 +490,27 @@ describe("parseBattleEntriesChecked（項目の過不足の検出）", () => {
     );
     expect(entries).toHaveLength(0);
     expect(rejected).toHaveLength(0);
+  });
+
+  it("直前に【N戦目】が無い単独の【壁戦】も出兵側だけで取り込む（都市に空白を含む遠征先の海戦でも同様）", () => {
+    const line =
+      "【壁戦】\t1666年12月\t08/04 23:59\t平戸への遠征 海戦\tエロゲソング同好会 SINCLAIR キャラメルBOX 統特 モニター艦 特殊船 龍の護符 攻城櫓 V.S. ななせ国 平戸の守備隊 下級城壁兵 壁 なし なし\tSINCLAIRの勝利\t3ターンで終了";
+    const { entries, rejected } = parseBattleEntriesChecked(line);
+    expect(rejected).toHaveLength(0);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].warlords).toHaveLength(1);
+    expect(entries[0].warlords[0].name).toBe("SINCLAIR");
+    expect(entries[0].warlords[0].battleAt).toBe("1666年12月 08/04 23:59");
+    expect(entries[0].line).toContain("平戸への遠征 海戦");
+  });
+
+  it("通常戦に続けて連結された【壁戦】も、通常戦とは別のエントリとして取り込む", () => {
+    const text = `${LINE_PLAIN}\n${WALL_LOSS_LINE}`;
+    const { entries, rejected } = parseBattleEntriesChecked(text);
+    expect(rejected).toHaveLength(0);
+    expect(entries).toHaveLength(2);
+    expect(entries[0].warlords.map((w) => w.name)).toEqual(["信長", "勝頼"]);
+    expect(entries[1].warlords.map((w) => w.name)).toEqual(["風真いろは"]);
   });
 });
 
