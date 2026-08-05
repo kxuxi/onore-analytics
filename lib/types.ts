@@ -1,4 +1,4 @@
-export type TabKey = "home" | "history" | "scout" | "db" | "damage" | "units" | "weapons" | "items" | "nations" | "factions" | "unitrank" | "weaponrank" | "itemrank" | "synergy" | "matrix" | "metaenv" | "metrics";
+export type TabKey = "home" | "history" | "scout" | "db" | "damage" | "units" | "weapons" | "items" | "nations" | "factions" | "wiki" | "unitrank" | "weaponrank" | "itemrank" | "synergy" | "matrix" | "metaenv" | "metrics";
 
 export interface Warlord {
   /** 武将名（プライマリキー） */
@@ -89,4 +89,23 @@ export interface AuthUser {
   id: number;
   /** ログイン ID。 */
   username: string;
+}
+
+/** 管理者Wikiの一覧表示に必要な最小データ。 */
+export interface WikiPageSummary {
+  id: number;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 管理者Wikiの1ページ。本文はMarkdownとして保存する。 */
+export interface WikiPage extends WikiPageSummary {
+  content: string;
+}
+
+/** 管理者Wikiの作成・更新入力。 */
+export interface WikiPageInput {
+  title: string;
+  content: string;
 }

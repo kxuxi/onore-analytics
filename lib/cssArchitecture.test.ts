@@ -19,6 +19,7 @@ const STYLE_FILES = [
   "13-analytics.css",
   "14-system.css",
   "15-home.css",
+  "16-wiki.css",
 ] as const;
 
 const appDirectory = join(process.cwd(), "app");

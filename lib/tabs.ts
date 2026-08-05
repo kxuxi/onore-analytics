@@ -14,6 +14,7 @@ export type TabGroupKey =
   | "meta"
   | "encyclopedia"
   | "nations"
+  | "wiki"
   | "settings";
 
 /** タブ（リーフ）ごとの短いラベル。ページ内サブタブの見出し・タイトルに使う。 */
@@ -34,6 +35,7 @@ export const TAB_LABELS: Record<TabKey, string> = {
   weapons: "武器",
   items: "品物",
   nations: "国",
+  wiki: "管理Wiki",
   factions: "環境設定",
 };
 
@@ -60,6 +62,7 @@ export const TAB_GROUPS: TabGroup[] = [
   { key: "meta", label: "メタ分析", tabs: ["matrix", "metaenv", "synergy"] },
   { key: "encyclopedia", label: "図鑑", tabs: ["units", "weapons", "items"] },
   { key: "nations", label: "国", tabs: ["nations"] },
+  { key: "wiki", label: "管理Wiki", tabs: ["wiki"] },
   { key: "settings", label: "環境設定", tabs: ["factions"] },
 ];
 

@@ -2,13 +2,13 @@ import type { Warlord } from "./types";
 
 /**
  * テキストを 1 戦闘ごとのセグメントに分割する。
- * 区切りは「【N戦目】」マーカー。改行の有無に依存せず、マーカーの直前で
- * 分割するため、マークダウン形式で複数戦が 1 行に連結されていても対応できる。
+ * 区切りは「【N戦目】」「【壁戦】」マーカー。改行の有無に依存せず、マーカーの
+ * 直前で分割するため、マークダウン形式で複数戦が 1 行に連結されていても対応できる。
  */
 export function splitBattleSegments(text: string): string[] {
   return text
     .replace(/\r/g, "")
-    .split(/(?=【[^】]*戦目】)/)
+    .split(/(?=【(?:[^】]*戦目|壁戦)】)/)
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
 }
@@ -173,43 +173,52 @@ export interface WallAttackEvent extends WallAttackProfile {
 }
 
 /**
- * 通常戦の末尾へ連結保存される `【壁戦】` から、出兵した武将と時刻を取り出す。
+ * `【壁戦】` セグメント 1 件から出兵した武将と時刻を取り出す。
  *
- * 壁側は通常の武将より項目が2つ少ないため、通常戦用の parseBattleCard では
- * 解析できない。被弾表では勝敗にかかわらず出兵済みとして扱うため、必要な
- * 出兵側8項目と時刻だけを専用に読み取る。
+ * 壁側（守備側）は通常の武将より項目が2つ少ないため、通常戦用の
+ * parseBattleCard / parseBattleLine では解析できない。出兵側（攻撃側）は
+ * 通常の武将と同じ8項目を持つため、そこだけを専用に読み取る。
+ */
+function parseWallAttackSegment(segment: string): WallAttackEvent | null {
+  const { line: raw } = extractBattleUrl(segment);
+  const tokens = tokenizeBattleLine(raw);
+  const vsIndex = tokens.findIndex((token) => /^v\.?s\.?$/i.test(token));
+  if (vsIndex < 8) return null;
+
+  const attacker = sliceWarlord(tokens.slice(vsIndex - 8, vsIndex));
+  if (!attacker) return null;
+
+  const meta = tokens.slice(1, vsIndex - 8);
+  const { battleAt } = splitMeta(meta);
+  return {
+    name: attacker.name,
+    household: attacker.household,
+    faction: attacker.faction,
+    type: attacker.type,
+    branch: attacker.branch,
+    unit: attacker.unit,
+    battleAt: battleAt || undefined,
+    actionAt: extractActionTime(battleAt),
+  };
+}
+
+/**
+ * 通常戦の末尾へ連結保存される `【壁戦】`（複数可）から、出兵した武将と時刻を
+ * すべて取り出す。被弾表では勝敗にかかわらず出兵済みとして扱うため、壁側の
+ * 情報や勝敗が欠けていても出兵側だけで判定できるようにする。
  */
 export function parseWallAttackEvents(line: string): WallAttackEvent[] {
-  const events: WallAttackEvent[] = [];
   const segments = line
     .replace(/\r/g, "")
     .split(/(?=【(?:[^】]*戦目|壁戦)】)/)
     .map((segment) => segment.trim())
     .filter((segment) => segment.startsWith("【壁戦】"));
 
+  const events: WallAttackEvent[] = [];
   for (const segment of segments) {
-    const { line: raw } = extractBattleUrl(segment);
-    const tokens = tokenizeBattleLine(raw);
-    const vsIndex = tokens.findIndex((token) => /^v\.?s\.?$/i.test(token));
-    if (vsIndex < 8) continue;
-
-    const attacker = sliceWarlord(tokens.slice(vsIndex - 8, vsIndex));
-    if (!attacker) continue;
-
-    const meta = tokens.slice(1, vsIndex - 8);
-    const { battleAt } = splitMeta(meta);
-    events.push({
-      name: attacker.name,
-      household: attacker.household,
-      faction: attacker.faction,
-      type: attacker.type,
-      branch: attacker.branch,
-      unit: attacker.unit,
-      battleAt: battleAt || undefined,
-      actionAt: extractActionTime(battleAt),
-    });
+    const event = parseWallAttackSegment(segment);
+    if (event) events.push(event);
   }
-
   return events;
 }
 
@@ -235,8 +244,23 @@ function looksLikeDateTime(token: string): boolean {
  * リンクが失われると都市が勢力名に連結し、メタは [年月, 月日, 時刻] だけになる。
  * その場合に末尾の時刻を都市と誤認しないよう、末尾が日時要素なら都市なしとみなし
  * 全体を戦闘日時として扱う（行動時刻の抽出が効くようにする）。
+ *
+ * 遠征先での海戦（例: 「平戸への遠征 海戦」）は都市欄自体に空白を含み、
+ * 末尾 2 トークン（「〇〇への遠征」「海戦」）に分かれる。これを 1 トークン
+ * だけ都市として拾うと「への遠征」側が戦闘日時に混ざってしまうため、
+ * このパターンのみ末尾 2 トークンをまとめて都市として扱う。
  */
 function splitMeta(meta: string[]): { place?: string; battleAt: string } {
+  if (
+    meta.length > 2 &&
+    meta[meta.length - 1] === "海戦" &&
+    /への遠征$/.test(meta[meta.length - 2])
+  ) {
+    return {
+      place: meta.slice(-2).join(" "),
+      battleAt: meta.slice(0, -2).join(" "),
+    };
+  }
   if (meta.length > 1 && !looksLikeDateTime(meta[meta.length - 1])) {
     return { place: meta[meta.length - 1], battleAt: meta.slice(0, -1).join(" ") };
   }
@@ -318,14 +342,14 @@ export interface BattleParseResult {
   rejected: RejectedBattle[];
 }
 
-/** セグメントが戦闘エントリの体裁（【N戦目】で始まる）かどうか。 */
+/** セグメントが戦闘エントリの体裁（【N戦目】または【壁戦】で始まる）かどうか。 */
 function looksLikeBattleSegment(seg: string): boolean {
-  return /^【[^】]*戦目】/.test(seg.trim());
+  return /^【(?:[^】]*戦目|壁戦)】/.test(seg.trim());
 }
 
-/** 【N戦目】 から戦目番号（例: "1戦目"）を取り出す。 */
+/** 【N戦目】/【壁戦】 から戦目番号（例: "1戦目" / "壁戦"）を取り出す。 */
 function battleNoOf(seg: string): string | undefined {
-  const m = seg.trim().match(/^【([^】]*戦目)】/);
+  const m = seg.trim().match(/^【([^】]*(?:戦目|壁戦))】/);
   return m ? m[1] : undefined;
 }
 
@@ -346,7 +370,12 @@ function battleRejectReason(seg: string): string {
 
 /**
  * 複数行をパースし、取り込めた行と「項目の過不足で取り込めなかった行」を
- * 分けて返す。戦闘エントリの体裁（【N戦目】で始まる）でない断片は対象外。
+ * 分けて返す。戦闘エントリの体裁（【N戦目】/【壁戦】で始まる）でない断片は対象外。
+ *
+ * 【壁戦】は通常戦と違って守備側（壁）が8項目に満たないため、通常戦と同じ
+ * parseBattleLine では出兵側ごと弾かれてしまう。城への遠征などで【壁戦】が
+ * 直前の【N戦目】と連結せず単独のセグメントになった場合でも取りこぼさない
+ * よう、出兵側だけを読み取る専用ルートを使う。
  */
 export function parseBattleEntriesChecked(text: string): BattleParseResult {
   const entries: BattleEntry[] = [];
@@ -354,6 +383,33 @@ export function parseBattleEntriesChecked(text: string): BattleParseResult {
   for (const seg of splitBattleSegments(text)) {
     // 前置きのメモ等、戦闘エントリの体裁でない断片は検証対象にしない。
     if (!looksLikeBattleSegment(seg)) continue;
+
+    if (/^【壁戦】/.test(seg.trim())) {
+      const event = parseWallAttackSegment(seg);
+      if (!event) {
+        rejected.push({
+          segment: seg,
+          battleNo: battleNoOf(seg),
+          reason: battleRejectReason(seg),
+        });
+        continue;
+      }
+      const warlord: Warlord = {
+        name: event.name,
+        household: event.household,
+        faction: event.faction,
+        type: event.type,
+        branch: event.branch,
+        unit: event.unit,
+        battleAt: event.battleAt,
+        lastActionAt: event.actionAt,
+        actions: event.actionAt ? [event.actionAt] : undefined,
+        updatedAt: Date.now(),
+      };
+      entries.push({ line: seg, time: event.battleAt, warlords: [warlord] });
+      continue;
+    }
+
     const warlords = parseBattleLine(seg);
     if (warlords.length === 0) {
       // 戦闘の体裁だが出兵側／守備側の項目数が想定と合わない（過不足）。
@@ -421,8 +477,12 @@ export const KNOWN_BRANCHES = new Set([
  * type が既知タイプでない、または branch が既知兵種でない場合にずれと見なす。
  * オリジナル兵名や装備名にスペースが混じると項目が 1 つずれ、type に兵種名・
  * branch に装備名が入り込む（例: type="イェニチェリ" / branch="銀の腕輪"）。
+ *
+ * 壁（branch === "壁"）は【壁戦】の守備側で、type には「下級城壁兵」等の
+ * 城壁ランクが入り武将タイプとは別概念のため、type の既知チェックは対象外にする。
  */
 export function isSkewedSide(side: BattleSide): boolean {
+  if (side.branch === "壁") return false;
   return !KNOWN_WARLORD_TYPES.has(side.type) || !KNOWN_BRANCHES.has(side.branch);
 }
 
@@ -492,19 +552,42 @@ function sideFromBlock(block: string[]): BattleSide {
 }
 
 /**
+ * 【壁戦】の守備側（壁）ブロック用。壁は家名・兵種名を持たず、通常の武将より
+ * 項目が2つ少ない（[勢力名, 名前, タイプ, 兵種, 武将の持つ品物, 武将の持つ武器]）。
+ */
+function wallSideFromBlock(block: string[]): BattleSide {
+  const [faction, name, type, branch, e1, e2] = block;
+  const equip1 = cleanToken(e1);
+  const equip2 = cleanToken(e2);
+  return {
+    faction: cleanToken(faction),
+    name: name?.trim() ?? "",
+    family: undefined,
+    type: type?.trim() ?? "",
+    unit: undefined,
+    branch: branch?.trim() ?? "",
+    equips: [equip1, equip2].filter((e): e is string => !!e),
+    equip1,
+    equip2,
+  };
+}
+
+/**
  * 守備側ブロックの武将の持つ武器と勝敗が連結している場合（スマホ等でリンクが失われ
  * 「…武将の持つ武器◯◯の勝利」のように詰まったケース）に、既知の武将名を手掛かりに
  * 切り離す。連結が無ければ素直に従来通り（resultRaw=次トークン）を返す。
+ * blockSize は守備側ブロックの項目数（通常戦は8、壁戦は壁を表す6）。
  */
 function splitGluedResult(
   tokens: string[],
   vsIndex: number,
   leftName: string,
-  rightName: string
+  rightName: string,
+  blockSize: number = 8
 ): { rightBlock: string[]; resultRaw: string; turns?: string } {
-  const rightBlock = tokens.slice(vsIndex + 1, vsIndex + 9);
-  let resultRaw = tokens[vsIndex + 9] ?? "";
-  let turnsRaw = tokens[vsIndex + 10];
+  const rightBlock = tokens.slice(vsIndex + 1, vsIndex + 1 + blockSize);
+  let resultRaw = tokens[vsIndex + 1 + blockSize] ?? "";
+  let turnsRaw = tokens[vsIndex + 2 + blockSize];
 
   const equip2 = rightBlock[rightBlock.length - 1] ?? "";
   const suffixes = [
@@ -560,15 +643,20 @@ function computeBattleCard(line: string): BattleCard | null {
   if (!raw) return null;
 
   const tokens = tokenizeBattleLine(raw);
+  if (tokens.length === 0) return null;
 
-  if (tokens.length === 0 || !/^【.*戦目】/.test(tokens[0])) return null;
+  // 【壁戦】は守備側（壁）が通常の武将より2項目少ない
+  // （[勢力名, 名前, タイプ, 兵種, 武将の持つ品物, 武将の持つ武器]）。
+  const isWallBattle = /^【壁戦】/.test(tokens[0]);
+  if (!isWallBattle && !/^【.*戦目】/.test(tokens[0])) return null;
 
   const vsIndex = tokens.findIndex((t) => /^v\.?s\.?$/i.test(t));
   if (vsIndex < 8) return null;
-  if (tokens.length < vsIndex + 9) return null;
+  const rightBlockSize = isWallBattle ? 6 : 8;
+  if (tokens.length < vsIndex + 1 + rightBlockSize + 1) return null;
 
   const leftBlock = tokens.slice(vsIndex - 8, vsIndex);
-  const rightBlockRaw = tokens.slice(vsIndex + 1, vsIndex + 9);
+  const rightBlockRaw = tokens.slice(vsIndex + 1, vsIndex + 1 + rightBlockSize);
   const leftName = leftBlock[1]?.trim() ?? "";
   const rightName = rightBlockRaw[1]?.trim() ?? "";
   // 守備側の武将の持つ武器に勝敗が連結している場合は切り離す（スマホ貼り付け対策）。
@@ -576,11 +664,12 @@ function computeBattleCard(line: string): BattleCard | null {
     tokens,
     vsIndex,
     leftName,
-    rightName
+    rightName,
+    rightBlockSize
   );
 
   const left = sideFromBlock(leftBlock);
-  const right = sideFromBlock(rightBlock);
+  const right = isWallBattle ? wallSideFromBlock(rightBlock) : sideFromBlock(rightBlock);
   if (!left.name || !right.name) return null;
 
   // 先頭【N戦目】〜出兵側ブロックの間が [年月, 月日, 時刻, 都市]。

@@ -16,6 +16,7 @@ Next.js + TypeScript 製の、ゲーム「己鯖」用の武将データベー�
 - **兵種図鑑タブ**: 兵種マスタ（攻撃・防御・コスト・特殊攻撃など）の閲覧・追加・編集
 - **武器図鑑タブ**: 戦闘履歴の武将の持つ武器から使用回数・勝率・主な使用武将を集計表示
 - **品物図鑑タブ**: 戦闘履歴の武将の持つ品物から使用回数・勝率・主な使用武将を集計表示
+- **管理Wikiタブ**: 管理者向けの運用手順・判断基準を複数ページのMarkdownで作成・編集。「都市の計算式」を初期ページとして用意し、編集 / プレビュー / 分割表示、タイトル検索、未保存変更の警告、同時更新の競合検知、`Cmd`/`Ctrl` + `S` での保存に対応。閲覧を含む全操作を管理者だけに限定
 - **環境設定タブ**: 画面テーマ（自動 / ライト / ダーク）と、勢力ごとの表示色（共有DBに保存）を設定。管理者はデータ整理（ずれデータの掃除・国単位の削除）や過去ログ記録モードも利用できます
 - **武将ページ / 兵種ページ**: 一覧や戦闘カード内の武将名・兵種名をクリックすると、戦闘数・勝率・対戦ログを表示する詳細ページへ。相互リンクと「戻る」スタックで自然に行き来できます
 - **共有リンク / DB更新**: 表示中のタブ・詳細ページは URL に反映され、ヘッダーや詳細ページの「共有 / リンクをコピー」ボタン、再読込でそのまま復元できます。ロゴ（ONORE ANALYTICS）クリックでホームへ戻り、ヘッダーの「更新」ボタンで共有DBを手動再取得できます
@@ -23,7 +24,7 @@ Next.js + TypeScript 製の、ゲーム「己鯖」用の武将データベー�
 - **アクセシビリティ**: 本文へのスキップリンク、キーボードフォーカスの可視化、エラー通知の読み上げ（assertive）、長い一覧では「先頭へ戻る」ボタンを表示
 - **管理者ログイン**: データの登録・編集は管理者のみが行えます（ヘッダーの「ログイン」から `/login` へ）。未ログインでも **ホーム・戦闘履歴・ランキング（指標を含む）・メタ分析・各種図鑑（兵種 / 武器 / 品物）・国** は閲覧できます。武将ページの一言コメント欄はログイン中のみ表示されます
 
-武将DB・戦闘履歴・国カラー設定はサーバー（Prisma + PostgreSQL）に保存され、複数の端末・ブラウザで共有されます。
+武将DB・戦闘履歴・国カラー設定・管理Wikiはサーバー（Prisma + PostgreSQL）に保存され、複数の端末・ブラウザで共有されます。
 
 ## ローカルで動かす
 
@@ -112,15 +113,17 @@ Next.js + TypeScript 製の、ゲーム「己鯖」用の武将データベー�
 - `GET/PUT /api/faction-colors` — 国カラー設定の取得・保存（全ユーザー共有）
 - `DELETE /api/battle-records/[id]` / `POST /api/battle-records/bulk-delete` — 戦闘履歴の個別・一括削除
 - `DELETE /api/battle-records/by-faction/[faction]` / `DELETE /api/battle-records/cleanup-skewed` — 国単位の削除・ずれデータの整理
+- `GET/POST /api/wiki-pages` / `GET/PUT/DELETE /api/wiki-pages/[id]` — 管理Wikiの一覧・作成・閲覧・更新・削除（すべて管理者専用）
 - `POST /api/auth/login` / `POST /api/auth/logout` / `GET /api/auth/me` — 管理者のログイン・ログアウト・ログイン状態の確認
 
-> データを変更する API（`POST /api/state`、`POST /api/unit-types`、`DELETE /api/unit-types/[name]`、`POST /api/warlord-stats`）は管理者のみが実行できます（未ログインは `401`）。閲覧用の `GET` は誰でも利用できます。
+> データを変更する API（`POST /api/state`、`POST /api/unit-types`、`DELETE /api/unit-types/[name]`、`POST /api/warlord-stats`）は管理者のみが実行できます（未ログインは `401`）。通常の閲覧用 `GET` は公開していますが、管理Wikiは内容自体が管理者向けのため、`GET` を含む全APIを認証必須にしています。
 
 主なテーブル（`prisma/schema.prisma`）:
 
 - `Warlord` — 武将（名前・勢力・タイプ・兵種タイプ・兵種名・行動履歴など）
 - `BattleRecord` — 戦闘履歴（`line` が重複排除キー、`raw` が表示・再解析用の元テキスト）
 - `UnitType` — 兵種マスタ（攻撃・防御・コスト・特殊攻撃など）
+- `WikiPage` — 管理者Wiki（タイトル・Markdown本文・作成日時・更新日時）
 - `User` — 管理者ユーザー（ユーザー名・パスワードハッシュ）。`npm run create-admin` で作成
 
 ## 技術スタック
@@ -129,6 +132,7 @@ Next.js + TypeScript 製の、ゲーム「己鯖」用の武将データベー�
 - React 18
 - TypeScript 5
 - Prisma 6 / PostgreSQL
+- react-markdown / remark-gfm（管理Wikiの安全なMarkdownプレビュー）
 - turndown（戦闘ログ HTML の Markdown 変換）
 - dotenv・tsx（Prisma 設定・シード実行用）
 - 認証は Node 標準の `node:crypto`（scrypt によるパスワードハッシュ・HMAC 署名付きセッション Cookie）で実装（追加ライブラリなし）
