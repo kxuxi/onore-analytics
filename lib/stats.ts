@@ -2,6 +2,7 @@ import {
   parseBattleCard,
   normalizeDisplayToken,
   battleKey,
+  isWallSide,
   type BattleCard,
   type BattleSide,
   type BattleWinner,
@@ -1663,6 +1664,7 @@ function computeSideSwi(
   for (const { record, card } of dedupedCards(log)) {
     if (!withinYearRange(card, range)) continue;
     const self = side === "left" ? card.left : card.right;
+    if (isWallSide(self)) continue;
     if (!sideMatchesFaction(self, faction)) continue;
     const rawName = self.name?.trim();
     if (!rawName) continue;
@@ -2195,6 +2197,7 @@ function computeAssists(
 
     const winnerSide = card.winner === "left" ? card.left : card.right;
     const loserSide = card.winner === "left" ? card.right : card.left;
+    if (isWallSide(winnerSide) || isWallSide(loserSide)) continue;
     const winnerName = resolveLogName(
       nameMap,
       record.term,
@@ -2265,13 +2268,13 @@ function computeRoundWinRates(
     if (card.winner !== "left" && card.winner !== "right") continue;
     const leftName = resolveLogName(nameMap, record.term, card.left.family, card.left.name);
     const rightName = resolveLogName(nameMap, record.term, card.right.family, card.right.name);
-    if (leftName && sideMatchesFaction(card.left, faction)) {
+    if (leftName && !isWallSide(card.left) && sideMatchesFaction(card.left, faction)) {
       const cur = out.get(leftName) ?? { attackWins: 0, attackRounds: 0, defenseWins: 0, defenseRounds: 0 };
       cur.attackRounds += 1;
       if (card.winner === "left") cur.attackWins += 1;
       out.set(leftName, cur);
     }
-    if (rightName && sideMatchesFaction(card.right, faction)) {
+    if (rightName && !isWallSide(card.right) && sideMatchesFaction(card.right, faction)) {
       const cur = out.get(rightName) ?? { attackWins: 0, attackRounds: 0, defenseWins: 0, defenseRounds: 0 };
       cur.defenseRounds += 1;
       if (card.winner === "right") cur.defenseWins += 1;
@@ -2300,6 +2303,7 @@ function computeEfficiency(
   for (const { record, card } of dedupedCards(log)) {
     if (!withinYearRange(card, range)) continue;
     const self = side === "left" ? card.left : card.right;
+    if (isWallSide(self)) continue;
     if (!sideMatchesFaction(self, faction)) continue;
     const rawName = self.name?.trim();
     if (!rawName) continue;

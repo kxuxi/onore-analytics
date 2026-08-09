@@ -986,6 +986,29 @@ describe("アシスト（warlordRanking）", () => {
   });
 });
 
+describe("warlordRanking は【壁戦】の守備側（壁）を武将として集計しない", () => {
+  it("壁を攻撃して勝った場合、守備隊はランキングに出ず出兵側だけ集計される", () => {
+    const line =
+      "【壁戦】 1666年12月 08/04 23:59 平戸への遠征 海戦 エロゲソング同好会 SINCLAIR キャラメルBOX 統特 モニター艦 特殊船 龍の護符 攻城櫓 V.S. ななせ国 平戸の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
+    const ranking = warlordRanking([rec(line, 1)]);
+    expect(ranking.some((r) => r.name === "平戸の守備隊")).toBe(false);
+    const sinclair = ranking.find((r) => r.name === "SINCLAIR");
+    expect(sinclair?.attackSorties).toBe(1);
+    expect(sinclair?.attackWins).toBe(1);
+  });
+
+  it("壁が守備に成功した（守備隊の勝利）場合も守備隊はランキングに出ない", () => {
+    const line =
+      "【壁戦】 1606年4月 07/25 21:03 久留米 ななせ国 風真いろは 風真いろは家 統特 剣兵 歩兵 銀の護符 ピコピコハンマー V.S. 己鯖冷笑プレイヤー族 久留米の守備隊 精鋭城壁兵 壁 なし なし 久留米の守備隊の勝利 6";
+    const ranking = warlordRanking([rec(line, 1)]);
+    expect(ranking.some((r) => r.name === "久留米の守備隊")).toBe(false);
+    // 出兵側（攻撃して敗れた側）は守備効率・勝率の計算対象として残る。
+    const kazama = ranking.find((r) => r.name === "風真いろは");
+    expect(kazama?.attackSorties).toBe(1);
+    expect(kazama?.attackWins).toBe(0);
+  });
+});
+
 describe("weaponStats / itemStats", () => {
   // 防衛側 勝頼: 武将の持つ品物=金の兜(品物) 武将の持つ武器=カルバリン砲(武器)。
   function equipLine(time: string, result: string): string {

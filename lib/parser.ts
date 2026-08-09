@@ -459,6 +459,14 @@ export interface BattleSide {
   equip2?: string;
 }
 
+/**
+ * 【壁戦】の守備側（壁）かどうか。壁は国を守るNPC的な城壁で、プレイヤーの
+ * 武将ではないため、武将単位の集計（ランキング等）からは除外する対象。
+ */
+export function isWallSide(side: BattleSide): boolean {
+  return side.branch === "壁";
+}
+
 /** 既知の武将タイプ。これ以外が type に入っていたらトークンずれの疑い。 */
 export const KNOWN_WARLORD_TYPES = new Set([
   "武特", "知特", "統特",
@@ -478,11 +486,11 @@ export const KNOWN_BRANCHES = new Set([
  * オリジナル兵名や装備名にスペースが混じると項目が 1 つずれ、type に兵種名・
  * branch に装備名が入り込む（例: type="イェニチェリ" / branch="銀の腕輪"）。
  *
- * 壁（branch === "壁"）は【壁戦】の守備側で、type には「下級城壁兵」等の
+ * 壁（isWallSide）は【壁戦】の守備側で、type には「下級城壁兵」等の
  * 城壁ランクが入り武将タイプとは別概念のため、type の既知チェックは対象外にする。
  */
 export function isSkewedSide(side: BattleSide): boolean {
-  if (side.branch === "壁") return false;
+  if (isWallSide(side)) return false;
   return !KNOWN_WARLORD_TYPES.has(side.type) || !KNOWN_BRANCHES.has(side.branch);
 }
 
