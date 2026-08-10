@@ -2,12 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, RefObject } from "react";
-import {
-  ActivityIcon,
-  HistoryIcon,
-  TargetIcon,
-  TrophyIcon,
-} from "@/components/icons";
+import { HistoryIcon, TrophyIcon } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
 import { moveHomeSuggestionIndex } from "./homeSearch";
 
@@ -210,12 +205,9 @@ export function HomeActivation({
       <div className="home-activation">
         <div className="home-activation-hero">
           <div className="home-activation-intro">
-            <p className="section-title">あなたの戦績ダッシュボード</p>
-            <h2 className="home-activation-title">
-              自分の武将から、戦いの傾向をつかむ
-            </h2>
+            <p className="section-title">ダッシュボード</p>
             <p className="home-activation-description muted">
-              武将を選ぶと、通算成績・年別の勝敗・最近の戦闘を、このホームですぐ確認できます。
+              武将を選ぶと、ここで確認できます。
             </p>
           </div>
 
@@ -236,44 +228,6 @@ export function HomeActivation({
             </p>
           </div>
         </div>
-
-        <section
-          className="home-capabilities"
-          aria-labelledby="home-capabilities-title"
-        >
-          <h3 id="home-capabilities-title" className="section-title">
-            選ぶと確認できること
-          </h3>
-          <ul className="home-capability-grid">
-            <li className="home-capability-item">
-              <span className="home-capability-icon">
-                <TargetIcon />
-              </span>
-              <span>
-                <strong>通算成績</strong>
-                <span>勝率・勝敗・総戦闘数をひと目で</span>
-              </span>
-            </li>
-            <li className="home-capability-item">
-              <span className="home-capability-icon">
-                <ActivityIcon />
-              </span>
-              <span>
-                <strong>年別の推移</strong>
-                <span>勝利数・敗北数の変化を比較</span>
-              </span>
-            </li>
-            <li className="home-capability-item">
-              <span className="home-capability-icon">
-                <HistoryIcon />
-              </span>
-              <span>
-                <strong>最近の戦闘</strong>
-                <span>相手・兵種・結果を直近5戦まで</span>
-              </span>
-            </li>
-          </ul>
-        </section>
 
         {hasExploreActions && (
           <div className="home-explore">
