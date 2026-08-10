@@ -2,7 +2,7 @@ import {
   parseBattleCard,
   normalizeDisplayToken,
   battleKey,
-  isWallSide,
+  isWallBattle,
   type BattleCard,
   type BattleSide,
   type BattleWinner,
@@ -180,8 +180,8 @@ export function collectWarlordBattles(
   const target = name.trim();
   const out: BattleOutcome[] = [];
   for (const { record, card } of dedupedCards(log)) {
-    // 壁戦（対戦相手が壁）は個人の勝敗・対戦相手集計に含めない。
-    if (isWallSide(card.left) || isWallSide(card.right)) continue;
+    // 【壁戦】は個人の勝敗・対戦相手集計に含めない。
+    if (isWallBattle(card)) continue;
     // (term, 家名) で名寄せした代表名が対象と一致する側を集める。
     // 通常は左右どちらか一方のみ一致する。両方一致した場合は左を優先。
     if (
@@ -243,8 +243,10 @@ export function warlordNamesInLog(
   for (const record of log) {
     const card = parseBattleCard(record.line);
     if (!card) continue;
-    for (const side of [card.left, card.right]) {
-      if (isWallSide(side)) continue;
+    // 【壁戦】の守備側（NPCの守備隊）だけ除外する。出兵側（実在武将）は候補に残す。
+    const wall = isWallBattle(card);
+    const sides = wall ? [card.left] : [card.left, card.right];
+    for (const side of sides) {
       const raw = side.name?.trim();
       if (!raw) continue;
       names.add(resolveLogName(nameMap, record.term, side.family, raw));
@@ -1213,23 +1215,23 @@ export function factionMemberStats(
   const target = faction.trim();
   const cards = dedupedCards(log);
 
-  // 1. この国で 1 度でも戦ったことのある武将名を集める。
+  // 1. この国で 1 度でも戦ったことのある武将名を集める（【壁戦】の守備側=NPCは除く）。
   const participants = new Set<string>();
   for (const { card } of cards) {
-    if (!isWallSide(card.left) && card.left.faction?.trim() === target && card.left.name?.trim())
+    if (card.left.faction?.trim() === target && card.left.name?.trim())
       participants.add(card.left.name.trim());
-    if (!isWallSide(card.right) && card.right.faction?.trim() === target && card.right.name?.trim())
+    if (!isWallBattle(card) && card.right.faction?.trim() === target && card.right.name?.trim())
       participants.add(card.right.name.trim());
   }
   if (participants.size === 0) return [];
 
   // 2. 参加武将の全戦闘履歴を集める（所属の変化を追うため他国での戦いも含む）。
+  // 【壁戦】は個人の勝敗に含めない。
   const history = new Map<string, BattleOutcome[]>();
   for (const { record, card } of cards) {
+    if (isWallBattle(card)) continue;
     for (const side of ["left", "right"] as SideKey[]) {
       const s = side === "left" ? card.left : card.right;
-      const opponent = side === "left" ? card.right : card.left;
-      if (isWallSide(opponent)) continue;
       const name = s.name?.trim();
       if (!name || !participants.has(name)) continue;
       const arr = history.get(name) ?? [];
@@ -1669,8 +1671,7 @@ function computeSideSwi(
   for (const { record, card } of dedupedCards(log)) {
     if (!withinYearRange(card, range)) continue;
     const self = side === "left" ? card.left : card.right;
-    const opponent = side === "left" ? card.right : card.left;
-    if (isWallSide(self) || isWallSide(opponent)) continue;
+    if (isWallBattle(card)) continue;
     if (!sideMatchesFaction(self, faction)) continue;
     const rawName = self.name?.trim();
     if (!rawName) continue;
@@ -1840,9 +1841,10 @@ export function pontaPointRanking(
   };
   for (const { record, card } of dedupedCards(log)) {
     if (!withinYearRange(card, range)) continue;
+    if (isWallBattle(card)) continue;
     const w = card.winner;
     if (w !== "left" && w !== "right") continue; // 撤退・引分・不明を除く（勝敗が付いた戦闘）のみ
-    const ln = !isWallSide(card.left) && !isWallSide(card.right) && sideMatchesFaction(card.left, faction)
+    const ln = sideMatchesFaction(card.left, faction)
       ? resolve(card.left, record.term)
       : undefined;
     if (ln) {
@@ -1850,7 +1852,7 @@ export function pontaPointRanking(
       if (w === "left") e.attackWins++;
       else e.losses++;
     }
-    const rn = !isWallSide(card.right) && sideMatchesFaction(card.right, faction)
+    const rn = sideMatchesFaction(card.right, faction)
       ? resolve(card.right, record.term)
       : undefined;
     if (rn) {
@@ -2198,12 +2200,12 @@ function computeAssists(
 
   for (const { record, card } of cards) {
     if (card.winner !== "left" && card.winner !== "right") continue;
+    if (isWallBattle(card)) continue;
     const t = getTime(card.battleAt);
     if (t === null) continue;
 
     const winnerSide = card.winner === "left" ? card.left : card.right;
     const loserSide = card.winner === "left" ? card.right : card.left;
-    if (isWallSide(winnerSide) || isWallSide(loserSide)) continue;
     const winnerName = resolveLogName(
       nameMap,
       record.term,
@@ -2272,15 +2274,16 @@ function computeRoundWinRates(
   for (const { record, card } of dedupedCards(log)) {
     if (!withinYearRange(card, range)) continue;
     if (card.winner !== "left" && card.winner !== "right") continue;
+    if (isWallBattle(card)) continue;
     const leftName = resolveLogName(nameMap, record.term, card.left.family, card.left.name);
     const rightName = resolveLogName(nameMap, record.term, card.right.family, card.right.name);
-    if (leftName && !isWallSide(card.left) && !isWallSide(card.right) && sideMatchesFaction(card.left, faction)) {
+    if (leftName && sideMatchesFaction(card.left, faction)) {
       const cur = out.get(leftName) ?? { attackWins: 0, attackRounds: 0, defenseWins: 0, defenseRounds: 0 };
       cur.attackRounds += 1;
       if (card.winner === "left") cur.attackWins += 1;
       out.set(leftName, cur);
     }
-    if (rightName && !isWallSide(card.right) && sideMatchesFaction(card.right, faction)) {
+    if (rightName && sideMatchesFaction(card.right, faction)) {
       const cur = out.get(rightName) ?? { attackWins: 0, attackRounds: 0, defenseWins: 0, defenseRounds: 0 };
       cur.defenseRounds += 1;
       if (card.winner === "right") cur.defenseWins += 1;
@@ -2309,8 +2312,7 @@ function computeEfficiency(
   for (const { record, card } of dedupedCards(log)) {
     if (!withinYearRange(card, range)) continue;
     const self = side === "left" ? card.left : card.right;
-    const opponent = side === "left" ? card.right : card.left;
-    if (isWallSide(self) || isWallSide(opponent)) continue;
+    if (isWallBattle(card)) continue;
     if (!sideMatchesFaction(self, faction)) continue;
     const rawName = self.name?.trim();
     if (!rawName) continue;

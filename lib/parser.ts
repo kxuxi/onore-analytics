@@ -462,9 +462,24 @@ export interface BattleSide {
 /**
  * 【壁戦】の守備側（壁）かどうか。壁は国を守るNPC的な城壁で、プレイヤーの
  * 武将ではないため、武将単位の集計（ランキング等）からは除外する対象。
+ *
+ * 注意: branch === "壁" だけでは判定できない。「ぬりかべ」等、branch が
+ * "壁" になる実在武将の兵種も存在するため、片側だけでは NPC の壁か実在
+ * 武将かを区別できない。武将単位の集計から除外したい場合は、カード全体が
+ * 【壁戦】かどうかを見る `isWallBattle` を使うこと。
  */
 export function isWallSide(side: BattleSide): boolean {
   return side.branch === "壁";
+}
+
+/**
+ * カード全体が【壁戦】（国の城壁への攻撃）かどうか。
+ * 【壁戦】は守備側が常にNPCの守備隊であり、実在武将同士の通常戦とは
+ * 区別できる唯一の確実な手掛かりが battleNo（"壁戦"）そのもの。
+ * 武将個人の勝敗集計からはこの単位で除外する。
+ */
+export function isWallBattle(card: BattleCard): boolean {
+  return card.battleNo === "壁戦";
 }
 
 /** 既知の武将タイプ。これ以外が type に入っていたらトークンずれの疑い。 */
