@@ -180,6 +180,8 @@ export function collectWarlordBattles(
   const target = name.trim();
   const out: BattleOutcome[] = [];
   for (const { record, card } of dedupedCards(log)) {
+    // 壁戦（対戦相手が壁）は個人の勝敗・対戦相手集計に含めない。
+    if (isWallSide(card.left) || isWallSide(card.right)) continue;
     // (term, 家名) で名寄せした代表名が対象と一致する側を集める。
     // 通常は左右どちらか一方のみ一致する。両方一致した場合は左を優先。
     if (
@@ -1226,6 +1228,8 @@ export function factionMemberStats(
   for (const { record, card } of cards) {
     for (const side of ["left", "right"] as SideKey[]) {
       const s = side === "left" ? card.left : card.right;
+      const opponent = side === "left" ? card.right : card.left;
+      if (isWallSide(opponent)) continue;
       const name = s.name?.trim();
       if (!name || !participants.has(name)) continue;
       const arr = history.get(name) ?? [];
@@ -1665,7 +1669,8 @@ function computeSideSwi(
   for (const { record, card } of dedupedCards(log)) {
     if (!withinYearRange(card, range)) continue;
     const self = side === "left" ? card.left : card.right;
-    if (isWallSide(self)) continue;
+    const opponent = side === "left" ? card.right : card.left;
+    if (isWallSide(self) || isWallSide(opponent)) continue;
     if (!sideMatchesFaction(self, faction)) continue;
     const rawName = self.name?.trim();
     if (!rawName) continue;
@@ -1837,7 +1842,7 @@ export function pontaPointRanking(
     if (!withinYearRange(card, range)) continue;
     const w = card.winner;
     if (w !== "left" && w !== "right") continue; // 撤退・引分・不明を除く（勝敗が付いた戦闘）のみ
-    const ln = !isWallSide(card.left) && sideMatchesFaction(card.left, faction)
+    const ln = !isWallSide(card.left) && !isWallSide(card.right) && sideMatchesFaction(card.left, faction)
       ? resolve(card.left, record.term)
       : undefined;
     if (ln) {
@@ -2269,7 +2274,7 @@ function computeRoundWinRates(
     if (card.winner !== "left" && card.winner !== "right") continue;
     const leftName = resolveLogName(nameMap, record.term, card.left.family, card.left.name);
     const rightName = resolveLogName(nameMap, record.term, card.right.family, card.right.name);
-    if (leftName && !isWallSide(card.left) && sideMatchesFaction(card.left, faction)) {
+    if (leftName && !isWallSide(card.left) && !isWallSide(card.right) && sideMatchesFaction(card.left, faction)) {
       const cur = out.get(leftName) ?? { attackWins: 0, attackRounds: 0, defenseWins: 0, defenseRounds: 0 };
       cur.attackRounds += 1;
       if (card.winner === "left") cur.attackWins += 1;
@@ -2304,7 +2309,8 @@ function computeEfficiency(
   for (const { record, card } of dedupedCards(log)) {
     if (!withinYearRange(card, range)) continue;
     const self = side === "left" ? card.left : card.right;
-    if (isWallSide(self)) continue;
+    const opponent = side === "left" ? card.right : card.left;
+    if (isWallSide(self) || isWallSide(opponent)) continue;
     if (!sideMatchesFaction(self, faction)) continue;
     const rawName = self.name?.trim();
     if (!rawName) continue;

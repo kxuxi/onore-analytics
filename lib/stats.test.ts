@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   collectWarlordBattles,
   collectUnitBattles,
+  summarize,
   opponentStats,
   matchupRanking,
   branchStats,
@@ -187,6 +188,22 @@ describe("opponentStats / matchupRanking / rivalry", () => {
     // 五分(C)はどちらにも出ない
     expect(bestNames).not.toContain("C五分");
     expect(worstNames).not.toContain("C五分");
+  });
+
+  it("collectWarlordBattles は壁戦（対戦相手が壁）を本人の対戦履歴・勝敗から除外する", () => {
+    const wallLine =
+      "【壁戦】 1666年12月 08/04 23:59 平戸への遠征 海戦 エロゲソング同好会 SINCLAIR キャラメルBOX 統特 モニター艦 特殊船 龍の護符 攻城櫓 V.S. ななせ国 平戸の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
+    const normalLine =
+      "【1戦目】 1666年12月 08/05 10:00 熊本 エロゲソング同好会 SINCLAIR キャラメルBOX 統特 モニター艦 特殊船 龍の護符 攻城櫓 V.S. ななせ国 丸星ラーメン 節ちゃんラーメン家 政治家 マッチ押し売りの少女 妖怪 マッチ押し売りの少女(ポスター) カルバリン砲 SINCLAIRの勝利 5";
+    const outcomes = collectWarlordBattles(
+      [rec(wallLine, 1), rec(normalLine, 2)],
+      "SINCLAIR"
+    );
+    expect(outcomes).toHaveLength(1);
+    expect(outcomes[0].opponent.name).toBe("丸星ラーメン");
+    const stat = summarize(outcomes);
+    expect(stat.battles).toBe(1);
+    expect(stat.wins).toBe(1);
   });
 });
 
@@ -445,6 +462,13 @@ describe("factionMemberStats", () => {
       "【壁戦】 1666年12月 08/04 23:59 熊本 エロゲソング同好会 SINCLAIR キャラメルBOX 統特 モニター艦 特殊船 龍の護符 攻城櫓 V.S. ななせ国 熊本の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
     const stats = factionMemberStats([rec(wallLine, 1)], "ななせ国");
     expect(stats.some((s) => s.name === "熊本の守備隊")).toBe(false);
+  });
+
+  it("壁を攻めた側の勝敗も所属国の武将一覧に含めない", () => {
+    const wallLine =
+      "【壁戦】 1666年12月 08/04 23:59 熊本 エロゲソング同好会 SINCLAIR キャラメルBOX 統特 モニター艦 特殊船 龍の護符 攻城櫓 V.S. ななせ国 熊本の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
+    const stats = factionMemberStats([rec(wallLine, 1)], "エロゲソング同好会");
+    expect(stats.some((s) => s.name === "SINCLAIR")).toBe(false);
   });
 });
 
@@ -1004,26 +1028,33 @@ describe("アシスト（warlordRanking）", () => {
   });
 });
 
-describe("warlordRanking は【壁戦】の守備側（壁）を武将として集計しない", () => {
-  it("壁を攻撃して勝った場合、守備隊はランキングに出ず出兵側だけ集計される", () => {
+describe("warlordRanking は【壁戦】（対戦相手が壁）を勝敗集計から除外する", () => {
+  it("壁を攻撃して勝った場合、守備隊も出兵側もランキングに出ない", () => {
     const line =
       "【壁戦】 1666年12月 08/04 23:59 平戸への遠征 海戦 エロゲソング同好会 SINCLAIR キャラメルBOX 統特 モニター艦 特殊船 龍の護符 攻城櫓 V.S. ななせ国 平戸の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
     const ranking = warlordRanking([rec(line, 1)]);
     expect(ranking.some((r) => r.name === "平戸の守備隊")).toBe(false);
-    const sinclair = ranking.find((r) => r.name === "SINCLAIR");
-    expect(sinclair?.attackSorties).toBe(1);
-    expect(sinclair?.attackWins).toBe(1);
+    // 壁との戦闘は本人の勝敗にも含めない（壁戦単独行のためエントリ自体が無い）。
+    expect(ranking.some((r) => r.name === "SINCLAIR")).toBe(false);
   });
 
-  it("壁が守備に成功した（守備隊の勝利）場合も守備隊はランキングに出ない", () => {
+  it("壁が守備に成功した（守備隊の勝利）場合も、守備隊・出兵側ともにランキングに出ない", () => {
     const line =
       "【壁戦】 1606年4月 07/25 21:03 久留米 ななせ国 風真いろは 風真いろは家 統特 剣兵 歩兵 銀の護符 ピコピコハンマー V.S. 己鯖冷笑プレイヤー族 久留米の守備隊 精鋭城壁兵 壁 なし なし 久留米の守備隊の勝利 6";
     const ranking = warlordRanking([rec(line, 1)]);
     expect(ranking.some((r) => r.name === "久留米の守備隊")).toBe(false);
-    // 出兵側（攻撃して敗れた側）は守備効率・勝率の計算対象として残る。
-    const kazama = ranking.find((r) => r.name === "風真いろは");
-    expect(kazama?.attackSorties).toBe(1);
-    expect(kazama?.attackWins).toBe(0);
+    expect(ranking.some((r) => r.name === "風真いろは")).toBe(false);
+  });
+
+  it("同じ武将が壁戦と通常戦の両方に出ていれば、通常戦だけが集計される", () => {
+    const wallLine =
+      "【壁戦】 1666年12月 08/04 23:59 平戸への遠征 海戦 エロゲソング同好会 SINCLAIR キャラメルBOX 統特 モニター艦 特殊船 龍の護符 攻城櫓 V.S. ななせ国 平戸の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
+    const normalLine =
+      "【1戦目】 1666年12月 08/05 10:00 熊本 エロゲソング同好会 SINCLAIR キャラメルBOX 統特 モニター艦 特殊船 龍の護符 攻城櫓 V.S. ななせ国 丸星ラーメン 節ちゃんラーメン家 政治家 マッチ押し売りの少女 妖怪 マッチ押し売りの少女(ポスター) カルバリン砲 SINCLAIRの勝利 5";
+    const ranking = warlordRanking([rec(wallLine, 1), rec(normalLine, 2)]);
+    const sinclair = ranking.find((r) => r.name === "SINCLAIR");
+    expect(sinclair?.attackSorties).toBe(1);
+    expect(sinclair?.attackWins).toBe(1);
   });
 });
 
@@ -1984,7 +2015,7 @@ describe("pontaPointRanking（PontaPoint）", () => {
     expect(ponta.pontaPoint).toBeCloseTo(0.8);
   });
 
-  it("壁を攻略した／壁が守り切った【壁戦】では守備隊をランキング対象にしない", () => {
+  it("壁を攻略した／壁が守り切った【壁戦】は守備隊・出兵側ともにランキング対象にしない", () => {
     const breached =
       "【壁戦】 1666年12月 08/04 23:59 熊本 エロゲソング同好会 SINCLAIR キャラメルBOX 統特 モニター艦 特殊船 龍の護符 攻城櫓 V.S. ななせ国 熊本の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
     const held =
@@ -1992,7 +2023,8 @@ describe("pontaPointRanking（PontaPoint）", () => {
     const ranking = pontaPointRanking([rec(breached, 1), rec(held, 2)]);
     expect(ranking.some((r) => r.name === "熊本の守備隊")).toBe(false);
     expect(ranking.some((r) => r.name === "久留米の守備隊")).toBe(false);
-    expect(ranking.find((r) => r.name === "SINCLAIR")?.attackWins).toBe(1);
+    expect(ranking.some((r) => r.name === "SINCLAIR")).toBe(false);
+    expect(ranking.some((r) => r.name === "風真いろは")).toBe(false);
   });
 });
 
