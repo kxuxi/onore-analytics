@@ -47,6 +47,7 @@ import {
   unitCountersBranch,
   assetMetricRanking,
   factionsInYearRange,
+  warlordNamesInLog,
 } from "./stats";
 import type { BattleRecord, UnitType, WarlordMap } from "./types";
 import { EMPTY_UNIT } from "./unitTypeForm";
@@ -437,6 +438,23 @@ describe("factionMemberStats", () => {
     const takeda = factionMemberStats(log, "武田").find((s) => s.name === "佐藤")!;
     expect(takeda.battles).toBe(1);
     expect(takeda.latestUnit).toBe("母衣衆");
+  });
+
+  it("壁戦の守備隊（壁）は所属国の武将一覧に出さない", () => {
+    const wallLine =
+      "【壁戦】 1666年12月 08/04 23:59 熊本 エロゲソング同好会 SINCLAIR キャラメルBOX 統特 モニター艦 特殊船 龍の護符 攻城櫓 V.S. ななせ国 熊本の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
+    const stats = factionMemberStats([rec(wallLine, 1)], "ななせ国");
+    expect(stats.some((s) => s.name === "熊本の守備隊")).toBe(false);
+  });
+});
+
+describe("warlordNamesInLog", () => {
+  it("壁戦の守備隊（壁）は武将名の集合に含めない", () => {
+    const wallLine =
+      "【壁戦】 1666年12月 08/04 23:59 熊本 エロゲソング同好会 SINCLAIR キャラメルBOX 統特 モニター艦 特殊船 龍の護符 攻城櫓 V.S. ななせ国 熊本の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
+    const names = warlordNamesInLog([rec(wallLine, 1)]);
+    expect(names.has("SINCLAIR")).toBe(true);
+    expect(names.has("熊本の守備隊")).toBe(false);
   });
 });
 
@@ -1964,6 +1982,17 @@ describe("pontaPointRanking（PontaPoint）", () => {
     expect(ponta.battles).toBe(3);
     // (出兵勝 1 + 1.4×守備勝 1) ÷ 戦闘 3 = 0.8
     expect(ponta.pontaPoint).toBeCloseTo(0.8);
+  });
+
+  it("壁を攻略した／壁が守り切った【壁戦】では守備隊をランキング対象にしない", () => {
+    const breached =
+      "【壁戦】 1666年12月 08/04 23:59 熊本 エロゲソング同好会 SINCLAIR キャラメルBOX 統特 モニター艦 特殊船 龍の護符 攻城櫓 V.S. ななせ国 熊本の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
+    const held =
+      "【壁戦】 1606年4月 07/25 21:03 久留米 ななせ国 風真いろは 風真いろは家 統特 剣兵 歩兵 銀の護符 ピコピコハンマー V.S. 己鯖冷笑プレイヤー族 久留米の守備隊 精鋭城壁兵 壁 なし なし 久留米の守備隊の勝利 6";
+    const ranking = pontaPointRanking([rec(breached, 1), rec(held, 2)]);
+    expect(ranking.some((r) => r.name === "熊本の守備隊")).toBe(false);
+    expect(ranking.some((r) => r.name === "久留米の守備隊")).toBe(false);
+    expect(ranking.find((r) => r.name === "SINCLAIR")?.attackWins).toBe(1);
   });
 });
 

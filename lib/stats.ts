@@ -242,6 +242,7 @@ export function warlordNamesInLog(
     const card = parseBattleCard(record.line);
     if (!card) continue;
     for (const side of [card.left, card.right]) {
+      if (isWallSide(side)) continue;
       const raw = side.name?.trim();
       if (!raw) continue;
       names.add(resolveLogName(nameMap, record.term, side.family, raw));
@@ -1213,9 +1214,9 @@ export function factionMemberStats(
   // 1. この国で 1 度でも戦ったことのある武将名を集める。
   const participants = new Set<string>();
   for (const { card } of cards) {
-    if (card.left.faction?.trim() === target && card.left.name?.trim())
+    if (!isWallSide(card.left) && card.left.faction?.trim() === target && card.left.name?.trim())
       participants.add(card.left.name.trim());
-    if (card.right.faction?.trim() === target && card.right.name?.trim())
+    if (!isWallSide(card.right) && card.right.faction?.trim() === target && card.right.name?.trim())
       participants.add(card.right.name.trim());
   }
   if (participants.size === 0) return [];
@@ -1836,7 +1837,7 @@ export function pontaPointRanking(
     if (!withinYearRange(card, range)) continue;
     const w = card.winner;
     if (w !== "left" && w !== "right") continue; // 撤退・引分・不明を除く（勝敗が付いた戦闘）のみ
-    const ln = sideMatchesFaction(card.left, faction)
+    const ln = !isWallSide(card.left) && sideMatchesFaction(card.left, faction)
       ? resolve(card.left, record.term)
       : undefined;
     if (ln) {
@@ -1844,7 +1845,7 @@ export function pontaPointRanking(
       if (w === "left") e.attackWins++;
       else e.losses++;
     }
-    const rn = sideMatchesFaction(card.right, faction)
+    const rn = !isWallSide(card.right) && sideMatchesFaction(card.right, faction)
       ? resolve(card.right, record.term)
       : undefined;
     if (rn) {
