@@ -45,14 +45,11 @@ describe("HomeTab", () => {
   it("未選択時は価値説明、検索、2つの補助導線を表示する", () => {
     const html = renderHome();
 
-    expect(html).toContain("自分の武将から、戦いの傾向をつかむ");
+    expect(html).toContain("自分の武将を選ぶ");
     expect(html).toContain("自分の武将を検索");
     expect(html).toContain('role="combobox"');
     expect(html).toContain('aria-expanded="false"');
     expect(html).toContain('aria-autocomplete="list"');
-    expect(html).toContain("通算成績");
-    expect(html).toContain("年別の推移");
-    expect(html).toContain("最近の戦闘");
     expect(html).toContain("武将ランキングを見る");
     expect(html).toContain("戦闘履歴を見る");
     expect(html).not.toContain("キャンセル");
@@ -68,7 +65,7 @@ describe("HomeTab", () => {
     expect(html).toContain("信長");
     expect(html).toContain("武将を変更");
     expect(html).toContain("この期の戦闘履歴");
-    expect(html).not.toContain("自分の武将から、戦いの傾向をつかむ");
+    expect(html).not.toContain("自分の武将を選ぶ");
     expect(html).not.toContain('role="combobox"');
   });
 
