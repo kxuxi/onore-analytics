@@ -104,6 +104,28 @@ describe("global CSS architecture", () => {
     expect(catalog).toContain("@container catalog-results");
   });
 
+  it("スマホではサブタブ上だけ余白をなくし、タブなし画面の余白は保つ", () => {
+    const responsive = readFileSync(
+      join(stylesDirectory, "08-responsive-tables.css"),
+      "utf8"
+    );
+
+    expect(responsive).toMatch(
+      /@media \(max-width: 480px\)\s*\{[\s\S]*?\.main\s*\{\s*padding:\s*12px 10px 80px;\s*\}[\s\S]*?\.main:has\(> #main-panel > \.subtabs\)\s*\{\s*padding-top:\s*0;\s*\}/
+    );
+  });
+
+  it("スマホのメニューは画面上端から表示し、ノッチの安全領域を保つ", () => {
+    const responsive = readFileSync(
+      join(stylesDirectory, "08-responsive-tables.css"),
+      "utf8"
+    );
+
+    expect(responsive).toMatch(
+      /@media \(max-width: 767px\)\s*\{[\s\S]*?\.sidebar\s*\{[^}]*top:\s*0;[^}]*padding-top:\s*calc\(var\(--space-2\) \+ env\(safe-area-inset-top, 0px\)\);[^}]*\}/
+    );
+  });
+
   it("データタグを角丸長方形にし、兵種タイプだけを中立色で表示する", () => {
     const battleHistory = readFileSync(
       join(stylesDirectory, "06-battle-history.css"),
