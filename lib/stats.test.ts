@@ -1056,6 +1056,21 @@ describe("warlordRanking は【壁戦】（対戦相手が壁）を勝敗集計�
     expect(sinclair?.attackSorties).toBe(1);
     expect(sinclair?.attackWins).toBe(1);
   });
+
+  it("対戦相手の兵種branchが「壁」でも、実在武将同士の通常戦なら勝敗に含める（NPCの壁と誤認しない）", () => {
+    // 実データ由来: 「赤城」の兵種「ぬりかべ」は branch=壁 だが実在武将であり、
+    // 【壁戦】の守備隊ではない。branch だけで壁と判定すると、この勝利が集計から
+    // 消えてしまう（実際に発生した「勝利数が1足りない」不具合の原因）。
+    const line =
+      "【1戦目】 1670年7月 08/05 14:07 鹿児島 ななせ国 オーガマン 大賀薬局 謎 二天一流武者 歩兵 龍の護符 鬼狩柳桜 V.S. エロゲソング同好会 赤城 重桜一航戦 統知 ぬりかべ 壁 ぬりかべの魂 鬼丸 オーガマンの勝利 15";
+    const ranking = warlordRanking([rec(line, 1)]);
+    const ogaman = ranking.find((r) => r.name === "オーガマン");
+    expect(ogaman?.attackSorties).toBe(1);
+    expect(ogaman?.attackWins).toBe(1);
+    const akagi = ranking.find((r) => r.name === "赤城");
+    expect(akagi?.defenseSorties).toBe(1);
+    expect(akagi?.defenseWins).toBe(0);
+  });
 });
 
 describe("weaponStats / itemStats", () => {

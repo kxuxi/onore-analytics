@@ -10,6 +10,7 @@ import {
   isSpecialToken,
   battleKey,
   isSkewedSide,
+  isWallBattle,
   parseWallAttackEvents,
 } from "./parser";
 
@@ -211,6 +212,20 @@ describe("parseBattleCard", () => {
     expect(card!.winner).toBe("left");
     expect(isSkewedSide(card!.left)).toBe(false);
     expect(isSkewedSide(card!.right)).toBe(false);
+    expect(isWallBattle(card!)).toBe(true);
+  });
+
+  it("branch が「壁」の実在武将（例: 兵種「ぬりかべ」）同士の通常戦は壁戦と誤認しない", () => {
+    // 実データ由来: 「赤城」は兵種「ぬりかべ」（branch=壁）を使う実在武将で、
+    // 【壁戦】の守備隊（NPC）ではない。branch だけで判定すると誤って除外されてしまう。
+    const line =
+      "【1戦目】 1670年7月 08/05 14:07 鹿児島 ななせ国 オーガマン 大賀薬局 謎 二天一流武者 歩兵 龍の護符 鬼狩柳桜 V.S. エロゲソング同好会 赤城 重桜一航戦 統知 ぬりかべ 壁 ぬりかべの魂 鬼丸 オーガマンの勝利 15";
+    const card = parseBattleCard(line);
+    expect(card).not.toBeNull();
+    expect(card!.battleNo).toBe("1戦目");
+    expect(card!.right).toMatchObject({ name: "赤城", branch: "壁" });
+    expect(card!.winner).toBe("left");
+    expect(isWallBattle(card!)).toBe(false);
   });
 
   it("守備側の勝利を判定する", () => {
