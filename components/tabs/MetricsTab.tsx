@@ -20,6 +20,7 @@ import {
   DEFAULT_RANKING_FILTERS_OPEN,
   DEFAULT_RANKING_MIN_COUNT,
   DEFAULT_RANKING_PERIOD_KEY,
+  RANK_METRIC_DESCRIPTIONS,
   WARLORD_RANKING_MIN_COUNT_OPTIONS,
 } from "@/lib/rankingDefaults";
 
@@ -58,27 +59,27 @@ const SORT_OPTIONS: { key: SortKey; label: string; desc: string }[] = [
   {
     key: "ppn",
     label: "PPN",
-    desc: "PontaPoint ＋ 抜き率。野球で言えばOPS（出塁率＋長打率）のような総合力の指標。",
+    desc: RANK_METRIC_DESCRIPTIONS.ppn,
   },
   {
     key: "pontaPoint",
     label: "PontaPoint",
-    desc: "ジョンさん印の指標。(出兵勝 + 1.4×守備勝) ÷ 戦闘数（撤退戦を除く）。普通の勝率の分子で守備の1勝を1.4勝としてボーナスしたもの。",
+    desc: RANK_METRIC_DESCRIPTIONS.pontaPoint,
   },
   {
     key: "winRate",
     label: "勝率",
-    desc: "(出兵勝 + 守備勝) ÷ 戦闘数（撤退戦を除く）。撤退を除いた普通の勝率。野球で言えば打率。",
+    desc: RANK_METRIC_DESCRIPTIONS.winRate,
   },
   {
     key: "breakthrough",
     label: "抜き数",
-    desc: "1×(1枚抜き) + 2×(2枚抜き) + … + n×(n枚抜き)。野球で言えば塁打数。",
+    desc: RANK_METRIC_DESCRIPTIONS.breakthrough,
   },
   {
     key: "breakthroughRate",
     label: "抜き率",
-    desc: "抜き数 ÷ 出兵数（各出兵を１回と数え、２戦目以降は数えません）。野球で言えば長打率。またの名をランカス度。",
+    desc: RANK_METRIC_DESCRIPTIONS.breakthroughRate,
   },
   {
     key: "attackWinRate",
