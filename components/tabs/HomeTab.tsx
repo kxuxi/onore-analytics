@@ -931,19 +931,24 @@ export function HomeTab({
           />
         )}
 
-        {dbInfo?.intelligence != null && dbInfo?.strategy != null && (
-          <StratagemUnlockCard
-            intelligence={dbInfo.intelligence}
-            strategy={dbInfo.strategy}
-          />
-        )}
+        {((dbInfo?.intelligence != null && dbInfo?.strategy != null) ||
+          dbInfo?.politics != null) && (
+          <div className="home-grid">
+            {dbInfo?.intelligence != null && dbInfo?.strategy != null && (
+              <StratagemUnlockCard
+                intelligence={dbInfo.intelligence}
+                strategy={dbInfo.strategy}
+              />
+            )}
 
-        {dbInfo?.politics != null && (
-          <ConscriptionSecurityCard
-            key={name}
-            politics={dbInfo.politics}
-            maxTroops={dbInfo.maxTroops}
-          />
+            {dbInfo?.politics != null && (
+              <ConscriptionSecurityCard
+                key={name}
+                politics={dbInfo.politics}
+                maxTroops={dbInfo.maxTroops}
+              />
+            )}
+          </div>
         )}
 
         {isAdmin && onToggleWatch && (
