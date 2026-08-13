@@ -14,6 +14,7 @@ import {
   DEFAULT_RANKING_FILTERS_OPEN,
   DEFAULT_RANKING_MIN_COUNT,
   DEFAULT_RANKING_PERIOD_KEY,
+  RANK_METRIC_DESCRIPTIONS,
 } from "@/lib/rankingDefaults";
 import { SearchBox } from "@/components/SearchBox";
 import {
@@ -50,32 +51,27 @@ const METRIC_OPTIONS: MetricOption[] = [
   {
     key: "ppn",
     label: "PPN",
-    description:
-      "PontaPoint ＋ 抜き率。勝敗と枚抜きを合わせた総合力の指標です。",
+    description: RANK_METRIC_DESCRIPTIONS.ppn,
   },
   {
     key: "pontaPoint",
     label: "PontaPoint",
-    description:
-      "(出兵勝 + 1.4×守備勝) ÷ 戦闘数。守備勝ちを1.4勝として評価します。",
+    description: RANK_METRIC_DESCRIPTIONS.pontaPoint,
   },
   {
     key: "winRate",
     label: "勝率",
-    description:
-      "(出兵勝 + 守備勝) ÷ 戦闘数。撤退・引分・不明は分母から除きます。",
+    description: RANK_METRIC_DESCRIPTIONS.winRate,
   },
   {
     key: "breakthrough",
     label: "抜き数",
-    description:
-      "1×(1枚抜き) + 2×(2枚抜き) + …で求める、出兵側の突破数です。",
+    description: RANK_METRIC_DESCRIPTIONS.breakthrough,
   },
   {
     key: "breakthroughRate",
     label: "抜き率",
-    description:
-      "抜き数 ÷ 出兵数。同一使用者・同一戦闘時刻を1出兵として数えます。",
+    description: RANK_METRIC_DESCRIPTIONS.breakthroughRate,
   },
 ];
 
