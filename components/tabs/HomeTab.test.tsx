@@ -100,6 +100,52 @@ describe("HomeTab", () => {
       '<rect class="home-line-dot home-line-dot--losses"'
     );
   });
+
+  it("管理者かつonUpdateStats指定時、自分のステータス編集フォームを既存値付きで表示する", () => {
+    vi.stubGlobal("document", {
+      cookie: "onore_my_warlord=%E4%BF%A1%E9%95%B7",
+    });
+
+    const html = renderToStaticMarkup(
+      <HomeTab
+        log={[]}
+        db={{
+          信長: {
+            name: "信長",
+            type: "武特",
+            branch: "騎兵",
+            updatedAt: 0,
+            power: 91,
+            intelligence: 84,
+            leadership: 88,
+            politics: 72,
+            strategy: 102.5,
+            maxTroops: 50000,
+          },
+        }}
+        colors={{}}
+        isAdmin
+        onUpdateStats={vi.fn()}
+        {...callbacks}
+      />
+    );
+
+    expect(html).toContain("自分のステータス");
+    expect(html).toContain("最大徴兵兵数");
+    expect(html).toContain('value="91"');
+    expect(html).toContain('value="102.5"');
+    expect(html).toContain('value="50000"');
+  });
+
+  it("管理者でない、またはonUpdateStats未指定なら編集フォームを表示しない", () => {
+    vi.stubGlobal("document", {
+      cookie: "onore_my_warlord=%E4%BF%A1%E9%95%B7",
+    });
+
+    const html = renderHome();
+
+    expect(html).not.toContain("自分のステータス");
+  });
 });
 
 describe("describeWinLossTrend", () => {

@@ -733,6 +733,20 @@ export default function HomePage() {
     [pushToast, setDb]
   );
 
+  const handleUpdateMyStats = useCallback(
+    async (stats: Parameters<typeof importWarlordStats>[0][number]) => {
+      try {
+        const res = await importWarlordStats([stats]);
+        setDb(res.db);
+        pushToast("success", "ステータスを保存しました");
+      } catch (e) {
+        pushToast("error", "ステータスの保存に失敗しました");
+        throw e;
+      }
+    },
+    [pushToast, setDb]
+  );
+
   const content = useMemo(() => {
     switch (tab) {
       case "home":
@@ -749,6 +763,7 @@ export default function HomePage() {
             onSelectFaction={selectFaction}
             onSelectRanking={() => selectTab("metrics")}
             onSelectHistory={() => selectTab("history")}
+            onUpdateStats={handleUpdateMyStats}
           />
         );
       case "history":
@@ -918,6 +933,7 @@ export default function HomePage() {
     themePref,
     handleRegister,
     handleImportStats,
+    handleUpdateMyStats,
     handleChangeFactionColors,
     handleChangeTheme,
     handleDeleteBattle,

@@ -35,6 +35,8 @@ export interface Warlord {
   strategy?: number;
   /** 自己PR（ランキング取り込み） */
   selfPr?: string;
+  /** 最大徴兵兵数（自己申告） */
+  maxTroops?: number;
   /** 取り込み元の生テキスト（未使用項目の保全用） */
   statsRaw?: string;
 }
