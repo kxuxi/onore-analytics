@@ -64,10 +64,6 @@ export function NationTab({ db, log, colors, onSelectFaction }: Props) {
     return arr;
   }, [summaries, query, sort]);
 
-  // 勝率バーの基準（最大勝率）。全国の比較がしやすいよう相対幅にする。
-  const maxRate =
-    view.reduce((m, f) => (f.decided > 0 ? Math.max(m, f.winRate) : m), 0) || 1;
-
   return (
     <section className="panel">
       <PageHeader
@@ -118,8 +114,6 @@ export function NationTab({ db, log, colors, onSelectFaction }: Props) {
       ) : (
         <ol className="nation-list">
           {view.map((f, i) => {
-            const pct = f.decided > 0 ? Math.round(f.winRate * 100) : 0;
-            const barWidth = f.decided > 0 ? (f.winRate / maxRate) * 100 : 0;
             return (
               <li key={f.faction} className="nation-row">
                 <span className="nation-rank">{i + 1}</span>
@@ -149,19 +143,6 @@ export function NationTab({ db, log, colors, onSelectFaction }: Props) {
                         : ""}
                     </span>
                   </div>
-                  <span
-                    className="nation-bar"
-                    role="progressbar"
-                    aria-valuenow={pct}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-label={`${f.faction} の勝率 ${pct}%`}
-                  >
-                    <span
-                      className="nation-bar-fill"
-                      style={{ width: `${barWidth}%` }}
-                    />
-                  </span>
                 </div>
               </li>
             );

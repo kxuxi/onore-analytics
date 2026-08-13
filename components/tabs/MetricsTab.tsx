@@ -287,18 +287,14 @@ function MetricRowItem({
   r,
   rank,
   metric,
-  maxValue,
   onSelectWarlord,
 }: {
   r: MetricRow;
   rank: number;
   metric: SortKey;
-  maxValue: number;
   onSelectWarlord: (name: string) => void;
 }) {
-  const value = metricValue(r, metric);
   const label = metricLabel(r, metric);
-  const pct = maxValue > 0 ? (value / maxValue) * 100 : 0;
   return (
     <li className="swi-row">
       <span className="swi-rank">{rank}</span>
@@ -314,16 +310,6 @@ function MetricRowItem({
           </button>
           <span className="swi-value">{label}</span>
         </div>
-        <span
-          className="swi-bar"
-          role="progressbar"
-          aria-valuenow={Math.round(pct)}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label={`${r.name} ${label}`}
-        >
-          <span className="swi-bar-fill" style={{ width: `${pct}%` }} />
-        </span>
         <div className="swi-meta muted">
           {metric === "ppn" ? (
             <span className="rank-side-active">
@@ -536,13 +522,6 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
     return sortByMetric(filtered, activeMetric);
   }, [ranking, activeMetric, query, branch, warlordType, minContacts]);
 
-  // バー幅の基準となる最大値（詳細表示の最大）。
-  const detailMax =
-    detailRows.reduce(
-      (m, r) => Math.max(m, activeMetric ? metricValue(r, activeMetric) : 0),
-      0
-    ) || 1;
-
   const activeOption = activeMetric
     ? SORT_OPTIONS.find((o) => o.key === activeMetric)
     : undefined;
@@ -742,10 +721,6 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
         // サマリー：指標ごとの上位 TOP3 を並べ、詳細へ誘導する。
         <div className="ranking-metric-grid">
           {summaries.map(({ opt, rows, totalCount }) => {
-            const max = rows.reduce(
-              (m, r) => Math.max(m, metricValue(r, opt.key)),
-              0
-            );
             return (
               <div className="metric-section" key={opt.key}>
                 <div className="metric-section-head">
@@ -779,7 +754,6 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
                         r={r}
                         rank={i + 1}
                         metric={opt.key}
-                        maxValue={max}
                         onSelectWarlord={onSelectWarlord}
                       />
                     ))}
@@ -821,7 +795,6 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
                   r={r}
                   rank={i + 1}
                   metric={activeMetric}
-                  maxValue={detailMax}
                   onSelectWarlord={onSelectWarlord}
                 />
               ))}
