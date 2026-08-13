@@ -178,7 +178,7 @@
 
 .branch-row {
   display: grid;
-  grid-template-columns: 56px 1fr 44px auto;
+  grid-template-columns: 1fr 44px auto;
   align-items: center;
   gap: 10px;
   font-size: 13px;
@@ -187,20 +187,6 @@
 .branch-name {
   font-weight: var(--font-weight-semibold);
   white-space: nowrap;
-}
-
-.branch-bar {
-  height: 10px;
-  border-radius: 999px;
-  background: var(--panel-2);
-  border: 0.5px solid var(--border);
-  overflow: hidden;
-}
-
-.branch-bar-fill {
-  display: block;
-  height: 100%;
-  background: var(--outcome-win-fill);
 }
 
 .branch-rate {
@@ -382,20 +368,6 @@
   font-weight: var(--font-weight-regular);
 }
 
-.nation-bar {
-  height: 8px;
-  border-radius: 999px;
-  background: var(--panel-2);
-  border: 0.5px solid var(--border);
-  overflow: hidden;
-}
-
-.nation-bar-fill {
-  display: block;
-  height: 100%;
-  background: var(--outcome-win-fill);
-}
-
 .swi-list {
   list-style: none;
   margin: 16px 0 0;
@@ -457,20 +429,6 @@
   font-size: 16px;
   color: var(--color-success-text);
   font-variant-numeric: tabular-nums;
-}
-
-.swi-bar {
-  height: 8px;
-  border-radius: 999px;
-  background: var(--panel-2);
-  border: 0.5px solid var(--border);
-  overflow: hidden;
-}
-
-.swi-bar-fill {
-  display: block;
-  height: 100%;
-  background: var(--outcome-win-fill);
 }
 
 .swi-meta {

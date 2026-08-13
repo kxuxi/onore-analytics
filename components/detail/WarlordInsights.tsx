@@ -138,21 +138,6 @@ export function BranchWinRates({ branches }: { branches: BranchStat[] }) {
           return (
             <li key={b.branch} className="branch-row">
               <span className="branch-name">{b.branch}</span>
-              <span
-                className="branch-bar"
-                role="progressbar"
-                aria-valuenow={b.decided > 0 ? Math.round(b.winRate * 100) : 0}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label={`${b.branch} の勝率 ${
-                  b.decided > 0 ? Math.round(b.winRate * 100) : 0
-                }%`}
-              >
-                <span
-                  className="branch-bar-fill"
-                  style={{ width: `${b.decided > 0 ? b.winRate * 100 : 0}%` }}
-                />
-              </span>
               <span className="branch-rate">
                 {formatWinRate(b.winRate, b.decided)}
               </span>

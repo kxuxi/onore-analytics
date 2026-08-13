@@ -174,7 +174,6 @@ function MetricRankingRow({
   row,
   rank,
   metric,
-  maxValue,
   compact = false,
   onSelectAsset,
   onSelectWarlord,
@@ -182,14 +181,11 @@ function MetricRankingRow({
   row: AssetMetricStat;
   rank: number;
   metric: MetricKey;
-  maxValue: number;
   compact?: boolean;
   onSelectAsset: (name: string) => void;
   onSelectWarlord: (name: string) => void;
 }) {
-  const value = metricValue(row, metric);
   const label = metricLabel(row, metric);
-  const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
 
   return (
     <li className="swi-row">
@@ -206,19 +202,6 @@ function MetricRankingRow({
           </button>
           <span className="swi-value">{label}</span>
         </div>
-        <span
-          className="swi-bar"
-          role="progressbar"
-          aria-valuenow={Math.round(percentage)}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label={`${row.name} ${label}`}
-        >
-          <span
-            className="swi-bar-fill"
-            style={{ width: `${percentage}%` }}
-          />
-        </span>
         <div className="swi-meta muted">
           {metric === "ppn" ? (
             <span className="rank-side-active">
@@ -358,12 +341,6 @@ export function RankingTab({
   const activeOption = activeMetric
     ? METRIC_OPTIONS.find((option) => option.key === activeMetric)
     : undefined;
-  const detailMaxValue =
-    detailRows.reduce(
-      (max, row) =>
-        Math.max(max, activeMetric ? metricValue(row, activeMetric) : 0),
-      0
-    ) || 1;
   const hasFilter =
     keyword.trim() !== "" ||
     faction !== "" ||
@@ -536,12 +513,6 @@ export function RankingTab({
       {activeMetric === null ? (
         <div className="ranking-metric-grid">
           {summaries.map(({ option, rows: summaryRows }) => {
-            const maxValue =
-              summaryRows.reduce(
-                (max, row) =>
-                  Math.max(max, metricValue(row, option.key)),
-                0
-              ) || 1;
             return (
               <div className="metric-section" key={option.key}>
                 <div className="metric-section-head">
@@ -570,7 +541,6 @@ export function RankingTab({
                         row={row}
                         rank={index + 1}
                         metric={option.key}
-                        maxValue={maxValue}
                         compact
                         onSelectAsset={openAssetDetail}
                         onSelectWarlord={onSelectWarlord}
@@ -621,7 +591,6 @@ export function RankingTab({
                   row={row}
                   rank={index + 1}
                   metric={activeMetric}
-                  maxValue={detailMaxValue}
                   onSelectAsset={openAssetDetail}
                   onSelectWarlord={onSelectWarlord}
                 />

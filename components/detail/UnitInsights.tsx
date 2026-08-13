@@ -126,21 +126,6 @@ export function UserWinRateList({
                 </span>
               </span>
             </div>
-            <span
-              className="branch-bar"
-              role="progressbar"
-              aria-valuenow={u.decided > 0 ? Math.round(u.winRate * 100) : 0}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label={`${u.name} の勝率 ${
-                u.decided > 0 ? Math.round(u.winRate * 100) : 0
-              }%`}
-            >
-              <span
-                className="branch-bar-fill"
-                style={{ width: `${u.decided > 0 ? u.winRate * 100 : 0}%` }}
-              />
-            </span>
           </li>
         ))}
       </ul>

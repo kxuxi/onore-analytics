@@ -306,8 +306,6 @@ function FactionMembers({
       <ul className="user-winrate-list">
         {shown.map((m) => {
           const s = m.stat;
-          const decided = s?.decided ?? 0;
-          const pct = decided > 0 ? Math.round((s!.winRate) * 100) : 0;
           return (
             <li key={m.name} className="user-winrate-row">
               <div className="user-winrate-head">
@@ -334,19 +332,6 @@ function FactionMembers({
                   )}
                 </span>
               </div>
-              <span
-                className="branch-bar"
-                role="progressbar"
-                aria-valuenow={pct}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label={`${m.name} の勝率 ${pct}%`}
-              >
-                <span
-                  className="branch-bar-fill"
-                  style={{ width: `${decided > 0 ? pct : 0}%` }}
-                />
-              </span>
               {m.unitTrend && m.unitTrend.units.length > 0 && (
                 <div className="member-units">
                   {m.unitTrend.units.slice(0, 4).map((u) => (
