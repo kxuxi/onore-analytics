@@ -45,6 +45,7 @@ model Warlord {
   politics     Int?     // 政治力
   strategy     Float?   // 計略 (例: 102.5)
   selfPr       String?  // 自己PR
+  maxTroops    Int?     // 最大徴兵兵数
   statsRaw     String?  // 取り込み元の生テキスト（資金・兵糧など未使用項目の保全用）
 }
 

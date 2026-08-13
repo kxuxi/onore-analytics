@@ -16,6 +16,7 @@ export interface WarlordCoreRow {
   politics: number | null;
   strategy: number | null;
   selfPr: string | null;
+  maxTroops: number | null;
   statsRaw: string | null;
 }
 
@@ -36,6 +37,7 @@ export function warlordCoreRowToDto(row: WarlordCoreRow): Warlord {
     politics: row.politics ?? undefined,
     strategy: row.strategy ?? undefined,
     selfPr: row.selfPr ?? undefined,
+    maxTroops: row.maxTroops ?? undefined,
     statsRaw: row.statsRaw ?? undefined,
   };
 }

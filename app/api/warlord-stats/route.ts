@@ -38,6 +38,7 @@ interface StatInput {
   politics?: number;
   strategy?: number;
   selfPr?: string;
+  maxTroops?: number;
   faction?: string;
   raw?: string;
 }
@@ -57,7 +58,8 @@ function parseBody(body: unknown): { stats: StatInput[] } | { error: string } {
       !optionalNumber(s.intelligence) ||
       !optionalNumber(s.leadership) ||
       !optionalNumber(s.politics) ||
-      !optionalNumber(s.strategy)
+      !optionalNumber(s.strategy) ||
+      !optionalNumber(s.maxTroops)
     ) {
       return { error: "能力値は数値である必要があります" };
     }
@@ -97,6 +99,7 @@ export async function POST(req: Request) {
             politics: s.politics ?? null,
             strategy: s.strategy ?? null,
             selfPr: s.selfPr ?? null,
+            maxTroops: s.maxTroops ?? null,
             statsRaw: s.raw ?? null,
           };
           if (existingNames.has(s.name)) updated++;

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
-import type { BattleRecord, WarlordMap } from "@/lib/types";
+import type { FormEvent, ReactNode } from "react";
+import type { BattleRecord, Warlord, WarlordMap } from "@/lib/types";
 import { lookup } from "@/lib/storage";
 import { normalizeDisplayToken } from "@/lib/parser";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
@@ -39,6 +39,19 @@ interface Props {
   onSelectRanking?: () => void;
   /** 未選択時に戦闘履歴を開く。未指定時は導線を表示しない。 */
   onSelectHistory?: () => void;
+  /** 自分のステータス（能力値・最大徴兵兵数）を保存する。管理者のみ表示。 */
+  onUpdateStats?: (stats: HomeStatsInput) => Promise<void>;
+}
+
+/** 自分のステータス編集フォームが送信する入力値。 */
+export interface HomeStatsInput {
+  name: string;
+  power?: number;
+  intelligence?: number;
+  leadership?: number;
+  politics?: number;
+  strategy?: number;
+  maxTroops?: number;
 }
 
 type WinLossSeriesKey = "wins" | "losses";
@@ -327,6 +340,117 @@ function resultBadge(o: BattleOutcome): { text: string; cls: string } {
   return { text: "引分・撤退", cls: "home-res-other" };
 }
 
+interface StatFieldDef {
+  key: keyof Omit<HomeStatsInput, "name">;
+  label: string;
+  step?: string;
+}
+
+const STATS_FIELDS: StatFieldDef[] = [
+  { key: "power", label: "武力" },
+  { key: "intelligence", label: "知力" },
+  { key: "leadership", label: "統率力" },
+  { key: "politics", label: "政治力" },
+  { key: "strategy", label: "計略", step: "0.1" },
+  { key: "maxTroops", label: "最大徴兵兵数" },
+];
+
+type StatFormState = Record<StatFieldDef["key"], string>;
+
+function statFormStateFrom(warlord: Warlord | undefined): StatFormState {
+  return {
+    power: warlord?.power?.toString() ?? "",
+    intelligence: warlord?.intelligence?.toString() ?? "",
+    leadership: warlord?.leadership?.toString() ?? "",
+    politics: warlord?.politics?.toString() ?? "",
+    strategy: warlord?.strategy?.toString() ?? "",
+    maxTroops: warlord?.maxTroops?.toString() ?? "",
+  };
+}
+
+/**
+ * 「自分のステータス」編集カード。能力値と最大徴兵兵数を自己申告で保存する。
+ * 管理者のみ表示（`key={name}` で武将を切り替えるたびに入力を作り直す）。
+ */
+function HomeStatsEditor({
+  name,
+  warlord,
+  onSave,
+}: {
+  name: string;
+  warlord: Warlord | undefined;
+  onSave: (stats: HomeStatsInput) => Promise<void>;
+}) {
+  const [form, setForm] = useState<StatFormState>(() =>
+    statFormStateFrom(warlord)
+  );
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const update = (key: StatFieldDef["key"], value: string) =>
+    setForm((cur) => ({ ...cur, [key]: value }));
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const stats: HomeStatsInput = { name };
+      for (const { key } of STATS_FIELDS) {
+        const raw = form[key].trim();
+        if (raw === "") continue;
+        const n = Number(raw);
+        if (Number.isNaN(n)) {
+          setError(`「${STATS_FIELDS.find((f) => f.key === key)?.label}」は数値で入力してください`);
+          setBusy(false);
+          return;
+        }
+        stats[key] = n;
+      }
+      await onSave(stats);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "保存に失敗しました");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="home-card">
+      <h3 className="home-card-title">⚙️ 自分のステータス</h3>
+      <p className="muted">
+        能力値と最大徴兵兵数を自己申告で設定できます（このブラウザ以外の利用者にも公開されます）。
+      </p>
+      <form onSubmit={handleSubmit}>
+        <div className="filter-grid">
+          {STATS_FIELDS.map(({ key, label, step }) => (
+            <label key={key} className="filter">
+              <span>{label}</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                step={step ?? "1"}
+                className="text-input"
+                value={form[key]}
+                onChange={(e) => update(key, e.target.value)}
+              />
+            </label>
+          ))}
+        </div>
+        {error && (
+          <p style={{ color: "var(--outcome-loss-text)", fontSize: 13 }}>
+            {error}
+          </p>
+        )}
+        <button type="submit" className="btn" disabled={busy}>
+          {busy ? "保存中…" : "保存"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 /** ウォッチリスト（お気に入り武将）のカード。管理者のみ表示。 */
 function WatchlistSection({
   watchlist,
@@ -409,6 +533,7 @@ export function HomeTab({
   onSelectFaction,
   onSelectRanking,
   onSelectHistory,
+  onUpdateStats,
 }: Props) {
   // 自分の武将名（クッキー由来）。詳細はハイドレーション後にマウントされるため
   // 初期化子で同期的にクッキーを読んでも SSR 不整合は起きない。
@@ -666,6 +791,15 @@ export function HomeTab({
             </>
           )}
         </div>
+
+        {isAdmin && onUpdateStats && (
+          <HomeStatsEditor
+            key={name}
+            name={name}
+            warlord={dbInfo}
+            onSave={onUpdateStats}
+          />
+        )}
 
         {isAdmin && onToggleWatch && (
           <WatchlistSection

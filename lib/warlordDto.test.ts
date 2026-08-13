@@ -18,6 +18,7 @@ function makeRow(overrides: Partial<WarlordCoreRow> = {}): WarlordCoreRow {
     politics: null,
     strategy: null,
     selfPr: null,
+    maxTroops: null,
     statsRaw: null,
     ...overrides,
   };
@@ -43,6 +44,7 @@ describe("warlordCoreRowToDto", () => {
           power: 100,
           strategy: 90.5,
           selfPr: "自己PR",
+          maxTroops: 50000,
         })
       )
     ).toMatchObject({
@@ -52,6 +54,7 @@ describe("warlordCoreRowToDto", () => {
       power: 100,
       strategy: 90.5,
       selfPr: "自己PR",
+      maxTroops: 50000,
     });
   });
 });

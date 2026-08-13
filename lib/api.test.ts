@@ -62,6 +62,7 @@ describe("importWarlordStats", () => {
         politics: 72,
         strategy: 102.5,
         selfPr: "前線を支えます",
+        maxTroops: 50000,
         faction: "天下五剣",
         raw: "取り込み元の行",
       },

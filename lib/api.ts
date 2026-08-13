@@ -65,6 +65,7 @@ export async function importWarlordStats(
     politics?: number;
     strategy?: number;
     selfPr?: string;
+    maxTroops?: number;
     faction?: string;
     raw?: string;
   }>
