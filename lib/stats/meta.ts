@@ -71,17 +71,10 @@ export interface MetaTraitStat {
   winRate: number;
 }
 
-export interface MetaWarning {
-  unit: string;
-  level: "dominant" | "overpick";
-  message: string;
-}
-
 export interface MetaOverview {
   totalBattles: number;
   units: MetaUnitStat[];
   traits: MetaTraitStat[];
-  warnings: MetaWarning[];
 }
 
 export function metaTier(
