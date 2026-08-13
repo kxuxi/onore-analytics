@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { makeErrorResponse } from "@/lib/apiError";
-import { readJsonBody } from "@/lib/apiRequest";
+import { INVALID_JSON_BODY_ERROR, readJsonBody } from "@/lib/apiRequest";
 import { requireAdmin } from "@/lib/authGuard";
 import { parseWikiPageInput } from "@/lib/wiki";
 import { wikiJson, withWikiNoStore } from "@/lib/wikiApiResponse";
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const body = await readJsonBody(request);
     if (!body.ok) {
       return wikiJson(
-        { error: "リクエストボディが不正なJSONです" },
+        { error: INVALID_JSON_BODY_ERROR },
         { status: 400 }
       );
     }

@@ -3,6 +3,10 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { makeErrorResponse } from "@/lib/apiError";
 import {
+  BODY_MUST_BE_OBJECT_ERROR,
+  INVALID_JSON_BODY_ERROR,
+} from "@/lib/apiRequest";
+import {
   hashPassword,
   verifyPassword,
   createSessionToken,
@@ -27,13 +31,13 @@ export async function POST(req: Request) {
       raw = await req.json();
     } catch {
       return NextResponse.json(
-        { error: "リクエストボディが不正な JSON です" },
+        { error: INVALID_JSON_BODY_ERROR },
         { status: 400 }
       );
     }
     if (typeof raw !== "object" || raw === null) {
       return NextResponse.json(
-        { error: "リクエストボディはオブジェクトである必要があります" },
+        { error: BODY_MUST_BE_OBJECT_ERROR },
         { status: 400 }
       );
     }

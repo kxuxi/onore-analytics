@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isObject, readJsonBody } from "./apiRequest";
+import {
+  BODY_MUST_BE_OBJECT_ERROR,
+  INVALID_JSON_BODY_ERROR,
+  isObject,
+  readJsonBody,
+} from "./apiRequest";
 
 describe("readJsonBody", () => {
   it("正しいJSONを unknown のまま返す", async () => {
@@ -28,5 +33,14 @@ describe("isObject", () => {
     expect(isObject([])).toBe(true);
     expect(isObject(null)).toBe(false);
     expect(isObject("value")).toBe(false);
+  });
+});
+
+describe("共通エラーメッセージ", () => {
+  it("複数のAPIルートで同じ文言を共有する（表記ゆれを防ぐ）", () => {
+    expect(INVALID_JSON_BODY_ERROR).toBe("リクエストボディが不正な JSON です");
+    expect(BODY_MUST_BE_OBJECT_ERROR).toBe(
+      "リクエストボディはオブジェクトである必要があります"
+    );
   });
 });

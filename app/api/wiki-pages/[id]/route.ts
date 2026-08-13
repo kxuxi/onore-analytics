@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { makeErrorResponse } from "@/lib/apiError";
-import { readJsonBody } from "@/lib/apiRequest";
+import { INVALID_JSON_BODY_ERROR, readJsonBody } from "@/lib/apiRequest";
 import { requireAdmin } from "@/lib/authGuard";
 import {
   parseWikiPageId,
@@ -15,6 +15,9 @@ export const runtime = "nodejs";
 const errorResponse = makeErrorResponse("api/wiki-pages/[id]");
 type RouteContext = { params: { id: string } };
 
+const INVALID_WIKI_PAGE_ID_ERROR = "WikiページIDが不正です";
+const WIKI_PAGE_NOT_FOUND_ERROR = "Wikiページが見つかりません";
+
 function validPageId(context: RouteContext): number | null {
   return parseWikiPageId(context.params.id);
 }
@@ -26,13 +29,13 @@ export async function GET(_request: Request, context: RouteContext) {
 
     const id = validPageId(context);
     if (id === null) {
-      return wikiJson({ error: "WikiページIDが不正です" }, { status: 400 });
+      return wikiJson({ error: INVALID_WIKI_PAGE_ID_ERROR }, { status: 400 });
     }
 
     const page = await prisma.wikiPage.findUnique({ where: { id } });
     if (!page) {
       return wikiJson(
-        { error: "Wikiページが見つかりません" },
+        { error: WIKI_PAGE_NOT_FOUND_ERROR },
         { status: 404 }
       );
     }
@@ -49,13 +52,13 @@ export async function PUT(request: Request, context: RouteContext) {
 
     const id = validPageId(context);
     if (id === null) {
-      return wikiJson({ error: "WikiページIDが不正です" }, { status: 400 });
+      return wikiJson({ error: INVALID_WIKI_PAGE_ID_ERROR }, { status: 400 });
     }
 
     const body = await readJsonBody(request);
     if (!body.ok) {
       return wikiJson(
-        { error: "リクエストボディが不正なJSONです" },
+        { error: INVALID_JSON_BODY_ERROR },
         { status: 400 }
       );
     }
@@ -89,7 +92,7 @@ export async function PUT(request: Request, context: RouteContext) {
               error:
                 "このWikiページは別の画面で更新されています。再読み込みして変更内容を確認してください",
             }
-          : { error: "Wikiページが見つかりません" },
+          : { error: WIKI_PAGE_NOT_FOUND_ERROR },
         { status: existingPage ? 409 : 404 }
       );
     }
@@ -97,7 +100,7 @@ export async function PUT(request: Request, context: RouteContext) {
     const page = await prisma.wikiPage.findUnique({ where: { id } });
     if (!page) {
       return wikiJson(
-        { error: "Wikiページが見つかりません" },
+        { error: WIKI_PAGE_NOT_FOUND_ERROR },
         { status: 404 }
       );
     }
@@ -114,13 +117,13 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
     const id = validPageId(context);
     if (id === null) {
-      return wikiJson({ error: "WikiページIDが不正です" }, { status: 400 });
+      return wikiJson({ error: INVALID_WIKI_PAGE_ID_ERROR }, { status: 400 });
     }
 
     const result = await prisma.wikiPage.deleteMany({ where: { id } });
     if (result.count === 0) {
       return wikiJson(
-        { error: "Wikiページが見つかりません" },
+        { error: WIKI_PAGE_NOT_FOUND_ERROR },
         { status: 404 }
       );
     }

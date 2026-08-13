@@ -40,8 +40,7 @@ type SortKey =
   | "attackWinRate"
   | "defenseWinRate"
   | "avgBreakthrough"
-  | "defenseEfficiency"
-  | "assists";
+  | "defenseEfficiency";
 
 /** ノイズ除去用の最低戦闘数の選択肢。 */
 const MIN_CONTACT_OPTIONS = WARLORD_RANKING_MIN_COUNT_OPTIONS;
@@ -101,11 +100,6 @@ const SORT_OPTIONS: { key: SortKey; label: string; desc: string }[] = [
     label: "守備効率",
     desc: "守備側での勝利戦目数 ÷ 撤退を含まない守備回数。1守備あたりの平均撃破数を示します。",
   },
-  {
-    key: "assists",
-    label: "アシスト数",
-    desc: "削った相手が、その後40分以内に別の戦闘で倒された回数。",
-  },
 ];
 
 /** 武将 1 行分の指標（PPN・PontaPoint・抜き数・抜き率をまとめたもの）。 */
@@ -155,8 +149,6 @@ interface MetricRow {
   attackSorties: number;
   /** 撤退を含まない守備数。 */
   defenseSorties: number;
-  /** アシスト数。 */
-  assists: number;
 }
 
 /** 各集計結果を安全に結合するための空行を作る。 */
@@ -189,7 +181,6 @@ function createMetricRow(
     defenseWinRounds: 0,
     attackSorties: 0,
     defenseSorties: 0,
-    assists: 0,
   };
 }
 
@@ -237,8 +228,6 @@ function metricLabel(r: MetricRow, metric: SortKey): string {
       return r.defenseSorties > 0
         ? `${r.defenseEfficiency.toFixed(2)}枚`
         : "—";
-    case "assists":
-      return r.assists.toLocaleString("ja-JP");
   }
 }
 
@@ -253,8 +242,6 @@ function metricContactCount(r: MetricRow, metric: SortKey): number {
       return r.attackSorties;
     case "defenseEfficiency":
       return r.defenseSorties;
-    case "assists":
-      return r.attackSorties + r.defenseSorties;
     default:
       return r.battles;
   }
@@ -346,10 +333,6 @@ function MetricRowItem({
               守備側勝利 {r.defenseWinRounds.toLocaleString("ja-JP")} ／ 守備{" "}
               {r.defenseSorties.toLocaleString("ja-JP")}回
             </span>
-          ) : metric === "assists" ? (
-            <span className="rank-side-active">
-              アシスト {r.assists.toLocaleString("ja-JP")}（40分以内追撃）
-            </span>
           ) : (
             <span className="rank-side-active">
               出兵 {r.attackWins.toLocaleString("ja-JP")}勝 ／ 守備{" "}
@@ -439,7 +422,6 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
       row.defenseWinRounds = oldRanking.defenseWinRounds;
       row.attackSorties = oldRanking.attackSorties;
       row.defenseSorties = oldRanking.defenseSorties;
-      row.assists = oldRanking.assists;
       byName.set(oldRanking.name, row);
     }
     const rows = Array.from(byName.values());
