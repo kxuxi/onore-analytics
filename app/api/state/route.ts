@@ -4,7 +4,12 @@ import { makeErrorResponse } from "@/lib/apiError";
 import { requireAdmin } from "@/lib/authGuard";
 import { mergeWarlords } from "@/lib/storage";
 import { battleKey } from "@/lib/parser";
-import { isObject, readJsonBody } from "@/lib/apiRequest";
+import {
+  BODY_MUST_BE_OBJECT_ERROR,
+  INVALID_JSON_BODY_ERROR,
+  isObject,
+  readJsonBody,
+} from "@/lib/apiRequest";
 import {
   warlordCoreRowToDto,
   type WarlordCoreRow,
@@ -89,7 +94,7 @@ function badRequest(message: string) {
 function parseStateBody(
   body: unknown
 ): { warlords: Warlord[]; records: BattleRecord[] } | { error: string } {
-  if (!isObject(body)) return { error: "リクエストボディはオブジェクトである必要があります" };
+  if (!isObject(body)) return { error: BODY_MUST_BE_OBJECT_ERROR };
   const warlords = body.warlords ?? [];
   const records = body.records ?? [];
   if (!Array.isArray(warlords)) return { error: "warlords は配列である必要があります" };
@@ -143,7 +148,7 @@ export async function POST(req: Request) {
     const responseTerm = parseTermParam(req);
     const bodyResult = await readJsonBody(req);
     if (!bodyResult.ok) {
-      return badRequest("リクエストボディが不正な JSON です");
+      return badRequest(INVALID_JSON_BODY_ERROR);
     }
     const parsed = parseStateBody(bodyResult.value);
     if ("error" in parsed) return badRequest(parsed.error);

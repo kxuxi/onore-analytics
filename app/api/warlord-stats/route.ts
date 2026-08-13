@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { makeErrorResponse } from "@/lib/apiError";
 import { requireAdmin } from "@/lib/authGuard";
-import { isObject, readJsonBody } from "@/lib/apiRequest";
+import {
+  BODY_MUST_BE_OBJECT_ERROR,
+  INVALID_JSON_BODY_ERROR,
+  isObject,
+  readJsonBody,
+} from "@/lib/apiRequest";
 import {
   warlordCoreRowToDto,
   type WarlordCoreRow,
@@ -45,7 +50,7 @@ interface StatInput {
 
 /** 取り込み能力値の入力を境界で検証する。 */
 function parseBody(body: unknown): { stats: StatInput[] } | { error: string } {
-  if (!isObject(body)) return { error: "リクエストボディはオブジェクトである必要があります" };
+  if (!isObject(body)) return { error: BODY_MUST_BE_OBJECT_ERROR };
   const stats = body.stats;
   if (!Array.isArray(stats)) return { error: "stats は配列である必要があります" };
   const optionalNumber = (v: unknown) => v === undefined || typeof v === "number";
@@ -73,7 +78,7 @@ export async function POST(req: Request) {
     if (denied) return denied;
     const bodyResult = await readJsonBody(req);
     if (!bodyResult.ok) {
-      return badRequest("リクエストボディが不正な JSON です");
+      return badRequest(INVALID_JSON_BODY_ERROR);
     }
     const parsed = parseBody(bodyResult.value);
     if ("error" in parsed) return badRequest(parsed.error);
