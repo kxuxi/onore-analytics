@@ -140,6 +140,12 @@ describe("HomeTab", () => {
     expect(html).toContain("計略解放まで");
     expect(html).toContain("先制計略");
     expect(html).toContain("あと計略P +2");
+
+    // 政治72・最大徴兵兵数50000（初期値） → 50000/(72*2)=347.22...
+    expect(html).toContain("徴兵時の治安減少値");
+    expect(html).toContain('value="50000"');
+    expect(html).toContain("東雲ドーナツ");
+    expect(html).toContain("-347.22");
   });
 
   it("管理者でない、またはonUpdateStats未指定なら編集フォームを表示しない", () => {
@@ -203,6 +209,61 @@ describe("HomeTab", () => {
     expect(html).toContain("計略解放まで");
     expect(html).toContain("同士討（威力系）");
     expect(html).not.toContain("あと計略P");
+  });
+
+  it("政治力が未設定なら「徴兵時の治安減少値」は表示しない", () => {
+    vi.stubGlobal("document", {
+      cookie: "onore_my_warlord=%E4%BF%A1%E9%95%B7",
+    });
+
+    const html = renderToStaticMarkup(
+      <HomeTab
+        log={[]}
+        db={{
+          信長: {
+            name: "信長",
+            type: "武特",
+            branch: "騎兵",
+            updatedAt: 0,
+          },
+        }}
+        colors={{}}
+        {...callbacks}
+      />
+    );
+
+    expect(html).not.toContain("徴兵時の治安減少値");
+  });
+
+  it("徴兵数の初期値が空でも「徴兵時の治安減少値」カード自体は表示する", () => {
+    vi.stubGlobal("document", {
+      cookie: "onore_my_warlord=%E4%BF%A1%E9%95%B7",
+    });
+
+    const html = renderToStaticMarkup(
+      <HomeTab
+        log={[]}
+        db={{
+          信長: {
+            name: "信長",
+            type: "武特",
+            branch: "騎兵",
+            updatedAt: 0,
+            politics: 50,
+          },
+        }}
+        colors={{}}
+        {...callbacks}
+      />
+    );
+
+    expect(html).toContain("徴兵時の治安減少値");
+    // 持ち物選択肢がすべて表示される。
+    expect(html).toContain("なし");
+    expect(html).toContain("三河物語");
+    expect(html).toContain("諸葛亮の白羽扇");
+    // 徴兵数未入力のため治安減少量は「—」。
+    expect(html).toContain(">—<");
   });
 });
 

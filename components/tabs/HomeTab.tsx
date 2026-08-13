@@ -22,6 +22,10 @@ import { WinRateBar } from "@/components/detail/DetailParts";
 import { HomeActivation, HomeWarlordSearch } from "./HomeActivation";
 import { filterHomeWarlordSuggestions } from "./homeSearch";
 import { computeStratagemUnlockStatus } from "@/lib/stratagemUnlock";
+import {
+  computeConscriptionSecurityDecrease,
+  CONSCRIPTION_POLITICS_ITEMS,
+} from "@/lib/conscriptionSecurity";
 
 interface Props {
   log: BattleRecord[];
@@ -496,6 +500,87 @@ function StratagemUnlockCard({
   );
 }
 
+/** 治安減少量の表示用フォーマット（整数ならそのまま、小数は小数点以下2桁まで）。 */
+function formatSecurityDecrease(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2);
+}
+
+/**
+ * 「徴兵時の治安減少値」カード。徴兵数と政治力を上げる持ち物から、
+ * 治安減少量 = 徴兵数 ÷ (政治力×2)（下限1）を計算して表示する。
+ * 政治力が設定されていれば誰でも見られる（読み取り専用のローカル計算）。
+ */
+function ConscriptionSecurityCard({
+  politics,
+  maxTroops,
+}: {
+  politics: number;
+  maxTroops?: number;
+}) {
+  const [troopsInput, setTroopsInput] = useState(
+    () => maxTroops?.toString() ?? ""
+  );
+  const [itemName, setItemName] = useState(CONSCRIPTION_POLITICS_ITEMS[0].name);
+
+  const item =
+    CONSCRIPTION_POLITICS_ITEMS.find((i) => i.name === itemName) ??
+    CONSCRIPTION_POLITICS_ITEMS[0];
+  const effectivePolitics = politics + item.politicsBonus;
+  const troops = Number(troopsInput);
+  const decrease =
+    troopsInput.trim() !== "" && Number.isFinite(troops) && troops >= 0
+      ? computeConscriptionSecurityDecrease(troops, effectivePolitics)
+      : null;
+
+  return (
+    <div className="home-card">
+      <h3 className="home-card-title">🛡️ 徴兵時の治安減少値</h3>
+      <p className="muted">治安減少量 = 徴兵数 ÷ (政治力 × 2)（下限1）</p>
+      <div className="filter-grid">
+        <label className="filter">
+          <span>徴兵数</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            className="text-input"
+            value={troopsInput}
+            onChange={(e) => setTroopsInput(e.target.value)}
+          />
+        </label>
+        <label className="filter">
+          <span>持ち物</span>
+          <select
+            className="text-input"
+            value={itemName}
+            onChange={(e) => setItemName(e.target.value)}
+          >
+            {CONSCRIPTION_POLITICS_ITEMS.map((i) => (
+              <option key={i.name} value={i.name}>
+                {i.name}
+                {i.politicsBonus > 0 ? `（政治+${i.politicsBonus}）` : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {item.note && <p className="muted">{item.note}</p>}
+      <div className="home-hero-stats">
+        <div className="home-bigstat">
+          <div className="home-bigstat-val">{effectivePolitics}</div>
+          <div className="home-bigstat-label">政治力（持ち物込み）</div>
+        </div>
+        <div className="home-bigstat">
+          <div className="home-bigstat-val">
+            {decrease != null ? `-${formatSecurityDecrease(decrease)}` : "—"}
+          </div>
+          <div className="home-bigstat-label">治安減少量</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** ウォッチリスト（お気に入り武将）のカード。管理者のみ表示。 */
 function WatchlistSection({
   watchlist,
@@ -850,6 +935,14 @@ export function HomeTab({
           <StratagemUnlockCard
             intelligence={dbInfo.intelligence}
             strategy={dbInfo.strategy}
+          />
+        )}
+
+        {dbInfo?.politics != null && (
+          <ConscriptionSecurityCard
+            key={name}
+            politics={dbInfo.politics}
+            maxTroops={dbInfo.maxTroops}
           />
         )}
 
