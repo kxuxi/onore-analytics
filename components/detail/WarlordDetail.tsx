@@ -9,7 +9,8 @@ import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
 import {
   collectWarlordBattles,
   summarize,
-  unitUsage,
+  selfUnitStats,
+  formatWinRate,
   latestSelfProfile,
   matchupRanking,
   branchStats,
@@ -83,7 +84,7 @@ export function WarlordDetail({
   const summary = useMemo(() => summarize(outcomes), [outcomes]);
   // 使用兵種の割合は戦闘ログと同じ年フィルターを共有する。
   const yearFilter = useYearRangeFilter(outcomes);
-  const usage = useMemo(() => unitUsage(yearFilter.filtered), [yearFilter.filtered]);
+  const usage = useMemo(() => selfUnitStats(yearFilter.filtered), [yearFilter.filtered]);
   const ranking = useMemo(() => matchupRanking(outcomes), [outcomes]);
   const branches = useMemo(() => branchStats(outcomes), [outcomes]);
   const heatmap = useMemo(() => winHeatmap(outcomes), [outcomes]);
@@ -146,13 +147,13 @@ export function WarlordDetail({
   const pieData = useMemo(
     () =>
       usage.map((u, i) => ({
-        label: u.name,
-        value: u.count,
+        label: u.unit,
+        value: u.battles,
         color: chartColor(i),
       })),
     [usage]
   );
-  const usageTotal = usage.reduce((s, u) => s + u.count, 0);
+  const usageTotal = usage.reduce((s, u) => s + u.battles, 0);
 
   const tags = (
     <>
@@ -295,28 +296,29 @@ export function WarlordDetail({
                 {usage.map((u, i) => {
                   const pct =
                     usageTotal > 0
-                      ? Math.round((u.count / usageTotal) * 100)
+                      ? Math.round((u.battles / usageTotal) * 100)
                       : 0;
                   return (
-                    <li key={u.name} className="pie-legend-item">
+                    <li key={u.unit} className="pie-legend-item">
                       <span
                         className="pie-dot"
                         style={{ background: chartColor(i) }}
                       />
-                      {u.name === "不明" ? (
+                      {u.unit === "不明" ? (
                         <span className="pie-legend-name muted">不明</span>
                       ) : (
                         <button
                           type="button"
                           className="pie-legend-name link-like"
-                          onClick={() => onSelectUnit(u.name)}
-                          title={`${u.name} の戦績を見る`}
+                          onClick={() => onSelectUnit(u.unit)}
+                          title={`${u.unit} の戦績を見る`}
                         >
-                          {u.name}
+                          {u.unit}
                         </button>
                       )}
                       <span className="pie-legend-val">
-                        {u.count.toLocaleString("ja-JP")}戦 ({pct}%)
+                        {u.battles.toLocaleString("ja-JP")}戦 ({pct}%)・勝率{" "}
+                        {formatWinRate(u.winRate, u.decided)}
                       </span>
                     </li>
                   );
