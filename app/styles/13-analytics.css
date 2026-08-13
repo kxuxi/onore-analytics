@@ -283,38 +283,6 @@
   min-width: 130px;
   flex: 0 0 auto;
 }
-.meta-warnings {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 14px;
-}
-.meta-warning {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  font-size: 13px;
-  line-height: 1.4;
-}
-.meta-warning .icon {
-  flex: 0 0 auto;
-  width: 18px;
-  height: 18px;
-}
-.meta-warning.dominant {
-  color: color-mix(in srgb, var(--danger) 72%, var(--text));
-  background: color-mix(in srgb, var(--danger) 12%, var(--panel));
-  border-color: color-mix(in srgb, var(--danger) 32%, transparent);
-}
-.meta-warning.overpick {
-  color: color-mix(in srgb, var(--label-type-fg) 82%, var(--text));
-  background: color-mix(in srgb, var(--label-type-fg) 12%, var(--panel));
-  border-color: color-mix(in srgb, var(--label-type-fg) 30%, transparent);
-}
-
 .meta-block {
   margin-top: 18px;
 }
@@ -385,60 +353,6 @@
   font-size: 14px;
   font-weight: var(--font-weight-bold);
 }
-.meta-sub {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: var(--font-weight-regular);
-}
-
-.meta-traits {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.meta-trait-row {
-  display: grid;
-  grid-template-columns: 52px 86px 1fr 120px;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-}
-.meta-trait-name {
-  font-weight: var(--font-weight-semibold);
-  color: var(--label-type-fg);
-}
-.meta-trait-pick {
-  color: var(--muted);
-  font-size: 12px;
-}
-.meta-trait-bar {
-  height: 8px;
-  border-radius: 999px;
-  background: var(--panel-2);
-  overflow: hidden;
-}
-.meta-trait-bar-fill {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--label-type-fg) 55%, transparent);
-}
-.meta-trait-rate {
-  text-align: right;
-  font-weight: var(--font-weight-bold);
-}
-@media (max-width: 560px) {
-  .meta-trait-row {
-    grid-template-columns: auto 1fr auto;
-  }
-  .meta-trait-pick {
-    display: none;
-  }
-}
-
 /* 時間帯・曜日別ヒートマップ */
 .heatmap-wrap {
   overflow-x: auto;

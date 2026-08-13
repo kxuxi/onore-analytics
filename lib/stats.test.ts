@@ -1526,12 +1526,6 @@ describe("metaOverview", () => {
     expect(touToku?.winRate).toBeCloseTo(4 / 12); // 右＝防衛側（鏡）
   });
 
-  it("支配的な兵種（S+）に環境警告を出す", () => {
-    const { warnings } = metaOverview(log);
-    const dominant = warnings.find((w) => w.level === "dominant");
-    expect(dominant?.unit).toBe("騎馬隊");
-  });
-
   it("年の範囲で期間を絞る", () => {
     // フィクスチャは全て 1600 年→範囲外は空
     const out = metaOverview(log, { from: 1700, to: 1800 });
@@ -1543,14 +1537,12 @@ describe("metaOverview", () => {
 
   it("武将タイプで兵種ランキングを絞り込み、採用率はタイプ内の割合にする", () => {
     // 武特（左側）は常に騎馬隊。武特で絞ると騎馬隊のみ・タイプ内採用率は 100%。
-    const { units, warnings } = metaOverview(log, undefined, "武特");
+    const { units } = metaOverview(log, undefined, "武特");
     expect(units).toHaveLength(1);
     expect(units[0].unit).toBe("騎馬隊");
     expect(units[0].appearances).toBe(12);
     expect(units[0].pickRate).toBeCloseTo(1); // 12 / 12（タイプ内）
     expect(units[0].winRate).toBeCloseTo(8 / 12);
-    // 絞り込み時は全体基準の環境警告を出さない。
-    expect(warnings).toHaveLength(0);
   });
 
   it("武将タイプで絞り込んでも特性別の勝率は全タイプを残す（比較ビュー）", () => {

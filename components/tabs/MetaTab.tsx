@@ -3,12 +3,7 @@
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import type { BattleRecord } from "@/lib/types";
-import {
-  metaOverview,
-  formatWinRate,
-  rankingPeriods,
-} from "@/lib/stats";
-import { AlertTriangleIcon } from "@/components/icons";
+import { metaOverview, rankingPeriods } from "@/lib/stats";
 
 interface Props {
   log: BattleRecord[];
@@ -24,8 +19,8 @@ function pct(rate: number): string {
 }
 
 /**
- * 環境ダッシュボード。期間内の兵種採用率ランキングと特性別勝率、環境警告を
- * まとめて表示する。兵種名クリックで兵種詳細へ遷移する。
+ * 環境ダッシュボード。期間内の兵種採用率ランキングを表示する。
+ * 兵種名クリックで兵種詳細へ遷移する。
  */
 export function MetaTab({ log, onSelectUnit }: Props) {
   const [period, setPeriod] = useState<string>("all");
@@ -44,7 +39,7 @@ export function MetaTab({ log, onSelectUnit }: Props) {
     [log]
   );
 
-  const { totalBattles, units, traits, warnings } = useMemo(
+  const { totalBattles, units } = useMemo(
     () => metaOverview(log, range ?? undefined, type || undefined),
     [log, range, type]
   );
@@ -53,16 +48,6 @@ export function MetaTab({ log, onSelectUnit }: Props) {
   const topUnits = useMemo(
     () => units.filter((u) => u.appearances > 0).slice(0, TOP_N),
     [units]
-  );
-
-  // 特性は登場のあるもののみ表示し、採用率バーは最大値を基準にする。
-  const shownTraits = useMemo(
-    () => traits.filter((t) => t.appearances > 0),
-    [traits]
-  );
-  const maxTraitPick = useMemo(
-    () => Math.max(0, ...shownTraits.map((t) => t.pickRate)),
-    [shownTraits]
   );
 
   return (
@@ -109,20 +94,6 @@ export function MetaTab({ log, onSelectUnit }: Props) {
         <p className="muted">この期間の対戦データがありません。</p>
       ) : (
         <>
-          {warnings.length > 0 && (
-            <div className="meta-warnings" role="status">
-              {warnings.map((w) => (
-                <div
-                  key={w.unit + w.level}
-                  className={"meta-warning " + w.level}
-                >
-                  <AlertTriangleIcon />
-                  <span>{w.message}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
           <div className="meta-block">
             <h3 className="meta-h3">
               採用率 TOP {TOP_N}
@@ -150,36 +121,6 @@ export function MetaTab({ log, onSelectUnit }: Props) {
                 ))}
               </ol>
             )}
-          </div>
-
-          <div className="meta-block">
-            <h3 className="meta-h3">特性別の勝率</h3>
-            <ul className="meta-traits">
-              {shownTraits.map((t) => (
-                <li className="meta-trait-row" key={t.trait}>
-                  <span className="meta-trait-name">{t.trait}</span>
-                  <span className="meta-trait-pick">採用 {pct(t.pickRate)}</span>
-                  <div className="meta-trait-bar">
-                    <span
-                      className="meta-trait-bar-fill"
-                      style={{
-                        width:
-                          maxTraitPick > 0
-                            ? `${Math.round((t.pickRate / maxTraitPick) * 100)}%`
-                            : "0%",
-                      }}
-                    />
-                  </div>
-                  <span className="meta-trait-rate">
-                    {formatWinRate(t.winRate, t.decided)}
-                    <span className="meta-sub">
-                      {" "}
-                      （{t.wins}-{t.losses}）
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
           </div>
         </>
       )}

@@ -20,7 +20,6 @@ import {
   type MetaPeriod,
   type MetaTraitStat,
   type MetaUnitStat,
-  type MetaWarning,
   type TraitMatchupMatrix,
   type YearRange,
 } from "./stats/meta";
@@ -38,7 +37,6 @@ export type {
   MetaTier,
   MetaTraitStat,
   MetaUnitStat,
-  MetaWarning,
   TraitMatchupCell,
   TraitMatchupMatrix,
   YearRange,
@@ -2988,7 +2986,7 @@ interface MetaTraitAcc {
 
 /**
  * 環境（メタゲーム）全体を概観する集計。
- * 兵種ごとの採用率・勝率・強度ティア・トレンド、特性別の勝率、環境警告をまとめて返す。
+ * 兵種ごとの採用率・勝率・強度ティア・トレンド、特性別の勝率をまとめて返す。
  * range を渡すと、その年範囲（ゲーム内の年が判明している分）に絞る。重複行は除外する。
  * typeFilter を渡すと、兵種採用ランキングをその武将タイプ（特性）のものだけに絞り、
  * 採用率は「そのタイプの中での割合」として計算する（特性別の勝率セクションは比較用なので絞らない）。
@@ -3114,27 +3112,5 @@ export function metaOverview(
   );
   traitStats.sort((x, y) => y.appearances - x.appearances);
 
-  const warnings: MetaWarning[] = [];
-  // タイプで絞り込んだときの採用率はタイプ内割合なので、全体基準の警告は出さない。
-  if (!typeOf) {
-    for (const u of unitStats) {
-      const pickPct = Math.round(u.pickRate * 100);
-      const winPct = Math.round(u.winRate * 100);
-      if (u.tier === "S+") {
-        warnings.push({
-          unit: u.unit,
-          level: "dominant",
-          message: `${u.unit} が高採用・高勝率で環境を支配しています（採用 ${pickPct}% / 勝率 ${winPct}%）。`,
-        });
-      } else if (u.pickRate > 0.22) {
-        warnings.push({
-          unit: u.unit,
-          level: "overpick",
-          message: `${u.unit} の採用率が突出しています（採用 ${pickPct}%）。`,
-        });
-      }
-    }
-  }
-
-  return { totalBattles, units: unitStats, traits: traitStats, warnings };
+  return { totalBattles, units: unitStats, traits: traitStats };
 }
