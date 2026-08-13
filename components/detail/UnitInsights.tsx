@@ -94,6 +94,9 @@ export function UnitMatchupRanking({
 
 /* ---------- 武将別の勝率比較 ---------- */
 
+/** 武将別の勝率で最初に表示する件数（これを超える分は「もっと見る」で展開）。 */
+const INITIAL_USERS = 5;
+
 export function UserWinRateList({
   users,
   onSelectWarlord,
@@ -101,12 +104,14 @@ export function UserWinRateList({
   users: UserWinRate[];
   onSelectWarlord: (name: string) => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   if (users.length === 0) return null;
-  const top = users.slice(0, 5);
+  const shown = expanded ? users : users.slice(0, INITIAL_USERS);
+  const hiddenCount = users.length - shown.length;
   return (
     <Section title="武将別の勝率" mobileCollapsed>
       <ul className="user-winrate-list">
-        {top.map((u) => (
+        {shown.map((u) => (
           <li key={u.name} className="user-winrate-row">
             <div className="user-winrate-head">
               <button
@@ -129,6 +134,18 @@ export function UserWinRateList({
           </li>
         ))}
       </ul>
+      {users.length > INITIAL_USERS && (
+        <div className="show-more-row">
+          <button
+            type="button"
+            className="btn show-more-btn"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+          >
+            {expanded ? "一部だけ表示" : `もっと見る（残り${hiddenCount}人）`}
+          </button>
+        </div>
+      )}
     </Section>
   );
 }

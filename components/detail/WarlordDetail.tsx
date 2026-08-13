@@ -13,7 +13,6 @@ import {
   formatWinRate,
   latestSelfProfile,
   matchupRanking,
-  branchStats,
   winHeatmap,
   factionTimeline,
   yearlyWinRates,
@@ -31,7 +30,7 @@ import {
 } from "@/components/detail/DetailParts";
 import {
   MatchupRanking,
-  BranchWinRates,
+  UnitWinRateList,
   WinHeatmapSection,
   FactionHistory,
   WarlordComment,
@@ -86,7 +85,7 @@ export function WarlordDetail({
   const yearFilter = useYearRangeFilter(outcomes);
   const usage = useMemo(() => selfUnitStats(yearFilter.filtered), [yearFilter.filtered]);
   const ranking = useMemo(() => matchupRanking(outcomes), [outcomes]);
-  const branches = useMemo(() => branchStats(outcomes), [outcomes]);
+  const unitStats = useMemo(() => selfUnitStats(outcomes), [outcomes]);
   const heatmap = useMemo(() => winHeatmap(outcomes), [outcomes]);
   const timeline = useMemo(() => factionTimeline(outcomes), [outcomes]);
   const yearly = useMemo(() => yearlyWinRates(outcomes), [outcomes]);
@@ -278,7 +277,7 @@ export function WarlordDetail({
             onSelectWarlord={onSelectWarlord}
           />
 
-          <BranchWinRates branches={branches} />
+          <UnitWinRateList units={unitStats} onSelectUnit={onSelectUnit} />
 
           <WinHeatmapSection heatmap={heatmap} />
 

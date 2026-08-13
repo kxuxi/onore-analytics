@@ -9,6 +9,7 @@ import {
   type HeatCell,
   type MatchupRanking as MatchupRankingData,
   type OpponentStat,
+  type SelfUnitStat,
   type WinHeatmap,
   type YearlyWinRate,
 } from "@/lib/stats";
@@ -149,6 +150,66 @@ export function BranchWinRates({ branches }: { branches: BranchStat[] }) {
           );
         })}
       </ul>
+    </Section>
+  );
+}
+
+/** 兵種単体の勝率で最初に表示する件数（これを超える分は「もっと見る」で展開）。 */
+const INITIAL_UNITS = 5;
+
+/** 兵種単体（例: 母衣衆・鉄砲隊）ごとの勝率一覧。兵種名クリックでその兵種の詳細へ遷移する。 */
+export function UnitWinRateList({
+  units,
+  onSelectUnit,
+}: {
+  units: SelfUnitStat[];
+  onSelectUnit: (name: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  if (units.length === 0) return null;
+  const shown = expanded ? units : units.slice(0, INITIAL_UNITS);
+  const hiddenCount = units.length - shown.length;
+  return (
+    <Section title="兵種別の勝率" mobileCollapsed>
+      <ul className="branch-list">
+        {shown.map((u) => (
+          <li key={u.unit} className="branch-row">
+            <span className="branch-name">
+              {u.unit === "不明" ? (
+                "不明"
+              ) : (
+                <button
+                  type="button"
+                  className="link-like"
+                  onClick={() => onSelectUnit(u.unit)}
+                  title={`${u.unit} の戦績を見る`}
+                >
+                  {u.unit}
+                </button>
+              )}
+            </span>
+            <span className="branch-rate">
+              {formatWinRate(u.winRate, u.decided)}
+            </span>
+            <span className="branch-record">
+              {u.wins.toLocaleString("ja-JP")}勝{u.losses.toLocaleString("ja-JP")}敗
+              <span className="muted">（{u.battles.toLocaleString("ja-JP")}戦）</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      {units.length > INITIAL_UNITS && (
+        <div className="show-more-row">
+          <button
+            type="button"
+            className="btn show-more-btn"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+          >
+            {expanded ? "一部だけ表示" : `もっと見る（残り${hiddenCount}件）`}
+          </button>
+        </div>
+      )}
     </Section>
   );
 }
