@@ -21,6 +21,7 @@ import {
 import { WinRateBar } from "@/components/detail/DetailParts";
 import { HomeActivation, HomeWarlordSearch } from "./HomeActivation";
 import { filterHomeWarlordSuggestions } from "./homeSearch";
+import { computeStratagemUnlockStatus } from "@/lib/stratagemUnlock";
 
 interface Props {
   log: BattleRecord[];
@@ -451,6 +452,50 @@ function HomeStatsEditor({
   );
 }
 
+/**
+ * 「計略解放まで」カード。判定値（知力×2/3+計略P）から、各計略の解放状況と
+ * 未解放分について計略P・知力それぞれで埋める場合の不足量を表示する。
+ * 能力値が設定されていれば誰でも見られる（編集は管理者のみ）。
+ */
+function StratagemUnlockCard({
+  intelligence,
+  strategy,
+}: {
+  intelligence: number;
+  strategy: number;
+}) {
+  const statuses = useMemo(
+    () => computeStratagemUnlockStatus(intelligence, strategy),
+    [intelligence, strategy]
+  );
+  const currentValue = statuses[0]?.currentValue ?? 0;
+
+  return (
+    <div className="home-card">
+      <h3 className="home-card-title">🔮 計略解放まで</h3>
+      <p className="muted">
+        判定値（知力×2/3+計略P）は現在 {currentValue.toFixed(1)}
+        です。
+      </p>
+      <ul className="home-unlock-list">
+        {statuses.map((s) => (
+          <li key={s.label} className="home-unlock-row">
+            <span className="home-unlock-label">{s.label}</span>
+            {s.unlocked ? (
+              <span className="home-res-win">解放済み</span>
+            ) : (
+              <span className="muted">
+                あと計略P +{s.neededStrategy} または 知力 +
+                {s.neededIntelligence}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /** ウォッチリスト（お気に入り武将）のカード。管理者のみ表示。 */
 function WatchlistSection({
   watchlist,
@@ -798,6 +843,13 @@ export function HomeTab({
             name={name}
             warlord={dbInfo}
             onSave={onUpdateStats}
+          />
+        )}
+
+        {dbInfo?.intelligence != null && dbInfo?.strategy != null && (
+          <StratagemUnlockCard
+            intelligence={dbInfo.intelligence}
+            strategy={dbInfo.strategy}
           />
         )}
 

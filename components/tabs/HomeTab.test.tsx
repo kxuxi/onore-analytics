@@ -135,6 +135,11 @@ describe("HomeTab", () => {
     expect(html).toContain('value="91"');
     expect(html).toContain('value="102.5"');
     expect(html).toContain('value="50000"');
+
+    // 知力84・計略102.5 → 判定値158.5。120・150は解放済み、160は未解放（あと2）。
+    expect(html).toContain("計略解放まで");
+    expect(html).toContain("先制計略");
+    expect(html).toContain("あと計略P +2");
   });
 
   it("管理者でない、またはonUpdateStats未指定なら編集フォームを表示しない", () => {
@@ -145,6 +150,59 @@ describe("HomeTab", () => {
     const html = renderHome();
 
     expect(html).not.toContain("自分のステータス");
+  });
+
+  it("知力・計略のどちらかが未設定なら「計略解放まで」は表示しない", () => {
+    vi.stubGlobal("document", {
+      cookie: "onore_my_warlord=%E4%BF%A1%E9%95%B7",
+    });
+
+    const html = renderToStaticMarkup(
+      <HomeTab
+        log={[]}
+        db={{
+          信長: {
+            name: "信長",
+            type: "武特",
+            branch: "騎兵",
+            updatedAt: 0,
+            intelligence: 84,
+          },
+        }}
+        colors={{}}
+        {...callbacks}
+      />
+    );
+
+    expect(html).not.toContain("計略解放まで");
+  });
+
+  it("能力値が十分なら「計略解放まで」で全項目が解放済みになる", () => {
+    vi.stubGlobal("document", {
+      cookie: "onore_my_warlord=%E4%BF%A1%E9%95%B7",
+    });
+
+    const html = renderToStaticMarkup(
+      <HomeTab
+        log={[]}
+        db={{
+          信長: {
+            name: "信長",
+            type: "武特",
+            branch: "騎兵",
+            updatedAt: 0,
+            intelligence: 300,
+            strategy: 300,
+          },
+        }}
+        colors={{}}
+        {...callbacks}
+      />
+    );
+
+    expect(html).toContain("計略解放まで");
+    expect(html).toContain("同士討（威力系）");
+    expect(html).not.toContain("あと計略P");
   });
 });
 
