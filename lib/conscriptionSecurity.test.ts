@@ -5,14 +5,14 @@ import {
 } from "./conscriptionSecurity";
 
 describe("computeConscriptionSecurityDecrease", () => {
-  it("徴兵数 ÷ (政治×2) を返す", () => {
-    // 1000 / (50*2) = 10
-    expect(computeConscriptionSecurityDecrease(1000, 50)).toBe(10);
+  it("徴兵数 ÷ (政治×2) + 1 を返す", () => {
+    // 1000 / (50*2) + 1 = 11
+    expect(computeConscriptionSecurityDecrease(1000, 50)).toBe(11);
   });
 
-  it("結果が1未満なら下限1にする", () => {
-    // 10 / (100*2) = 0.05 → 下限1
-    expect(computeConscriptionSecurityDecrease(10, 100)).toBe(1);
+  it("徴兵数が少なくても +1 される", () => {
+    // 10 / (100*2) + 1 = 1.05
+    expect(computeConscriptionSecurityDecrease(10, 100)).toBeCloseTo(1.05);
   });
 
   it("政治力が0以下なら計算不能としてnullを返す", () => {
@@ -20,10 +20,10 @@ describe("computeConscriptionSecurityDecrease", () => {
     expect(computeConscriptionSecurityDecrease(1000, -10)).toBeNull();
   });
 
-  it("小数の結果もそのまま返す（下限1は超えている場合）", () => {
-    // 1000 / (300*2) = 1.666...
+  it("小数の結果もそのまま返す", () => {
+    // 1000 / (300*2) + 1 = 2.666...
     expect(computeConscriptionSecurityDecrease(1000, 300)).toBeCloseTo(
-      1.6666,
+      2.6666,
       3
     );
   });
