@@ -681,6 +681,13 @@ describe("unitMatchupRanking / userWinRates", () => {
   it("兵種ラベルは最多出現の兵種を返す", () => {
     expect(unitBranchLabel(outcomes)).toBe("騎兵");
   });
+
+  it("collectUnitBattlesは【壁戦】（対人ではなくNPCの壁への攻撃）を含めない", () => {
+    const wallLine =
+      "【壁戦】 1666年12月 08/04 23:59 熊本 ななせ国 SINCLAIR キャラメルBOX 統特 ランセロ 特殊船 龍の護符 攻城櫓 V.S. エロゲソング同好会 熊本の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
+    const wallOutcomes = collectUnitBattles([rec(wallLine, 1)], "ランセロ");
+    expect(wallOutcomes).toHaveLength(0);
+  });
 });
 
 describe("unitUsageTrend", () => {
@@ -732,6 +739,13 @@ describe("unitUsageTrend", () => {
     expect(trend[0].decided).toBe(1);
     expect(trend[1].wins).toBe(1);
     expect(trend[1].losses).toBe(0);
+  });
+
+  it("【壁戦】（対人ではなくNPCの壁への攻撃）は使用率・勝率のどちらにも含めない", () => {
+    const wallLine =
+      "【壁戦】 1666年12月 08/04 23:59 熊本 ななせ国 SINCLAIR キャラメルBOX 統特 ランセロ 特殊船 龍の護符 攻城櫓 V.S. エロゲソング同好会 熊本の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
+    const trend = unitUsageTrend([rec(wallLine, 1)], "ランセロ");
+    expect(trend).toHaveLength(0);
   });
 });
 
@@ -1209,6 +1223,13 @@ describe("weaponStats / itemStats", () => {
     );
 
     expect(outcomes.map((o) => o.record.id)).toEqual([1, 3, 2, 4, 5]);
+  });
+
+  it("【壁戦】（対人ではなくNPCの壁への攻撃）は装備の勝率に含めない", () => {
+    const wallLine =
+      "【壁戦】 1666年12月 08/04 23:59 熊本 ななせ国 SINCLAIR キャラメルBOX 統特 ランセロ 特殊船 龍の護符 攻城櫓 V.S. エロゲソング同好会 熊本の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
+    expect(collectEquipBattles([rec(wallLine, 1)], "龍の護符", "item")).toEqual([]);
+    expect(collectEquipBattles([rec(wallLine, 1)], "攻城櫓", "weapon")).toEqual([]);
   });
 });
 
@@ -2143,6 +2164,15 @@ describe("assetMetricRanking（兵種・武器・品物の指標）", () => {
         expect(metric.winRate).toBeCloseTo(legacy.winRate);
       }
     }
+  });
+
+  it("【壁戦】（対人ではなくNPCの壁への攻撃）は兵種・武器・品物の指標に含めない", () => {
+    const wallLine =
+      "【壁戦】 1666年12月 08/04 23:59 熊本 ななせ国 SINCLAIR キャラメルBOX 統特 ランセロ 特殊船 龍の護符 攻城櫓 V.S. エロゲソング同好会 熊本の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
+    const wallLog = [rec(wallLine, 1)];
+    expect(assetMetricRanking(wallLog, "unit").some((r) => r.name === "ランセロ")).toBe(false);
+    expect(assetMetricRanking(wallLog, "item").some((r) => r.name === "龍の護符")).toBe(false);
+    expect(assetMetricRanking(wallLog, "weapon").some((r) => r.name === "攻城櫓")).toBe(false);
   });
 });
 
