@@ -667,6 +667,8 @@ export function yearBucketWinRankings(
   for (const b of YEAR_BUCKETS) byBucket.set(b.key, new Map());
 
   for (const { record, card } of dedupedCards(log)) {
+    // 【壁戦】（対人ではなくNPCの壁への攻撃）は年代別ランキングに含めない。
+    if (isWallBattle(card)) continue;
     const year = parseGameYear(record.time ?? card.battleAt);
     if (year === null) continue;
     const bucket = yearBucketFor(year);
@@ -1067,6 +1069,8 @@ export function collectFactionBattles(
   const target = faction.trim();
   const out: BattleOutcome[] = [];
   for (const { record, card } of dedupedCards(log)) {
+    // 【壁戦】（対人ではなくNPCの壁への攻撃）は国の戦績に含めない。
+    if (isWallBattle(card)) continue;
     if (card.left.faction?.trim() === target)
       out.push(makeOutcome(record, card, "left"));
     if (card.right.faction?.trim() === target)
@@ -1110,6 +1114,8 @@ export function factionSummaries(
     return a;
   };
   for (const { card } of dedupedCards(log)) {
+    // 【壁戦】（対人ではなくNPCの壁への攻撃）は国の戦績に含めない。
+    if (isWallBattle(card)) continue;
     for (const side of ["left", "right"] as SideKey[]) {
       const s = side === "left" ? card.left : card.right;
       const faction = s.faction?.trim();
@@ -1351,6 +1357,8 @@ export function factionMemberUnitTrends(
   const unitCounts = new Map<string, Map<string, number>>();
   const totals = new Map<string, number>();
   for (const { card } of cards) {
+    // 【壁戦】（対人ではなくNPCの壁への攻撃）は使用兵種の傾向に含めない。
+    if (isWallBattle(card)) continue;
     const year = gameYear(card);
     if (sinceYear != null && (year == null || year < sinceYear)) continue;
     for (const side of ["left", "right"] as SideKey[]) {
@@ -2795,6 +2803,8 @@ export function equipSynergy(log: BattleRecord[]): EquipSynergyStat[] {
   const map = new Map<string, Acc>();
   const sides: SideKey[] = ["left", "right"];
   for (const { card } of dedupedCards(log)) {
+    // 【壁戦】（対人ではなくNPCの壁への攻撃）は武器・品物の組み合わせ統計に含めない。
+    if (isWallBattle(card)) continue;
     for (const side of sides) {
       const self = side === "left" ? card.left : card.right;
       if (!self.equip1 || !self.equip2) continue;
@@ -2913,6 +2923,8 @@ export function traitMatchupMatrix(
   );
   for (const { card } of dedupedCards(log)) {
     if (!withinYearRange(card, range)) continue;
+    // 【壁戦】（対人ではなくNPCの壁への攻撃）は特性別マトリクスに含めない。
+    if (isWallBattle(card)) continue;
     const ri = index.get(card.left.type?.trim() ?? "");
     const ci = index.get(card.right.type?.trim() ?? "");
     if (ri == null || ci == null) continue;
@@ -2952,6 +2964,8 @@ export function collectTraitMatchupBattles(
   const out: BattleOutcome[] = [];
   for (const { record, card } of dedupedCards(log)) {
     if (!withinYearRange(card, range)) continue;
+    // 【壁戦】（対人ではなくNPCの壁への攻撃）は特性別対戦成績に含めない。
+    if (isWallBattle(card)) continue;
     if ((card.left.type?.trim() ?? "") !== row) continue;
     if ((card.right.type?.trim() ?? "") !== col) continue;
     out.push(makeOutcome(record, card, "left"));
@@ -3055,6 +3069,8 @@ export function metaOverview(
 
   for (const { record, card } of dedupedCards(log)) {
     if (!withinYearRange(card, range)) continue;
+    // 【壁戦】（対人ではなくNPCの壁への攻撃）はメタ分析に含めない。
+    if (isWallBattle(card)) continue;
     totalBattles++;
     const t = parseActionDate(record.time, now)?.getTime() ?? null;
     const leftResult = outcomeForSide(card.winner, "left");

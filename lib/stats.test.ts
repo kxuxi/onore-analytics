@@ -399,6 +399,17 @@ describe("collectFactionBattles", () => {
     expect(outcomes).toHaveLength(6);
     expect(outcomes.every((o) => o.self.faction === "織田")).toBe(true);
   });
+
+  it("【壁戦】（対人ではなくNPCの壁への攻撃）は国の戦績に含めない", () => {
+    const wallLine =
+      "【壁戦】 1666年12月 08/04 23:59 熊本 ななせ国 SINCLAIR キャラメルBOX 統特 ランセロ 特殊船 龍の護符 攻城櫓 V.S. エロゲソング同好会 熊本の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
+    expect(collectFactionBattles([rec(wallLine, 1)], "ななせ国")).toHaveLength(
+      0
+    );
+    expect(
+      collectFactionBattles([rec(wallLine, 1)], "エロゲソング同好会")
+    ).toHaveLength(0);
+  });
 });
 
 describe("factionMemberStats", () => {
@@ -542,6 +553,13 @@ describe("factionMemberUnitTrends", () => {
     const sato = trends.get("佐藤")!;
     expect(sato.units).toEqual([{ unit: "母衣衆", count: 1 }]);
   });
+
+  it("【壁戦】（対人ではなくNPCの壁への攻撃）は使用兵種の傾向に含めない", () => {
+    const wallLine =
+      "【壁戦】 1666年12月 08/04 23:59 熊本 ななせ国 SINCLAIR キャラメルBOX 統特 ランセロ 特殊船 龍の護符 攻城櫓 V.S. エロゲソング同好会 熊本の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
+    const trends = factionMemberUnitTrends([rec(wallLine, 1)], "ななせ国", null);
+    expect(trends.get("SINCLAIR")).toBeUndefined();
+  });
 });
 
 describe("factionSummaries", () => {
@@ -598,6 +616,14 @@ describe("factionSummaries", () => {
     expect(uesugi.members).toBe(1);
     expect(uesugi.decided).toBe(0);
     expect(uesugi.winRate).toBe(0);
+  });
+
+  it("【壁戦】（対人ではなくNPCの壁への攻撃）は国の戦闘数に含めない", () => {
+    const wallLine =
+      "【壁戦】 1666年12月 08/04 23:59 熊本 ななせ国 SINCLAIR キャラメルBOX 統特 ランセロ 特殊船 龍の護符 攻城櫓 V.S. エロゲソング同好会 熊本の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
+    const list = factionSummaries([rec(wallLine, 1)], {});
+    const nanase = list.find((f) => f.faction === "ななせ国");
+    expect(nanase?.battles ?? 0).toBe(0);
   });
 });
 
@@ -1357,6 +1383,12 @@ describe("equipSynergy", () => {
     ];
     expect(equipSynergy(noItem)).toHaveLength(0);
   });
+
+  it("【壁戦】（対人ではなくNPCの壁への攻撃）は武器・品物の組み合わせ統計に含めない", () => {
+    const wallLine =
+      "【壁戦】 1666年12月 08/04 23:59 熊本 ななせ国 SINCLAIR キャラメルBOX 統特 ランセロ 特殊船 龍の護符 攻城櫓 V.S. エロゲソング同好会 熊本の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
+    expect(equipSynergy([rec(wallLine, 1)])).toHaveLength(0);
+  });
 });
 
 describe("traitMatchupMatrix / collectTraitMatchupBattles", () => {
@@ -1437,6 +1469,20 @@ describe("traitMatchupMatrix / collectTraitMatchupBattles", () => {
     expect(battles.every((b) => b.side === "left")).toBe(true);
     // 新しい順（12:00 が先頭・敗北）
     expect(battles[0].result).toBe("loss");
+  });
+
+  it("【壁戦】（対人ではなくNPCの壁への攻撃）は特性別対戦成績に含めない", () => {
+    const wallLine =
+      "【壁戦】 1666年12月 08/04 23:59 熊本 ななせ国 SINCLAIR キャラメルBOX 統特 ランセロ 特殊船 龍の護符 攻城櫓 V.S. エロゲソング同好会 熊本の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
+    const wallLog = [rec(wallLine, 1)];
+    expect(
+      collectTraitMatchupBattles(wallLog, "統特", "下級城壁兵")
+    ).toHaveLength(0);
+    const { matrix } = traitMatchupMatrix(wallLog, undefined, [
+      "統特",
+      "下級城壁兵",
+    ]);
+    expect(matrix.flat().reduce((s, c) => s + c.battles, 0)).toBe(0);
   });
 });
 
@@ -1570,6 +1616,14 @@ describe("metaOverview", () => {
     const { traits } = metaOverview(log, undefined, "武特");
     expect(traits.find((t) => t.trait === "武特")).toBeTruthy();
     expect(traits.find((t) => t.trait === "統特")).toBeTruthy();
+  });
+
+  it("【壁戦】（対人ではなくNPCの壁への攻撃）はメタ分析に含めない", () => {
+    const wallLine =
+      "【壁戦】 1666年12月 08/04 23:59 熊本 ななせ国 SINCLAIR キャラメルBOX 統特 ランセロ 特殊船 龍の護符 攻城櫓 V.S. エロゲソング同好会 熊本の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
+    const out = metaOverview([rec(wallLine, 1)]);
+    expect(out.totalBattles).toBe(0);
+    expect(out.units.find((u) => u.unit === "ランセロ")).toBeUndefined();
   });
 });
 
@@ -1836,6 +1890,14 @@ describe("年代別の勝率ランキング（yearBucketWinRankings）", () => {
       "48年-59年",
       "60年以降",
     ]);
+  });
+
+  it("【壁戦】（対人ではなくNPCの壁への攻撃）は年代別ランキングに含めない", () => {
+    const wallLine =
+      "【壁戦】 1666年12月 08/04 23:59 熊本 ななせ国 SINCLAIR キャラメルBOX 統特 ランセロ 特殊船 龍の護符 攻城櫓 V.S. エロゲソング同好会 熊本の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
+    const rankings = yearBucketWinRankings([rec(wallLine, 1)]);
+    const b = rankings.find((r) => r.bucket.key === "60+")!;
+    expect(b.entries.some((e) => e.name === "SINCLAIR")).toBe(false);
   });
 });
 
