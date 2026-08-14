@@ -204,6 +204,8 @@ export function collectUnitBattles(
   const target = unitName.trim();
   const out: BattleOutcome[] = [];
   for (const { record, card } of dedupedCards(log)) {
+    // 【壁戦】（対人ではなくNPCの壁への攻撃）は兵種の勝率に含めない。
+    if (isWallBattle(card)) continue;
     if (unitMatches(card.left, target))
       out.push(makeOutcome(record, card, "left"));
     if (unitMatches(card.right, target))
@@ -1543,6 +1545,8 @@ export function unitUsageTrend(
   const wins = new Map<number, number>();
   const losses = new Map<number, number>();
   for (const { card } of dedupedCards(log)) {
+    // 【壁戦】（対人ではなくNPCの壁への攻撃）は使用率・勝率のどちらにも含めない。
+    if (isWallBattle(card)) continue;
     const year = gameYear(card);
     if (year == null) continue;
     total.set(year, (total.get(year) ?? 0) + 1);
@@ -1966,6 +1970,8 @@ export function assetMetricRanking(
 
   for (const { record, card } of dedupedCards(log)) {
     if (!withinYearRange(card, range)) continue;
+    // 【壁戦】（対人ではなくNPCの壁への攻撃）は兵種・武器・品物の勝率に含めない。
+    if (isWallBattle(card)) continue;
 
     for (const sideKey of sides) {
       const side = sideKey === "left" ? card.left : card.right;
@@ -2744,6 +2750,8 @@ export function collectEquipBattles(
   const target = equipName.trim();
   const out: BattleOutcome[] = [];
   for (const { record, card } of dedupedCards(log)) {
+    // 【壁戦】（対人ではなくNPCの壁への攻撃）は装備の勝率に含めない。
+    if (isWallBattle(card)) continue;
     if (equipMatches(card.left, slot, target))
       out.push(makeOutcome(record, card, "left"));
     if (equipMatches(card.right, slot, target))
