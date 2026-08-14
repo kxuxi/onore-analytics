@@ -507,7 +507,7 @@ function formatSecurityDecrease(value: number): string {
 
 /**
  * 「徴兵時の治安減少値」カード。徴兵数と政治力を上げる持ち物から、
- * 治安減少量 = 徴兵数 ÷ (政治力×2)（下限1）を計算して表示する。
+ * 治安減少量 = 徴兵数 ÷ (政治力×2) + 1 を計算して表示する。
  * 政治力が設定されていれば誰でも見られる（読み取り専用のローカル計算）。
  */
 function ConscriptionSecurityCard({
@@ -535,7 +535,7 @@ function ConscriptionSecurityCard({
   return (
     <div className="home-card">
       <h3 className="home-card-title">🛡️ 徴兵時の治安減少値</h3>
-      <p className="muted">治安減少量 = 徴兵数 ÷ (政治力 × 2)（下限1）</p>
+      <p className="muted">治安減少量 = 徴兵数 ÷ (政治力 × 2) + 1</p>
       <div className="filter-grid">
         <label className="filter">
           <span>徴兵数</span>

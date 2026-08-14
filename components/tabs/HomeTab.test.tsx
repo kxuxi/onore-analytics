@@ -141,11 +141,11 @@ describe("HomeTab", () => {
     expect(html).toContain("先制計略");
     expect(html).toContain("あと計略P +2");
 
-    // 政治72・最大徴兵兵数50000（初期値） → 50000/(72*2)=347.22...
+    // 政治72・最大徴兵兵数50000（初期値） → 50000/(72*2)+1=348.22...
     expect(html).toContain("徴兵時の治安減少値");
     expect(html).toContain('value="50000"');
     expect(html).toContain("東雲ドーナツ");
-    expect(html).toContain("-347.22");
+    expect(html).toContain("-348.22");
   });
 
   it("管理者でない、またはonUpdateStats未指定なら編集フォームを表示しない", () => {

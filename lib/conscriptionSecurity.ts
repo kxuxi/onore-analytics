@@ -23,7 +23,7 @@ export const CONSCRIPTION_POLITICS_ITEMS: ConscriptionPoliticsItem[] = [
 ];
 
 /**
- * 徴兵時の治安減少量 = 徴兵数 ÷ (政治力 × 2)（下限1）。
+ * 徴兵時の治安減少量 = 徴兵数 ÷ (政治力 × 2) + 1。
  * 政治力が0以下（計算不能）の場合は null を返す。
  */
 export function computeConscriptionSecurityDecrease(
@@ -31,6 +31,5 @@ export function computeConscriptionSecurityDecrease(
   politics: number
 ): number | null {
   if (politics <= 0) return null;
-  const raw = troops / (politics * 2);
-  return Math.max(1, raw);
+  return troops / (politics * 2) + 1;
 }
