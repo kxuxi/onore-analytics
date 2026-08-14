@@ -111,15 +111,17 @@
 }
 
 .wiki-page-link-title {
-  display: -webkit-box;
+  /* 旧来の -webkit-box + -webkit-line-clamp（2行省略）は、和文タイトルで
+     文字が壊れて表示される問題を検証で確認したため、標準的な1行省略に
+     変更する（他画面のタイトル省略表示と同じ text-overflow 方式）。 */
+  display: block;
   width: 100%;
   overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: var(--font-size-control);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-control);
-  overflow-wrap: anywhere;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 
 .wiki-page-link time {
