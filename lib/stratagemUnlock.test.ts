@@ -14,24 +14,24 @@ describe("computeStratagemUnlockStatus", () => {
   });
 
   it("判定値が閾値未満なら未解放で、必要な追加ポイントを計算する", () => {
-    // 知力90, 計略0 → 判定値 = 90*2/3 = 60。先制計略(120)まで60不足。
+    // 知力90, 計略0 → 判定値 = 90*2/3 = 60。先制(120)まで60不足。
     const result = computeStratagemUnlockStatus(90, 0);
-    const senseiKeiryaku = result.find((r) => r.label === "先制計略")!;
-    expect(senseiKeiryaku.unlocked).toBe(false);
-    expect(senseiKeiryaku.currentValue).toBeCloseTo(60);
+    const sensei = result.find((r) => r.label === "計略発動条件：先制")!;
+    expect(sensei.unlocked).toBe(false);
+    expect(sensei.currentValue).toBeCloseTo(60);
     // 計略Pだけで埋めるなら +60。
-    expect(senseiKeiryaku.neededStrategy).toBe(60);
+    expect(sensei.neededStrategy).toBe(60);
     // 知力だけで埋めるなら 60 / (2/3) = 90 → 知力90+90=180で判定値120。
-    expect(senseiKeiryaku.neededIntelligence).toBe(90);
+    expect(sensei.neededIntelligence).toBe(90);
   });
 
   it("判定値がちょうど閾値なら解放済みとする（≧判定）", () => {
-    // 知力0, 計略120 → 判定値120 = 先制計略の閾値。
+    // 知力0, 計略120 → 判定値120 = 先制の閾値。
     const result = computeStratagemUnlockStatus(0, 120);
-    const senseiKeiryaku = result.find((r) => r.label === "先制計略")!;
-    expect(senseiKeiryaku.unlocked).toBe(true);
-    expect(senseiKeiryaku.neededStrategy).toBe(0);
-    expect(senseiKeiryaku.neededIntelligence).toBe(0);
+    const sensei = result.find((r) => r.label === "計略発動条件：先制")!;
+    expect(sensei.unlocked).toBe(true);
+    expect(sensei.neededStrategy).toBe(0);
+    expect(sensei.neededIntelligence).toBe(0);
   });
 
   it("判定値が閾値を超えていれば解放済みとする", () => {
@@ -41,15 +41,28 @@ describe("computeStratagemUnlockStatus", () => {
   });
 
   it("小数の判定値でも必要ポイントを切り上げで返す（不足分をきっちり埋められる値にする）", () => {
-    // 知力61, 計略0 → 判定値 = 61*2/3 = 40.666... 神算鬼謀(230)まで189.333...不足。
+    // 知力61, 計略0 → 判定値 = 61*2/3 = 40.666... 発動率ボーナス+12%(300)まで259.333...不足。
     const result = computeStratagemUnlockStatus(61, 0);
-    const shinsanKibou = result.find((r) => r.label === "神算鬼謀")!;
-    expect(shinsanKibou.unlocked).toBe(false);
-    expect(shinsanKibou.neededStrategy).toBe(190); // ceil(189.33...)
+    const bonus300 = result.find((r) => r.label === "発動率ボーナス：12%")!;
+    expect(bonus300.unlocked).toBe(false);
+    expect(bonus300.neededStrategy).toBe(260); // ceil(259.33...)
   });
 
-  it("同じ閾値の項目（両者武将/兵種アタック封印、敵武将/兵種アタック封印）も両方含む", () => {
+  it("同じ閾値に複数の効果がある場合はすべて含む", () => {
     const result = computeStratagemUnlockStatus(0, 0);
+    const at120 = result.filter((r) => r.threshold === 120);
+    expect(at120.map((r) => r.label)).toEqual([
+      "計略発動条件：先制",
+      "武将アタック+10%",
+      "兵種アタック+10%",
+      "敵〇〇アタック（計略）半減",
+    ]);
+    const at150 = result.filter((r) => r.threshold === 150);
+    expect(at150.map((r) => r.label)).toEqual([
+      "敵計略封印",
+      "計略発動タイミング：２枠",
+      "計略効果：２枠",
+    ]);
     const at160 = result.filter((r) => r.threshold === 160);
     expect(at160.map((r) => r.label)).toEqual([
       "両者武将アタック封印",
@@ -59,6 +72,11 @@ describe("computeStratagemUnlockStatus", () => {
     expect(at180.map((r) => r.label)).toEqual([
       "敵武将アタック封印",
       "敵兵種アタック封印",
+    ]);
+    const at230 = result.filter((r) => r.threshold === 230);
+    expect(at230.map((r) => r.label)).toEqual([
+      "激励（士気回復系）",
+      "乱戦（封印系）",
     ]);
   });
 });

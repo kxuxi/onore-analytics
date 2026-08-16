@@ -138,7 +138,7 @@ describe("HomeTab", () => {
 
     // 知力84・計略102.5 → 判定値158.5。120・150は解放済み、160は未解放（あと2）。
     expect(html).toContain("計略解放まで");
-    expect(html).toContain("先制計略");
+    expect(html).toContain("計略発動条件：先制");
     expect(html).toContain("あと計略P +2");
 
     // 政治72・最大徴兵兵数50000（初期値） → 50000/(72*2)+1=348.22...
@@ -207,7 +207,7 @@ describe("HomeTab", () => {
     );
 
     expect(html).toContain("計略解放まで");
-    expect(html).toContain("同士討（威力系）");
+    expect(html).toContain("発動率ボーナス：12%");
     expect(html).not.toContain("あと計略P");
   });
 
