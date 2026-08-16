@@ -136,9 +136,10 @@ describe("HomeTab", () => {
     expect(html).toContain('value="102.5"');
     expect(html).toContain('value="50000"');
 
-    // 知力84・計略102.5 → 判定値158.5。120・150は解放済み、160は未解放（あと2）。
+    // 知力84・計略102.5 → 判定値158.5。120・150（計7件）は解放済み、160から先が未解放（次の3件を表示）。
     expect(html).toContain("計略解放まで");
-    expect(html).toContain("計略発動条件：先制");
+    expect(html).toContain("解放済み（7件）を表示");
+    expect(html).toContain("両者武将アタック封印");
     expect(html).toContain("あと計略P +2");
 
     // 政治72・最大徴兵兵数50000（初期値） → 50000/(72*2)+1=348.22...
@@ -207,8 +208,40 @@ describe("HomeTab", () => {
     );
 
     expect(html).toContain("計略解放まで");
-    expect(html).toContain("発動率ボーナス：12%");
+    expect(html).toContain("すべて解放済みです");
+    expect(html).toContain("解放済み（18件）を表示");
     expect(html).not.toContain("あと計略P");
+  });
+
+  it("「計略解放まで」は未解放の直近3件だけを表示し、解放済みが無ければトグルも出さない", () => {
+    vi.stubGlobal("document", {
+      cookie: "onore_my_warlord=%E4%BF%A1%E9%95%B7",
+    });
+
+    const html = renderToStaticMarkup(
+      <HomeTab
+        log={[]}
+        db={{
+          信長: {
+            name: "信長",
+            type: "武特",
+            branch: "騎兵",
+            updatedAt: 0,
+            intelligence: 0,
+            strategy: 0,
+          },
+        }}
+        colors={{}}
+        {...callbacks}
+      />
+    );
+
+    expect(html).toContain("計略発動条件：先制");
+    expect(html).toContain("武将アタック+10%");
+    expect(html).toContain("兵種アタック+10%");
+    // 4件目以降は表示しない（次の3件まで）。
+    expect(html).not.toContain("敵〇〇アタック（計略）半減");
+    expect(html).not.toContain("解放済み");
   });
 
   it("政治力が未設定なら「徴兵時の治安減少値」は表示しない", () => {

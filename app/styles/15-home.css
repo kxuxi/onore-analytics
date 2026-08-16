@@ -592,6 +592,9 @@
 .home-unlock-label {
   font-size: 14px;
 }
+.home-unlock-list--unlocked {
+  margin-top: 10px;
+}
 
 @media (max-width: 960px) {
   .home-activation-hero {
