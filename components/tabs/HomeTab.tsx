@@ -456,9 +456,13 @@ function HomeStatsEditor({
   );
 }
 
+/** 「計略解放まで」カードで先頭に表示する、未解放の直近件数。 */
+const NEXT_UNLOCK_COUNT = 3;
+
 /**
- * 「計略解放まで」カード。判定値（知力×2/3+計略P）から、各計略の解放状況と
- * 未解放分について計略P・知力それぞれで埋める場合の不足量を表示する。
+ * 「計略解放まで」カード。判定値（知力×2/3+計略P）から、次に解放される
+ * 計略（直近{@link NEXT_UNLOCK_COUNT}件）について計略P・知力それぞれで埋める
+ * 場合の不足量を表示する。解放済み分は件数だけ示し、トグルで一覧を確認できる。
  * 能力値が設定されていれば誰でも見られる（編集は管理者のみ）。
  */
 function StratagemUnlockCard({
@@ -468,11 +472,16 @@ function StratagemUnlockCard({
   intelligence: number;
   strategy: number;
 }) {
+  const [showUnlocked, setShowUnlocked] = useState(false);
   const statuses = useMemo(
     () => computeStratagemUnlockStatus(intelligence, strategy),
     [intelligence, strategy]
   );
   const currentValue = statuses[0]?.currentValue ?? 0;
+  const unlocked = statuses.filter((s) => s.unlocked);
+  const pending = statuses
+    .filter((s) => !s.unlocked)
+    .slice(0, NEXT_UNLOCK_COUNT);
 
   return (
     <div className="home-card">
@@ -481,21 +490,45 @@ function StratagemUnlockCard({
         判定値（知力×2/3+計略P）は現在 {currentValue.toFixed(1)}
         です。
       </p>
-      <ul className="home-unlock-list">
-        {statuses.map((s) => (
-          <li key={s.label} className="home-unlock-row">
-            <span className="home-unlock-label">{s.label}</span>
-            {s.unlocked ? (
-              <span className="home-res-win">解放済み</span>
-            ) : (
+      {pending.length > 0 ? (
+        <ul className="home-unlock-list">
+          {pending.map((s) => (
+            <li key={s.label} className="home-unlock-row">
+              <span className="home-unlock-label">{s.label}</span>
               <span className="muted">
                 あと計略P +{s.neededStrategy} または 知力 +
                 {s.neededIntelligence}
               </span>
-            )}
-          </li>
-        ))}
-      </ul>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted">すべて解放済みです。</p>
+      )}
+      {unlocked.length > 0 && (
+        <div className="show-more-row">
+          <button
+            type="button"
+            className="btn show-more-btn"
+            onClick={() => setShowUnlocked((v) => !v)}
+            aria-expanded={showUnlocked}
+          >
+            {showUnlocked
+              ? "解放済みを隠す"
+              : `解放済み（${unlocked.length}件）を表示`}
+          </button>
+        </div>
+      )}
+      {showUnlocked && (
+        <ul className="home-unlock-list home-unlock-list--unlocked">
+          {unlocked.map((s) => (
+            <li key={s.label} className="home-unlock-row">
+              <span className="home-unlock-label">{s.label}</span>
+              <span className="home-res-win">解放済み</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
