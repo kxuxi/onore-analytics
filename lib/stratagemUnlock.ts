@@ -11,14 +11,22 @@ export interface StratagemUnlockThreshold {
 
 /** 出現判定の閾値一覧（閾値の低い順）。 */
 export const STRATAGEM_UNLOCK_THRESHOLDS: StratagemUnlockThreshold[] = [
-  { label: "先制計略", threshold: 120 },
-  { label: "敵計略封印，３枠目計略解放", threshold: 150 },
+  { label: "計略発動条件：先制", threshold: 120 },
+  { label: "武将アタック+10%", threshold: 120 },
+  { label: "兵種アタック+10%", threshold: 120 },
+  { label: "敵〇〇アタック（計略）半減", threshold: 120 },
+  { label: "敵計略封印", threshold: 150 },
+  { label: "計略発動タイミング：２枠", threshold: 150 },
+  { label: "計略効果：２枠", threshold: 150 },
   { label: "両者武将アタック封印", threshold: 160 },
   { label: "両者兵種アタック封印", threshold: 160 },
   { label: "敵武将アタック封印", threshold: 180 },
   { label: "敵兵種アタック封印", threshold: 180 },
-  { label: "神算鬼謀", threshold: 230 },
-  { label: "同士討（威力系）", threshold: 280 },
+  { label: "激励（士気回復系）", threshold: 230 },
+  { label: "乱戦（封印系）", threshold: 230 },
+  { label: "発動率ボーナス：11%", threshold: 240 },
+  { label: "発動率ボーナス：-2%", threshold: 250 },
+  { label: "発動率ボーナス：12%", threshold: 300 },
 ];
 
 /** 知力が判定値に効く割合（2/3）。 */
