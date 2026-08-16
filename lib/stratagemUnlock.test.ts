@@ -77,6 +77,9 @@ describe("computeStratagemUnlockStatus", () => {
     expect(at230.map((r) => r.label)).toEqual([
       "激励（士気回復系）",
       "乱戦（封印系）",
+      "神算鬼謀",
     ]);
+    const at280 = result.filter((r) => r.threshold === 280);
+    expect(at280.map((r) => r.label)).toEqual(["同士討（威力系）"]);
   });
 });

@@ -24,8 +24,10 @@ export const STRATAGEM_UNLOCK_THRESHOLDS: StratagemUnlockThreshold[] = [
   { label: "敵兵種アタック封印", threshold: 180 },
   { label: "激励（士気回復系）", threshold: 230 },
   { label: "乱戦（封印系）", threshold: 230 },
+  { label: "神算鬼謀", threshold: 230 },
   { label: "発動率ボーナス：11%", threshold: 240 },
   { label: "発動率ボーナス：-2%", threshold: 250 },
+  { label: "同士討（威力系）", threshold: 280 },
   { label: "発動率ボーナス：12%", threshold: 300 },
 ];
 
