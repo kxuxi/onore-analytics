@@ -76,6 +76,8 @@
   max-height: min(62vh, 680px);
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* iOS Safariでスクロール領域内の文字が潰れて描画される既知の不具合対策。 */
+  -webkit-overflow-scrolling: touch;
 }
 
 .wiki-page-link {
@@ -122,6 +124,10 @@
   font-size: var(--font-size-control);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-control);
+  /* iOS Safariでスクロール可能な親の中の文字が潰れて描画される既知の不具合対策。
+     自身をGPUの合成レイヤーに昇格させ、テキストの再描画不良を防ぐ。 */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 .wiki-page-link time {
