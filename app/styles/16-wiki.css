@@ -29,11 +29,6 @@
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-3);
-  /* iOS Safariで@containerによる列数切り替え（PC⇔スマホ表示）後に
-     内部の文字が潰れて描画される既知の不具合対策。GPUの合成レイヤーに
-     昇格させ、レイアウト変化後の再描画不良を防ぐ。 */
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
 }
 
 .wiki-sidebar-heading,
@@ -81,8 +76,6 @@
   max-height: min(62vh, 680px);
   overflow-y: auto;
   overscroll-behavior: contain;
-  /* iOS Safariでスクロール領域内の文字が潰れて描画される既知の不具合対策。 */
-  -webkit-overflow-scrolling: touch;
 }
 
 .wiki-page-link {
@@ -118,21 +111,10 @@
 }
 
 .wiki-page-link-title {
-  /* 旧来の -webkit-box + -webkit-line-clamp（2行省略）は、和文タイトルで
-     文字が壊れて表示される問題を検証で確認したため、標準的な1行省略に
-     変更する（他画面のタイトル省略表示と同じ text-overflow 方式）。 */
   display: block;
-  width: 100%;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
   font-size: var(--font-size-control);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-control);
-  /* iOS Safariでスクロール可能な親の中の文字が潰れて描画される既知の不具合対策。
-     自身をGPUの合成レイヤーに昇格させ、テキストの再描画不良を防ぐ。 */
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
 }
 
 .wiki-page-link time {
