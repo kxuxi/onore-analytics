@@ -81,6 +81,7 @@
 .wiki-page-link {
   display: flex;
   width: 100%;
+  min-width: 0;
   min-height: var(--touch-target);
   flex-direction: column;
   align-items: flex-start;
@@ -112,12 +113,23 @@
 
 .wiki-page-link-title {
   display: block;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: var(--font-size-control);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-control);
 }
 
 .wiki-page-link time {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   color: var(--color-text-secondary);
   font-size: var(--font-size-2xs);
   line-height: var(--line-height-caption);
