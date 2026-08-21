@@ -36,6 +36,7 @@ describe("データ表のcaption", () => {
     const markup = renderToStaticMarkup(
       <DbTab
         db={DB}
+        log={[]}
         colors={{}}
         onSelectWarlord={vi.fn()}
         onSelectFaction={vi.fn()}

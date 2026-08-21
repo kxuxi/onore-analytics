@@ -49,6 +49,7 @@ import {
   assetMetricRanking,
   factionsInYearRange,
   warlordNamesInLog,
+  latestUnitByWarlord,
 } from "./stats";
 import type { BattleRecord, UnitType, WarlordMap } from "./types";
 import { EMPTY_UNIT } from "./unitTypeForm";
@@ -490,6 +491,63 @@ describe("warlordNamesInLog", () => {
     const names = warlordNamesInLog([rec(wallLine, 1)]);
     expect(names.has("SINCLAIR")).toBe(true);
     expect(names.has("熊本の守備隊")).toBe(false);
+  });
+});
+
+describe("latestUnitByWarlord", () => {
+  // 兵種名・兵種タイプ・在ゲーム年月・家名を制御できる戦闘行ビルダー。
+  const uline = (opts: {
+    year: number;
+    month?: number;
+    self: string;
+    family?: string;
+    unit: string;
+    branch: string;
+  }) =>
+    `【1戦目】 ${opts.year}年${opts.month ?? 4}月 04/10 10:00 京都 織田 ${opts.self} ${opts.family ?? "某家"} 武特 ${opts.unit} ${opts.branch} 槍 鎧 V.S. 敵国 敵 敵家 統特 騎馬隊 騎兵 馬 旗 ${opts.self}の勝利 12`;
+
+  it("同名でも在ゲーム年が新しい戦闘の兵種を返す", () => {
+    const log = [
+      rec(uline({ year: 1702, self: "山田", unit: "剛弓", branch: "弓兵" }), 2),
+      rec(uline({ year: 1700, self: "山田", unit: "ロングボウ", branch: "弓兵" }), 1),
+    ];
+    expect(latestUnitByWarlord(log).get("山田")).toEqual({
+      unit: "剛弓",
+      branch: "弓兵",
+    });
+  });
+
+  it("同じ年でも新しい月の兵種を優先し、ログ順に依存しない", () => {
+    const log = [
+      rec(uline({ year: 1700, month: 4, self: "佐藤", unit: "母衣衆", branch: "騎兵" }), 1),
+      rec(uline({ year: 1700, month: 8, self: "佐藤", unit: "赤備", branch: "騎兵" }), 2),
+    ];
+    expect(latestUnitByWarlord(log).get("佐藤")).toEqual({
+      unit: "赤備",
+      branch: "騎兵",
+    });
+  });
+
+  it("【壁戦】の守備隊は除外し、出兵側の兵種は集計する", () => {
+    const wallLine =
+      "【壁戦】 1666年12月 08/04 23:59 熊本 ななせ国 SINCLAIR キャラメルBOX 統特 ランセロ 特殊船 龍の護符 攻城櫓 V.S. エロゲソング同好会 熊本の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
+    const m = latestUnitByWarlord([rec(wallLine, 1)]);
+    expect(m.get("SINCLAIR")).toEqual({ unit: "ランセロ", branch: "特殊船" });
+    expect(m.has("熊本の守備隊")).toBe(false);
+  });
+
+  it("db を渡すと同じ家名（household）でまとめ、最新兵種を家中で共有する", () => {
+    const log = [
+      rec(uline({ year: 1700, self: "山田", family: "甲", unit: "ロングボウ", branch: "弓兵" }), 1),
+      rec(uline({ year: 1702, self: "山田改", family: "甲", unit: "剛弓", branch: "弓兵" }), 2),
+    ];
+    const db: WarlordMap = {
+      山田: { name: "山田", type: "武特", branch: "弓兵", updatedAt: 0, household: "甲" },
+      山田改: { name: "山田改", type: "武特", branch: "弓兵", updatedAt: 0, household: "甲" },
+    };
+    const m = latestUnitByWarlord(log, db);
+    expect(m.get("山田")).toEqual({ unit: "剛弓", branch: "弓兵" });
+    expect(m.get("山田改")).toEqual({ unit: "剛弓", branch: "弓兵" });
   });
 });
 

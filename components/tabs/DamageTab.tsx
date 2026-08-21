@@ -7,6 +7,7 @@ import { SearchBox } from "@/components/SearchBox";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
 import { normalizationMap } from "@/lib/storage";
+import { latestUnitByWarlord } from "@/lib/stats";
 import { displayWarlordType } from "@/lib/warlordType";
 import {
   ACTION_LABEL,
@@ -238,6 +239,12 @@ export function DamageTab({
     [db, allDb, log]
   );
 
+  // 選択中の期のログから、武将ごとの「その期で最後に使った兵種」を求める。
+  const latestUnits = useMemo(
+    () => latestUnitByWarlord(log, allDb ?? db),
+    [log, allDb, db]
+  );
+
   const rows = useMemo(() => {
     if (!now) return [];
     const q = nameQuery.trim().toLowerCase();
@@ -254,12 +261,23 @@ export function DamageTab({
         availability,
         hasAttack,
         canOpenDetail,
-      }) => ({
-        w: warlord,
-        info: getActionInfo(actionWarlord, now, availability),
-        hasAttack,
-        canOpenDetail,
-      })
+      }) => {
+        // 名前が同じでも前の期の兵種を引きずらないよう、その期の最新兵種で上書きする。
+        const latest = latestUnits.get(warlord.name);
+        const w = latest
+          ? {
+              ...warlord,
+              branch: latest.branch || warlord.branch,
+              unit: latest.unit || warlord.unit,
+            }
+          : warlord;
+        return {
+          w,
+          info: getActionInfo(actionWarlord, now, availability),
+          hasAttack,
+          canOpenDetail,
+        };
+      }
     );
 
     return merged
@@ -281,6 +299,7 @@ export function DamageTab({
       });
   }, [
     candidates,
+    latestUnits,
     now,
     statusFilter,
     factionFilter,

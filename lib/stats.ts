@@ -255,6 +255,82 @@ export function warlordNamesInLog(
   return names;
 }
 
+/** 武将ごとの、ログ上で最後に使った兵種・兵種タイプ。 */
+export interface LatestUnitInfo {
+  /** 表示名に正規化した兵種名。 */
+  unit: string;
+  /** 兵種タイプ（兵科）。 */
+  branch: string;
+}
+
+/**
+ * 戦闘ログから武将ごとの「最後に使った兵種・兵種タイプ」を集計する。
+ * 在ゲーム年月（新しいほど優先、同年月は行動の実時刻）が最新の戦闘の兵種を採る。
+ *
+ * 選択中の期のログを渡すと「その期で最後に使った兵種」になり、名前が同じでも
+ * 前の期の兵種を引きずらない。db を渡すと同じ household（家名）の武将を1人に
+ * まとめ、グループ内で最も新しい兵種を全員に共有する（DB一覧などの名寄せに合わせる）。
+ *
+ * ログに兵種付きの戦闘が無い武将はマップに載らないので、呼び出し側は
+ * 保存済みの Warlord.unit / branch にフォールバックすること。
+ */
+export function latestUnitByWarlord(
+  log: BattleRecord[],
+  db?: WarlordMap
+): Map<string, LatestUnitInfo> {
+  const now = new Date();
+  // name -> 最新戦闘（order=在ゲーム年月, t=行動の実時刻でタイブレーク）の兵種。
+  const byName = new Map<
+    string,
+    { order: number; t: number; unit: string; branch: string }
+  >();
+  for (const { record, card } of dedupedCards(log)) {
+    // 【壁戦】の守備側（NPC）は除外し、出兵側（実在武将）だけ見る。
+    const wall = isWallBattle(card);
+    const sides = wall ? [card.left] : [card.left, card.right];
+    const order = gameOrder(card) ?? -1;
+    const t = parseActionDate(record.time, now)?.getTime() ?? -1;
+    for (const side of sides) {
+      const name = side.name?.trim();
+      if (!name) continue;
+      const unit = side.unit ? normalizeDisplayToken(side.unit) : "";
+      if (!unit) continue; // 兵種が読めない戦闘は最新兵種の候補にしない
+      const prev = byName.get(name);
+      if (!prev || order > prev.order || (order === prev.order && t > prev.t)) {
+        byName.set(name, { order, t, unit, branch: side.branch?.trim() ?? "" });
+      }
+    }
+  }
+  // household（家名）でまとめ、グループ内の最新兵種を全メンバーへ共有する。
+  if (db) {
+    const groups = new Map<string, string[]>();
+    for (const w of Object.values(db)) {
+      if (!w.household) continue;
+      const list = groups.get(w.household);
+      if (list) list.push(w.name);
+      else groups.set(w.household, [w.name]);
+    }
+    for (const names of groups.values()) {
+      let best: { order: number; t: number; unit: string; branch: string } | null =
+        null;
+      for (const name of names) {
+        const v = byName.get(name);
+        if (!v) continue;
+        if (!best || v.order > best.order || (v.order === best.order && v.t > best.t)) {
+          best = v;
+        }
+      }
+      if (!best) continue;
+      for (const name of names) byName.set(name, best);
+    }
+  }
+  const out = new Map<string, LatestUnitInfo>();
+  for (const [name, v] of byName) {
+    out.set(name, { unit: v.unit, branch: v.branch });
+  }
+  return out;
+}
+
 /** 勝利数・敗北数・勝率などを集計する。 */
 export function summarize(outcomes: BattleOutcome[]): StatSummary {
   let wins = 0;

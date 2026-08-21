@@ -1,8 +1,9 @@
 "use client";
 
 import { useId, useMemo, useState } from "react";
-import type { WarlordMap } from "@/lib/types";
+import type { BattleRecord, WarlordMap } from "@/lib/types";
 import { copyText } from "@/lib/copyText";
+import { latestUnitByWarlord } from "@/lib/stats";
 import { parseWarlordStats } from "@/lib/warlordStats";
 import { displayWarlordType } from "@/lib/warlordType";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
@@ -17,6 +18,8 @@ import {
 
 interface Props {
   db: WarlordMap;
+  /** 選択中の期の戦闘ログ。武将ごとの「その期で最後に使った兵種」を出すのに使う。 */
+  log: BattleRecord[];
   colors: FactionColorMap;
   onSelectWarlord: (name: string) => void;
   onSelectFaction: (name: string) => void;
@@ -49,7 +52,7 @@ function formatUpdatedAt(ms: number): string {
   });
 }
 
-export function DbTab({ db, colors, onSelectWarlord, onSelectFaction, onImportStats }: Props) {
+export function DbTab({ db, log, colors, onSelectWarlord, onSelectFaction, onImportStats }: Props) {
   const [keyword, setKeyword] = useState("");
   const [faction, setFaction] = useState("");
   const [type, setType] = useState("");
@@ -73,6 +76,9 @@ export function DbTab({ db, colors, onSelectWarlord, onSelectFaction, onImportSt
     result: `${importId}-result`,
   };
 
+  // 選択中の期のログから、武将ごとの「その期で最後に使った兵種」を求める。
+  const latestUnits = useMemo(() => latestUnitByWarlord(log, db), [log, db]);
+
   const all = useMemo(() => {
     // 同じ household を持つ武将をグループ化して、最新の武将だけを表示する。
     const byHousehold = new Map<string, typeof db[string]>();
@@ -87,8 +93,17 @@ export function DbTab({ db, colors, onSelectWarlord, onSelectFaction, onImportSt
         }
       }
     }
-    return [...byHousehold.values(), ...noHousehold];
-  }, [db]);
+    // 名前が同じでも前の期の兵種を引きずらないよう、その期の最新兵種で上書きする。
+    return [...byHousehold.values(), ...noHousehold].map((w) => {
+      const latest = latestUnits.get(w.name);
+      if (!latest) return w;
+      return {
+        ...w,
+        branch: latest.branch || w.branch,
+        unit: latest.unit || w.unit,
+      };
+    });
+  }, [db, latestUnits]);
 
   // 各項目の選択肢（出現する値を昇順で）
   const options = useMemo(() => {

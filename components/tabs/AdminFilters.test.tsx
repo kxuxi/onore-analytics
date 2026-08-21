@@ -39,6 +39,7 @@ describe("DbTab", () => {
     const markup = renderToStaticMarkup(
       <DbTab
         db={DB}
+        log={[]}
         colors={{}}
         onSelectWarlord={vi.fn()}
         onSelectFaction={vi.fn()}
@@ -66,6 +67,7 @@ describe("DbTab", () => {
     const markup = renderToStaticMarkup(
       <DbTab
         db={{}}
+        log={[]}
         colors={{}}
         onSelectWarlord={vi.fn()}
         onSelectFaction={vi.fn()}

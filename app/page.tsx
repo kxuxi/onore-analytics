@@ -785,6 +785,7 @@ export default function HomePage() {
         return (
           <ScoutTab
             db={db}
+            log={filteredBattleLog}
             colors={factionColors}
             onSelectWarlord={selectWarlordNormalized}
           />
@@ -858,7 +859,7 @@ export default function HomePage() {
           />
         );
       case "db":
-        return <DbTab db={filteredDb} colors={factionColors} onSelectWarlord={selectWarlord} onSelectFaction={selectFaction} onImportStats={handleImportStats} />;
+        return <DbTab db={filteredDb} log={filteredBattleLog} colors={factionColors} onSelectWarlord={selectWarlord} onSelectFaction={selectFaction} onImportStats={handleImportStats} />;
       case "units":
         return (
           <UnitTab
