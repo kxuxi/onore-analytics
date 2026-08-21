@@ -55,7 +55,7 @@ describe("偵察コピーの外部文字列契約", () => {
 describe("ScoutTab", () => {
   it("入力に可視ラベルと区切り方の説明を関連付ける", () => {
     const markup = renderToStaticMarkup(
-      <ScoutTab db={{}} colors={{}} onSelectWarlord={vi.fn()} />
+      <ScoutTab db={{}} log={[]} colors={{}} onSelectWarlord={vi.fn()} />
     );
     const inputId = markup.match(
       /<label class="scout-input-label" for="([^"]+)"/

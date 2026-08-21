@@ -1,8 +1,9 @@
 "use client";
 
 import { useId, useMemo, useState } from "react";
-import type { WarlordMap } from "@/lib/types";
+import type { BattleRecord, WarlordMap } from "@/lib/types";
 import { lookup } from "@/lib/storage";
+import { latestUnitByWarlord } from "@/lib/stats";
 import { normalizeDisplayToken } from "@/lib/parser";
 import { shortUnit } from "@/lib/unitShortNames";
 import { copyText } from "@/lib/copyText";
@@ -12,6 +13,8 @@ import { PageHeader } from "@/components/layout/PageHeader";
 
 interface Props {
   db: WarlordMap;
+  /** 選択中の期の戦闘ログ。武将ごとの「その期で最後に使った兵種」を出すのに使う。 */
+  log: BattleRecord[];
   colors: FactionColorMap;
   onSelectWarlord: (name: string) => void;
 }
@@ -119,7 +122,7 @@ export function buildScoutReport(
   return { parts, text: parts.join(separator) };
 }
 
-export function ScoutTab({ db, colors, onSelectWarlord }: Props) {
+export function ScoutTab({ db, log, colors, onSelectWarlord }: Props) {
   const [text, setText] = useState("");
   const [unregisteredOnly, setUnregisteredOnly] = useState(false);
   const [includeUnit, setIncludeUnit] = useState(true);
@@ -132,6 +135,10 @@ export function ScoutTab({ db, colors, onSelectWarlord }: Props) {
   const inputSummaryId = `${inputId}-summary`;
   const reportId = `${inputId}-report`;
   const reportTitleId = `${inputId}-report-title`;
+
+  // 選択中の期のログから、武将ごとの「その期で最後に使った兵種」を求める。
+  // 名前が同じでも前の期の兵種を引きずらないようにする（家中は household で共有）。
+  const latestUnits = useMemo(() => latestUnitByWarlord(log, db), [log, db]);
 
   const rows = useMemo<ScoutRow[]>(() => {
     const names = splitNames(text);
@@ -147,6 +154,7 @@ export function ScoutTab({ db, colors, onSelectWarlord }: Props) {
     return unique.map((name) => {
       const w = lookup(db, name);
       if (!w) return { name, found: false };
+      const latest = latestUnits.get(w.name);
       return {
         name,
         faction: w.faction,
@@ -155,12 +163,12 @@ export function ScoutTab({ db, colors, onSelectWarlord }: Props) {
         intelligence: w.intelligence,
         leadership: w.leadership,
         politics: w.politics,
-        branch: w.branch,
-        unit: w.unit,
+        branch: latest?.branch ?? w.branch,
+        unit: latest?.unit ?? w.unit,
         found: true,
       };
     });
-  }, [text, db]);
+  }, [text, db, latestUnits]);
 
   // 「未登録のみ表示」を適用した表示用リスト。
   const visibleRows = unregisteredOnly ? rows.filter((r) => !r.found) : rows;
