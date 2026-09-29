@@ -300,7 +300,7 @@ export function DbTab({ db, log, colors, onSelectWarlord, onSelectFaction, onImp
     <section className="panel">
       <PageHeader
         title="DB確認"
-        description="登録済みの武将を検索・並べ替えし、能力値の取り込みやTSVコピーを行います。"
+        description="登録済みの武将を検索・並べ替えし、能力値の取り込みやTSVコピーを行います。改名した武将は家督名が登録されている場合のみ同一人物として名寄せされます（家督名なしの同名は別人として扱います）。"
       />
 
       <div className="import-block">

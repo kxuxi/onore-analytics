@@ -2,8 +2,16 @@ import type { Warlord, WarlordMap } from "./types";
 import { parseActionDate } from "./action";
 
 /**
+ * WarlordMap のキー。同名でも期が違えば別レコードとして扱い、
+ * 過去の期の所属国が現在の期の登録で上書きされないようにする。
+ */
+export function warlordKey(name: string, term: number | undefined): string {
+  return `${name}\u0000${term ?? ""}`;
+}
+
+/**
  * 既存 DB に Warlord 配列をマージ。
- * 配列の後ろにあるものほど新しい想定で、同名は上書き。
+ * 同一 (name, term) のみ上書きし、期が違う同名は別レコードとして保持する。
  * @returns マージ後の DB と、新規登録数 / 上書き数
  */
 export function mergeWarlords(
@@ -15,7 +23,8 @@ export function mergeWarlords(
   let added = 0;
   let updated = 0;
   for (const w of incoming) {
-    const prev = map[w.name];
+    const key = warlordKey(w.name, w.term);
+    const prev = map[key];
     if (prev) updated++;
     else added++;
 
@@ -30,20 +39,17 @@ export function mergeWarlords(
     );
 
     // 属性（国・タイプ・兵種タイプ・兵種名・装備）は「より新しい戦闘」の方を採用する。
-    // 新旧は 期 → 在ゲーム年月 → 実時刻 の順で判定し（isNewerBattle 参照）、
+    // 同一 (name, term) 内の比較なので、在ゲーム年月 → 実時刻 の順で判定し（isNewerBattle 参照）、
     // 出兵・守備のどちらで観測したかは問わず、最新の戦闘で見えたプロフィールを反映する。
     const base = isNewerBattle(w, prev, now) ? w : prev ?? w;
 
-    map[w.name] = {
+    map[key] = {
       ...base,
       // 行動履歴・登録時刻は常に最新へ更新
       lastActionAt,
       actions: actions.length > 0 ? actions : undefined,
-      // 期番号は採用した戦闘（base）に追従させる。
-      // ここを常に w.term にすると、より古い期の戦闘を後から処理したとき
-      // term が古い期へ書き換わり、battleAt（新しい期）と不整合になって
-      // 次回以降の期比較が壊れる（在ゲーム年が期ごとにリセットするため誤判定する）。
-      term: base.term ?? w.term ?? prev?.term,
+      // キーの期をそのまま保持する（期が違えば別レコードなので入れ替わらない）。
+      term: w.term ?? prev?.term,
       updatedAt: Math.max(prev?.updatedAt ?? 0, w.updatedAt),
       // 家督名は新しい方を採用（未設定なら既存値を保持）
       household: w.household ?? prev?.household,
@@ -151,11 +157,37 @@ function pickLatestAction(
   return latest;
 }
 
-/** 武将名で DB を引く（前後の空白除去・全角空白許容） */
+/** 武将名で DB を引く（前後の空白除去・全角空白許容）。名前キーの map 専用。 */
 export function lookup(map: WarlordMap, name: string): Warlord | undefined {
   const key = name.trim();
   if (!key) return undefined;
   return map[key];
+}
+
+/**
+ * 指定した期に登録された武将だけを、名前キーの map で返す。
+ * 同じ期内では名前は一意なので、UI 側は従来どおり db[name] で引ける。
+ */
+export function warlordsForTerm(map: WarlordMap, term: number): WarlordMap {
+  const out: WarlordMap = {};
+  for (const w of Object.values(map)) {
+    if (w.term === term) out[w.name] = w;
+  }
+  return out;
+}
+
+/**
+ * 各武将名につき最新の戦闘（期 → 在ゲーム年月 → 実時刻）を持つレコードを採用し、
+ * 名前キーの map で返す。全期間横断のプロフィール参照（被害集計の候補抽出など）に使う。
+ */
+export function latestWarlordsByName(map: WarlordMap): WarlordMap {
+  const now = new Date();
+  const out: WarlordMap = {};
+  for (const w of Object.values(map)) {
+    const prev = out[w.name];
+    if (!prev || isNewerBattle(w, prev, now)) out[w.name] = w;
+  }
+  return out;
 }
 
 /**

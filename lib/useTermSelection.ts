@@ -72,7 +72,8 @@ export function useTermSelection(
       const storedTerm = parseStoredSelectedTerm(
         window.localStorage.getItem(TERM_SELECTED_STORAGE_KEY)
       );
-      if (storedTerm !== null) {
+      // 「すべての期」は廃止。保存済みの "all" は最新期として復元する。
+      if (storedTerm !== null && storedTerm !== "all") {
         setSelectedTerm(storedTerm);
         setHasRestoredSelection(true);
         return;
