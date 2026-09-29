@@ -12,7 +12,7 @@ function renderHeader(
       sidebarOpen={false}
       onToggleSidebar={vi.fn()}
       onSelectHome={vi.fn()}
-      lastFetchedAt={null}
+      latestUpdatedAt={null}
       resolvedTheme="light"
       onToggleTheme={vi.fn()}
       refreshing={false}
@@ -25,9 +25,9 @@ function renderHeader(
   );
 }
 
-function getFetchedSlot(html: string): string {
+function getUpdatedSlot(html: string): string {
   const slot = html.match(
-    /<span class="header-fetched[^"]*"[^>]*>[^<]*<\/span>/
+    /<span class="header-updated[^"]*"[^>]*>[^<]*<\/span>/
   )?.[0];
 
   expect(slot).toBeDefined();
@@ -47,23 +47,23 @@ describe("AppHeader", () => {
     expect(openHtml).toContain('aria-label="メニューを閉じる"');
   });
 
-  it("取得前も同寸の非表示slotを描画する", () => {
-    const slot = getFetchedSlot(renderHeader());
+  it("未取得時も同寸の非表示slotを描画する", () => {
+    const slot = getUpdatedSlot(renderHeader());
 
-    expect(slot).toContain('class="header-fetched muted is-pending"');
+    expect(slot).toContain('class="header-updated muted is-pending"');
     expect(slot).toContain('aria-hidden="true"');
     expect(slot).not.toContain("title=");
-    expect(slot).toContain("最終取得 00:00");
+    expect(slot).toContain("最終更新 00/00/00 00:00");
   });
 
-  it("取得後は従来のtitleと時刻を表示する", () => {
-    const fetchedAt = new Date(2026, 6, 24, 9, 7).getTime();
-    const slot = getFetchedSlot(renderHeader({ lastFetchedAt: fetchedAt }));
+  it("登録日時があればtitleと最終更新日時を表示する", () => {
+    const updatedAt = new Date(2026, 6, 24, 9, 7).getTime();
+    const slot = getUpdatedSlot(renderHeader({ latestUpdatedAt: updatedAt }));
 
-    expect(slot).toContain('class="header-fetched muted"');
+    expect(slot).toContain('class="header-updated muted"');
     expect(slot).not.toContain("is-pending");
     expect(slot).not.toContain("aria-hidden");
-    expect(slot).toContain('title="共有DBを最後に取得した時刻"');
-    expect(slot).toContain("最終取得 09:07");
+    expect(slot).toContain('title="管理者が最後にデータを登録した日時"');
+    expect(slot).toContain("最終更新 26/07/24 09:07");
   });
 });

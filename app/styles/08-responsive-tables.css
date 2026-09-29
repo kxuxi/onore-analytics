@@ -47,12 +47,14 @@
   }
 }
 
-/* ヘッダー: タブレット幅以下ではアクションのテキストラベル（最終取得時刻・更新・共有）を
+/* ヘッダー: タブレット幅以下では更新・共有ボタンのテキストラベルを
    隠してアイコンのみにする。ラベルが残るとタイトルやハンバーガーを圧迫して崩れるため。
-   操作内容は aria-label / title で読み上げ・ツールチップに残す。 */
+   操作内容は aria-label / title で読み上げ・ツールチップに残す。
+   最終更新日時はデータの鮮度を常に確認できるよう常時表示する。狭幅では
+   フォントを縮小してタイトル・ハンバーガーとの競合を避ける。 */
 @media (max-width: 640px) {
-  .header-fetched { display: none; }
   .header-actions { gap: 6px; }
+  .header-updated { font-size: 10px; }
   .header-refresh span,
   .header-share span,
   .header-auth span { display: none; }

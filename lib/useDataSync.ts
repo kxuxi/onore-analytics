@@ -21,7 +21,6 @@ export interface DataSyncState {
   logLoading: boolean;
   loadError: boolean;
   refreshing: boolean;
-  lastFetchedAt: number | null;
   reload: () => void;
   refresh: () => Promise<void>;
   /** 全期間の戦闘履歴を取得する（武将詳細の入賞タグ＝全期間集計用）。初回だけ取得しキャッシュする。 */
@@ -46,7 +45,6 @@ export function useDataSync(
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  const [lastFetchedAt, setLastFetchedAt] = useState<number | null>(null);
   // 全期間 log のキャッシュ（登録・更新・削除のたびに無効化する）。
   const fullLogCache = useRef<BattleRecord[] | null>(null);
 
@@ -84,7 +82,6 @@ export function useDataSync(
         if (!active) return;
         setDb(state.db);
         setBattleLog(state.log);
-        setLastFetchedAt(Date.now());
       })
       .catch(() => {
         if (!active) return;
@@ -114,7 +111,6 @@ export function useDataSync(
       setDb(state.db);
       setBattleLog(state.log);
       setFactionColors(colors);
-      setLastFetchedAt(Date.now());
       fullLogCache.current = null;
       pushToast("success", "最新の状態に更新しました");
     } catch {
@@ -144,7 +140,6 @@ export function useDataSync(
     logLoading,
     loadError,
     refreshing,
-    lastFetchedAt,
     reload,
     refresh,
     loadFullLog,

@@ -78,12 +78,12 @@
   gap: 8px;
   flex: 0 0 auto;
 }
-.header-fetched {
+.header-updated {
   font-size: 12px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.header-fetched.is-pending {
+.header-updated.is-pending {
   visibility: hidden;
 }
 .header-theme {
