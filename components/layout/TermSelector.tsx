@@ -42,14 +42,9 @@ export function TermSelector({
         <select
           id="sidebar-decade-select"
           className="select sidebar-term-select"
-          value={selectedTerm === "all" ? "all" : String(selectedDecade)}
-          onChange={(event) => {
-            const value = event.target.value;
-            if (value === "all") onSelectTerm("all");
-            else onSelectDecade(Number(value));
-          }}
+          value={String(selectedDecade)}
+          onChange={(event) => onSelectDecade(Number(event.target.value))}
         >
-          <option value="all">すべての期</option>
           {termDecades.map((decade) => (
             <option key={decade} value={String(decade)}>
               {decade}期台
