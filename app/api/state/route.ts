@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { makeErrorResponse } from "@/lib/apiError";
 import { requireAdmin } from "@/lib/authGuard";
-import { mergeWarlords } from "@/lib/storage";
+import { mergeWarlords, warlordKey } from "@/lib/storage";
 import { battleKey } from "@/lib/parser";
 import {
   BODY_MUST_BE_OBJECT_ERROR,
@@ -63,7 +63,9 @@ async function loadMap(names?: ReadonlySet<string>): Promise<WarlordMap> {
       })
     : await prisma.warlord.findMany();
   const map: WarlordMap = {};
-  for (const r of rows as WarlordRow[]) map[r.name] = rowToWarlord(r);
+  // 同名でも期が違えば別レコード（その期の所属国を保持する）。
+  for (const r of rows as WarlordRow[])
+    map[warlordKey(r.name, r.term)] = rowToWarlord(r);
   return map;
 }
 
@@ -159,12 +161,14 @@ export async function POST(req: Request) {
     const existing = await loadMap(changedNames);
     const { map, added, updated } = mergeWarlords(existing, warlords);
 
+    // 書き戻すのは入力に含まれた (name, term) のレコードだけ。
+    const changedKeys = new Set(warlords.map((w) => warlordKey(w.name, w.term)));
     await prisma.$transaction(
-      Array.from(changedNames).map((name) => {
-        const row = warlordToRow(map[name]);
-        const { name: _n, ...rest } = row;
+      Array.from(changedKeys).map((key) => {
+        const row = warlordToRow(map[key]);
+        const { name: _n, term: _t, ...rest } = row;
         return prisma.warlord.upsert({
-          where: { name },
+          where: { name_term: { name: row.name, term: row.term } },
           create: row,
           update: rest,
         });

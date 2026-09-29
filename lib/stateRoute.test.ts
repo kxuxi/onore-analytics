@@ -19,6 +19,7 @@ vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/authGuard", () => ({ requireAdmin: () => null }));
 
 import { POST } from "@/app/api/state/route";
+import { warlordKey } from "@/lib/storage";
 
 function postRequest(term?: number): Request {
   const query = term == null ? "" : `?term=${term}`;
@@ -110,13 +111,14 @@ describe("POST /api/state", () => {
     expect(prismaMock.warlord.findMany).toHaveBeenNthCalledWith(2);
     expect(prismaMock.warlord.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
+        where: { name_term: { name: "織田信長", term: 147 } },
         update: expect.objectContaining({ power: 99 }),
       })
     );
     await expect(response.json()).resolves.toMatchObject({
       db: {
-        織田信長: { power: 99 },
-        武田信玄: { faction: "武田家" },
+        [warlordKey("織田信長", 147)]: { power: 99 },
+        [warlordKey("武田信玄", 147)]: { faction: "武田家" },
       },
       log: [],
     });

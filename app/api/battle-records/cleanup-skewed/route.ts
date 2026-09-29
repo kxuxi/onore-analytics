@@ -44,24 +44,24 @@ export async function DELETE(_req: NextRequest) {
     //     faction に都市名などが入り込んだ誤り。国一覧に都市名が出る原因）。
     // ※ type/branch が空の武将は能力値ランキングのみの登録＝正常なので残す。
     const warlords = await prisma.warlord.findMany({
-      select: { name: true, type: true, branch: true, faction: true },
+      select: { name: true, term: true, type: true, branch: true, faction: true },
     });
     // 他の武将の faction として使われている値（＝実在する国名）の集合。
     const factionSet = new Set(
       warlords.map((w) => w.faction?.trim()).filter((f): f is string => !!f)
     );
-    const warlordNames = warlords
-      .filter(
-        (w) =>
-          (w.type !== "" && !KNOWN_WARLORD_TYPES.has(w.type)) ||
-          (w.branch !== "" && !KNOWN_BRANCHES.has(w.branch)) ||
-          factionSet.has(w.name.trim())
-      )
-      .map((w) => w.name);
+    const targets = warlords.filter(
+      (w) =>
+        (w.type !== "" && !KNOWN_WARLORD_TYPES.has(w.type)) ||
+        (w.branch !== "" && !KNOWN_BRANCHES.has(w.branch)) ||
+        factionSet.has(w.name.trim())
+    );
 
     const [recordResult, warlordResult] = await prisma.$transaction([
       prisma.battleRecord.deleteMany({ where: { id: { in: ids } } }),
-      prisma.warlord.deleteMany({ where: { name: { in: warlordNames } } }),
+      prisma.warlord.deleteMany({
+        where: { OR: targets.map((w) => ({ name: w.name, term: w.term })) },
+      }),
     ]);
 
     return NextResponse.json({

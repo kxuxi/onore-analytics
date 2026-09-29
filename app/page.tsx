@@ -44,7 +44,11 @@ import {
   CloseIcon,
 } from "@/components/icons";
 import type { BattleRecord, TabKey, WarlordMap } from "@/lib/types";
-import { normalizationMap } from "@/lib/storage";
+import {
+  latestWarlordsByName,
+  normalizationMap,
+  warlordsForTerm,
+} from "@/lib/storage";
 import { yearBucketWinRankings, warlordYearRankTags } from "@/lib/stats";
 import {
   getWatchlist,
@@ -365,14 +369,16 @@ export default function HomePage() {
   // 戦闘履歴はサーバー側で選択期に絞り込み済み（selectedTerm の期のみ / all は全期間）。
   const filteredBattleLog = battleLog;
 
-  // db は常に全件取得されるため、選択中の期に登録された武将へクライアント側で絞る。
+  // db は (name, term) ごとの全件。選択中の期に登録された武将へ絞り、名前キーで引ける形にする。
+  // その期の行はその期の所属国を保持しているので、過去の期も当時の国で表示される。
   const filteredDb = useMemo(() => {
-    if (selectedTerm === "all") return db;
+    if (selectedTerm === "all") return latestWarlordsByName(db);
     if (selectedTerm == null) return {} as WarlordMap;
-    return Object.fromEntries(
-      Object.entries(db).filter(([, w]) => w.term === selectedTerm)
-    );
+    return warlordsForTerm(db, selectedTerm);
   }, [db, selectedTerm]);
+
+  // 全期間横断で名前引きするビュー（各名前の最新期のプロフィールを採用）。
+  const latestDbByName = useMemo(() => latestWarlordsByName(db), [db]);
 
   // filteredDb 内の household 正規化マップ（同じ household → 最新の代表名）。
   const householdNormMap = useMemo(() => normalizationMap(filteredDb), [filteredDb]);
@@ -760,7 +766,7 @@ export default function HomePage() {
         return (
           <HomeTab
             log={filteredBattleLog}
-            db={db}
+            db={latestDbByName}
             colors={factionColors}
             isAdmin={isAdmin}
             watchlist={watchlist}
@@ -791,7 +797,7 @@ export default function HomePage() {
       case "scout":
         return (
           <ScoutTab
-            db={db}
+            db={latestDbByName}
             log={filteredBattleLog}
             colors={factionColors}
             onSelectWarlord={selectWarlordNormalized}
@@ -801,7 +807,7 @@ export default function HomePage() {
         return (
           <DamageTab
             db={filteredDb}
-            allDb={db}
+            allDb={latestDbByName}
             log={filteredBattleLog}
             colors={factionColors}
             onSelectWarlord={selectWarlordNormalized}

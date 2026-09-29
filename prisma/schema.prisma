@@ -25,9 +25,9 @@ model UnitType {
   updatedAt   DateTime @updatedAt
 }
 
-// 武将DB
+// 武将DB（期ごとに1レコード。同名でも期が違えば別レコードとして所属国等を保持する）
 model Warlord {
-  name         String   @id // 武将名
+  name         String   // 武将名
   household    String?  // 家督名（同じ家督名を持つ異なる名前は同一武将と見なす）
   faction      String?  // 勢力/国
   type         String   @default("") // タイプ
@@ -36,7 +36,7 @@ model Warlord {
   battleAt     String?  // 戦闘時刻 (元テキスト)
   lastActionAt String?  // 最終行動時刻
   actions      String[] @default([]) // 行動履歴
-  term         Int      @default(145) // 最後に登録された期番号
+  term         Int      @default(145) // 期番号
   updatedAt    BigInt   @default(0)
   // ランキング取り込みで反映する能力値（武力〜計略）と自己PR。すべて任意。
   power        Int?     // 武力
@@ -47,6 +47,8 @@ model Warlord {
   selfPr       String?  // 自己PR
   maxTroops    Int?     // 最大徴兵兵数
   statsRaw     String?  // 取り込み元の生テキスト（資金・兵糧など未使用項目の保全用）
+
+  @@id([name, term])
 }
 
 // 戦闘履歴

@@ -45,16 +45,17 @@ export async function DELETE(
     }
 
     // その国に所属する武将（DB 名簿）も削除する。戦歴がない国も対象。
+    // 同名でも別の期に別の国で登録された行は残すため (name, term) で削除する。
     const warlords = await prisma.warlord.findMany({
-      select: { name: true, faction: true },
+      select: { name: true, term: true, faction: true },
     });
-    const warlordNames = warlords
-      .filter((w) => w.faction?.trim() === faction)
-      .map((w) => w.name);
+    const targets = warlords.filter((w) => w.faction?.trim() === faction);
 
     const [recordResult, warlordResult] = await prisma.$transaction([
       prisma.battleRecord.deleteMany({ where: { id: { in: ids } } }),
-      prisma.warlord.deleteMany({ where: { name: { in: warlordNames } } }),
+      prisma.warlord.deleteMany({
+        where: { OR: targets.map((w) => ({ name: w.name, term: w.term })) },
+      }),
     ]);
 
     return NextResponse.json({
