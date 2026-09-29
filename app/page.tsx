@@ -230,7 +230,6 @@ export default function HomePage() {
     logLoading,
     loadError,
     refreshing,
-    lastFetchedAt,
     reload,
     refresh,
     loadFullLog,
@@ -243,6 +242,14 @@ export default function HomePage() {
     addManualTerm,
     selectDecade,
   } = useTermSelection(terms, selectedTerm, setSelectedTerm);
+  // 管理者が最後にデータを登録した日時（共有DB全件の updatedAt の最大値）。
+  const latestUpdatedAt = useMemo(() => {
+    let max = 0;
+    for (const w of Object.values(db)) {
+      if (w.updatedAt > max) max = w.updatedAt;
+    }
+    return max > 0 ? max : null;
+  }, [db]);
   // サイドバーの開閉とモバイル判定
   const {
     sidebarOpen,
@@ -1035,7 +1042,7 @@ export default function HomePage() {
         sidebarOpen={sidebarOpen}
         onToggleSidebar={toggleSidebar}
         onSelectHome={() => selectTab("home")}
-        lastFetchedAt={lastFetchedAt}
+        latestUpdatedAt={latestUpdatedAt}
         resolvedTheme={resolvedTheme}
         onToggleTheme={toggleTheme}
         refreshing={refreshing}

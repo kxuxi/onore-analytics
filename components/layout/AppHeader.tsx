@@ -12,7 +12,7 @@ interface AppHeaderProps {
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
   onSelectHome: () => void;
-  lastFetchedAt: number | null;
+  latestUpdatedAt: number | null;
   resolvedTheme: ResolvedTheme | null;
   onToggleTheme: () => void;
   refreshing: boolean;
@@ -22,8 +22,11 @@ interface AppHeaderProps {
   onShareLink: () => void;
 }
 
-function formatFetchTime(timestamp: number): string {
-  return new Date(timestamp).toLocaleTimeString("ja-JP", {
+function formatUpdatedAt(timestamp: number): string {
+  return new Date(timestamp).toLocaleString("ja-JP", {
+    year: "2-digit",
+    month: "2-digit",
+    day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -34,7 +37,7 @@ export function AppHeader({
   sidebarOpen,
   onToggleSidebar,
   onSelectHome,
-  lastFetchedAt,
+  latestUpdatedAt,
   resolvedTheme,
   onToggleTheme,
   refreshing,
@@ -47,7 +50,7 @@ export function AppHeader({
     resolvedTheme === "dark"
       ? "ライトモードに切り替え"
       : "ダークモードに切り替え";
-  const fetchTimePending = lastFetchedAt == null;
+  const updatedTimePending = latestUpdatedAt == null;
 
   return (
     <header className="header">
@@ -78,15 +81,19 @@ export function AppHeader({
       <div className="header-actions">
         <span
           className={
-            "header-fetched muted" + (fetchTimePending ? " is-pending" : "")
+            "header-updated muted" + (updatedTimePending ? " is-pending" : "")
           }
-          aria-hidden={fetchTimePending ? true : undefined}
+          aria-hidden={updatedTimePending ? true : undefined}
           title={
-            fetchTimePending ? undefined : "共有DBを最後に取得した時刻"
+            updatedTimePending
+              ? undefined
+              : "管理者が最後にデータを登録した日時"
           }
         >
-          最終取得{" "}
-          {fetchTimePending ? "00:00" : formatFetchTime(lastFetchedAt)}
+          最終更新{" "}
+          {updatedTimePending
+            ? "00/00/00 00:00"
+            : formatUpdatedAt(latestUpdatedAt)}
         </span>
         <button
           type="button"
