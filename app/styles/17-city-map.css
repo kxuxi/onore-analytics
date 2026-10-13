@@ -1,0 +1,880 @@
+/* ---------- Account city map ---------- */
+.city-map-page {
+  min-width: 0;
+}
+
+.city-map-page > .page-header {
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border-default);
+}
+
+.city-map-toolbar,
+.city-map-editor-heading,
+.city-map-save-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.city-map-view {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.city-map-dimensions {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-caption);
+}
+
+.city-map-save-state {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  background: var(--surface-subtle);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-caption);
+}
+
+.city-map-save-state[data-dirty] {
+  color: var(--color-warning-text);
+}
+
+.city-map-editor {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-subtle);
+}
+
+.city-map-editor[hidden] {
+  display: none;
+}
+
+.city-map-editor-heading > label {
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-semibold);
+}
+
+.city-map-help {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-caption);
+}
+
+.city-map-source {
+  display: block;
+  min-height: 220px;
+  background: var(--surface-raised);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: var(--font-size-sm);
+  line-height: 1.7;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
+
+.city-map-source[aria-invalid="true"] {
+  border-color: var(--color-danger-text);
+}
+
+.city-map-editor-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.city-map-character-count {
+  margin-left: auto;
+  text-align: right;
+}
+
+/* 地図・偵察情報・行商設定をまとめて消す操作。塗りの危険色にせず控えめに置く。 */
+.city-map-page .city-map-reset-trigger {
+  border-color: color-mix(in srgb, var(--color-danger-text) 45%, var(--color-border-default));
+  background: transparent;
+  color: var(--color-danger-text);
+}
+
+.city-map-page .city-map-reset-trigger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-danger-text) 10%, transparent);
+}
+
+.city-map-notice {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--color-success-text) 40%, var(--color-border-default));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-success-text) 6%, var(--surface-subtle));
+  color: var(--color-success-text);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-caption);
+}
+
+.city-map-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  flex-wrap: wrap;
+  padding: 0;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-caption);
+  list-style: none;
+}
+
+.city-map-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.city-map-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 3px;
+  background: var(--surface-raised);
+}
+
+.city-map-state,
+.city-map-empty,
+.city-map-load-error {
+  margin: 0;
+  padding: var(--space-7) var(--space-4);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.city-map-empty,
+.city-map-load-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.city-map-error {
+  margin: 0;
+  color: var(--color-danger-text);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-caption);
+  overflow-wrap: anywhere;
+}
+
+.city-map-save-error {
+  padding: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--color-danger-text) 40%, var(--color-border-default));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-danger-text) 6%, var(--surface-subtle));
+}
+
+.city-map-scroll {
+  /* スクリーンリーダー用の絶対配置テキストも地図内に収める。 */
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-subtle);
+}
+
+.city-map-grid {
+  --city-map-column-width: 112px;
+  width: 100%;
+  min-width: calc(44px + var(--city-map-column-count, 1) * var(--city-map-column-width));
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.city-map-grid .city-map-coordinate-column {
+  width: 44px;
+}
+
+.city-map-grid th,
+.city-map-grid td {
+  padding: var(--space-1);
+  border: 0;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.city-map-grid th {
+  color: var(--color-text-secondary);
+  background: var(--surface-subtle);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: none;
+  overflow-wrap: anywhere;
+}
+
+.city-map-grid thead th {
+  position: static;
+  height: 36px;
+  box-shadow: none;
+}
+
+.city-map-grid tbody th {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.city-map-grid tbody tr:hover {
+  background: transparent;
+}
+
+.city-map-cell {
+  display: flex;
+  min-height: 76px;
+  height: 100%;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-1);
+  /* 空きマスは配置が分かる程度に薄くし、都市マスを目立たせる。 */
+  border: 1px dashed color-mix(in srgb, var(--color-border-default) 55%, transparent);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  overflow-wrap: anywhere;
+}
+
+.city-map-cell-populated {
+  border-style: solid;
+  border-color: var(--color-border-default);
+  background: var(--surface-raised);
+}
+
+.city-map-cell-scouted,
+.city-map-legend-swatch[data-scouted] {
+  border-color: color-mix(in srgb, var(--color-focus-ring) 45%, var(--color-border-default));
+  background: color-mix(in srgb, var(--color-focus-ring) 9%, var(--surface-raised));
+}
+
+.city-map-city {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-caption);
+}
+
+.city-map-note {
+  color: var(--color-warning-text);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-caption);
+}
+
+.city-map-empty-marker {
+  color: color-mix(in srgb, var(--color-text-secondary) 50%, transparent);
+}
+
+.city-map-page button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+@media (max-width: 560px) {
+  .city-map-editor {
+    padding: var(--space-3);
+  }
+
+  .city-map-page > .page-header .btn {
+    width: 100%;
+  }
+
+  .city-map-source {
+    min-height: 190px;
+    font-size: var(--font-size-body);
+  }
+
+  /* スマホでも一度に3〜4列を見渡せるよう、列幅とマスの高さを詰める。 */
+  .city-map-grid {
+    --city-map-column-width: 84px;
+  }
+
+  .city-map-grid .city-map-coordinate-column {
+    width: 28px;
+  }
+
+  .city-map-grid th,
+  .city-map-grid td {
+    padding: 2px;
+  }
+
+  .city-map-cell {
+    min-height: 60px;
+    padding: var(--space-1) 2px;
+  }
+
+  .city-map-city {
+    font-size: var(--font-size-xs);
+  }
+}
+
+/* ---------- Merchant positions ---------- */
+.city-map-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.city-map-merchants {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-subtle);
+}
+
+.city-map-merchant-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.city-map-merchant-heading h2 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+}
+
+.city-map-merchant-inputs {
+  color-scheme: dark;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+:root[data-theme="light"] .city-map-merchant-inputs {
+  color-scheme: light;
+}
+
+.city-map-merchant-inputs label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.city-map-merchant-inputs input,
+.city-map-merchant-inputs select {
+  width: 100%;
+  min-width: 100px;
+  min-height: 40px;
+  padding: var(--space-2);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.city-map-merchant-inputs input[type="text"] {
+  width: 110px;
+}
+
+.city-map-merchants .city-map-merchant-step {
+  min-height: 40px;
+  padding: var(--space-1) var(--space-3);
+  white-space: nowrap;
+}
+
+.city-map-merchant-inputs input[aria-invalid="true"] {
+  border-color: var(--color-danger-text);
+}
+
+.city-map-merchant-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.city-map-merchant-positions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.city-map-merchant-positions li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  overflow-wrap: anywhere;
+}
+
+.city-map-merchant-coordinate {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.city-map-merchant-positions strong {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.city-map-merchant-absence {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-caption);
+}
+
+.city-map-merchant-rules summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.city-map-merchant-rules[open] summary {
+  margin-bottom: var(--space-2);
+}
+
+.city-map-cell-merchant[data-merchants],
+.city-map-legend-swatch[data-merchants] {
+  border-width: 2px;
+  border-style: solid;
+}
+
+.city-map-cell-merchant[data-merchants^="1"],
+.city-map-legend-swatch[data-merchants="1"] {
+  border-color: var(--color-warning-text);
+  background: color-mix(in srgb, var(--color-warning-text) 10%, var(--surface-raised));
+}
+
+.city-map-cell-merchant[data-merchants="2"],
+.city-map-legend-swatch[data-merchants="2"] {
+  border-color: var(--color-success-text);
+  background: color-mix(in srgb, var(--color-success-text) 10%, var(--surface-raised));
+}
+
+/* 2人が同じ都市にいるときは、行商人2の色を外枠に重ねる。 */
+.city-map-cell-merchant[data-merchants="1 2"] {
+  box-shadow: 0 0 0 2px var(--color-success-text);
+}
+
+.city-map-merchant-badges {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.city-map-merchant-badge {
+  padding: 2px var(--space-1);
+  border: 1px solid currentColor;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-caption);
+}
+
+.city-map-merchant-badge--1 {
+  color: var(--color-warning-text);
+  background: color-mix(in srgb, var(--color-warning-text) 8%, var(--surface-raised));
+}
+
+.city-map-merchant-badge--2 {
+  color: var(--color-success-text);
+  background: color-mix(in srgb, var(--color-success-text) 8%, var(--surface-raised));
+}
+
+/* ---------- City scouting ---------- */
+.city-scout-panel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-subtle);
+}
+
+.city-scout-heading,
+.city-scout-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.city-scout-heading h2 {
+  min-width: 0;
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-heading);
+  overflow-wrap: anywhere;
+}
+
+.city-scout-panel > .city-scout-heading h2 {
+  font-size: var(--font-size-body);
+}
+
+.city-scout-editor {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.city-scout-editor[hidden] {
+  display: none;
+}
+
+.city-scout-editor > label {
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-semibold);
+}
+
+.city-scout-source {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 180px;
+  padding: var(--space-3);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-caption);
+  resize: vertical;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.city-scout-source[aria-invalid="true"] {
+  border-color: var(--color-danger-text);
+}
+
+.city-scout-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 200px;
+  padding: var(--space-3);
+  margin: 0;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  list-style: none;
+  overflow-y: auto;
+}
+
+.city-scout-preview li {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  flex-wrap: wrap;
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.city-scout-preview li > span {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.city-scout-preview li > .city-scout-map-warning {
+  color: var(--color-warning-text);
+}
+
+.city-scout-success {
+  margin: 0;
+  color: var(--color-success-text);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-caption);
+  overflow-wrap: anywhere;
+}
+
+.city-map-city-button {
+  width: 100%;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+  appearance: none;
+}
+
+.city-map-city-button:hover {
+  filter: brightness(1.18);
+}
+
+.city-map-city-button:focus-visible,
+.city-scout-source:focus-visible,
+.city-scout-original summary:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.city-map-city-type {
+  white-space: nowrap;
+}
+
+.city-map-facilities {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-caption);
+}
+
+.city-scout-dialog {
+  max-width: 620px;
+  min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--surface-raised);
+  color: var(--color-text-primary);
+}
+
+.city-scout-dialog .city-scout-heading {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+
+.city-scout-dialog .city-scout-heading > .btn {
+  flex-shrink: 0;
+}
+
+.city-scout-dialog p.city-scout-observed {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.city-scout-dialog p.city-map-error {
+  color: var(--color-danger-text);
+}
+
+.city-scout-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  padding: 0;
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.city-scout-detail-item {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border-default);
+  overflow-wrap: anywhere;
+}
+
+.city-scout-detail-item dt {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.city-scout-detail-item dd {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.city-scout-details-wide {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.city-scout-facilities {
+  display: flex;
+  gap: var(--space-1) var(--space-2);
+  flex-wrap: wrap;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.city-scout-facilities li {
+  max-width: 100%;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-subtle);
+}
+
+.city-scout-original summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.city-scout-original pre {
+  max-width: 100%;
+  padding: var(--space-3);
+  margin: var(--space-2) 0 0;
+  border-radius: var(--radius-md);
+  background: var(--surface-subtle);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-caption);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 1024px) {
+  .city-map-controls {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  }
+
+  .city-map-controls > :only-child {
+    grid-column: 1 / -1;
+  }
+
+  .city-map-merchant-inputs label {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .city-map-merchant-inputs input,
+  .city-map-merchant-inputs select {
+    min-width: 80px;
+    min-height: 36px;
+    padding: var(--space-1) var(--space-2);
+  }
+
+  .city-map-merchant-inputs input[type="text"] {
+    width: 88px;
+  }
+
+  .city-map-controls .btn {
+    min-height: 36px;
+    padding: var(--space-1) var(--space-2);
+  }
+}
+
+@media (max-width: 560px) {
+  .city-map-merchants {
+    padding: var(--space-3);
+  }
+
+  .city-map-merchant-positions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* 年・月を1行目、前後の移動ボタンを2行目に並べ、ボタンだけが折り返さないようにする。 */
+  .city-map-merchant-inputs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+
+  .city-map-merchant-inputs input[type="text"] {
+    width: 100%;
+  }
+
+  .city-map-merchant-inputs input,
+  .city-map-merchant-inputs select {
+    min-width: 0;
+  }
+
+  .city-map-merchants .city-map-merchant-step {
+    order: 1;
+  }
+
+  .city-scout-panel {
+    padding: var(--space-3);
+  }
+
+  .city-scout-dialog {
+    padding: var(--space-3);
+  }
+}
+
+/* ---------- City map reset ---------- */
+
+.city-map-reset-dialog {
+  min-width: 0;
+  max-width: 480px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--surface-raised);
+  color: var(--color-text-primary);
+}
+
+.city-map-reset-dialog h2 {
+  margin: 0;
+  font-size: var(--font-size-heading);
+  line-height: var(--line-height-heading);
+  overflow-wrap: anywhere;
+}
+
+.city-map-reset-dialog p {
+  line-height: var(--line-height-caption);
+  overflow-wrap: anywhere;
+}
+
+.city-map-reset-dialog p.city-map-error {
+  color: var(--color-danger-text);
+}
+
+.city-map-reset-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.city-map-reset-actions > .btn {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 560px) {
+  .city-map-reset-dialog {
+    padding: var(--space-3);
+  }
+
+  .city-map-reset-actions > .btn {
+    width: 100%;
+  }
+}

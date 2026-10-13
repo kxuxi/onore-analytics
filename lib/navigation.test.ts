@@ -127,6 +127,13 @@ describe("buildPath", () => {
     expect(buildPath("units", null)).toBe("/encyclopedia/units");
     expect(buildPath("metrics", null)).toBe("/ranking");
     expect(buildPath("wiki", null)).toBe("/wiki");
+    expect(buildPath("citymap", null)).toBe("/city-map");
+  });
+
+  it("都市地図の直リンクと旧クエリからタブを復元できる", () => {
+    const expected = { tab: "citymap", detailStack: [] };
+    expect(navStateFromPath("/city-map")).toEqual(expected);
+    expect(navStateFromSearch("?tab=citymap")).toEqual(expected);
   });
 
   it.each(DETAIL_ROUTE_CASES)(

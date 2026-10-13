@@ -38,12 +38,13 @@ describe("公開範囲（認可の境界）", () => {
     expect(PUBLIC_TAB_KEYS).toEqual(expected);
   });
 
-  it("管理者専用タブ（偵察・被弾表・DB確認・管理Wiki・環境設定）は公開されていない", () => {
+  it("管理者専用タブ（偵察・被弾表・DB確認・都市地図・管理Wiki・環境設定）は公開されていない", () => {
     const adminOnly: TabKey[] = [
       "scout",
       "damage",
       "db",
       "wiki",
+      "citymap",
       "factions",
     ];
     for (const t of adminOnly) {
@@ -52,6 +53,7 @@ describe("公開範囲（認可の境界）", () => {
     // 武将グループ（書き込み系導線を含む）と環境設定グループは非公開。
     expect(isPublicGroup("warlords")).toBe(false);
     expect(isPublicGroup("wiki")).toBe(false);
+    expect(isPublicGroup("citymap")).toBe(false);
     expect(isPublicGroup("settings")).toBe(false);
   });
 

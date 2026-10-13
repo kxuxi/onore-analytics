@@ -25,6 +25,15 @@ export function SearchIcon({ className = "icon" }: IconProps) {
   );
 }
 
+export function MapIcon({ className = "icon" }: IconProps) {
+  return (
+    <svg className={className} {...base}>
+      <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z" />
+      <path d="M9 3v15M15 6v15" />
+    </svg>
+  );
+}
+
 export function FilterIcon({ className = "icon" }: IconProps) {
   return (
     <svg className={className} {...base}>

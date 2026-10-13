@@ -14,6 +14,7 @@ export type TabGroupKey =
   | "meta"
   | "encyclopedia"
   | "nations"
+  | "citymap"
   | "wiki"
   | "settings";
 
@@ -35,6 +36,7 @@ export const TAB_LABELS: Record<TabKey, string> = {
   weapons: "武器",
   items: "品物",
   nations: "国",
+  citymap: "都市地図",
   wiki: "管理Wiki",
   factions: "環境設定",
 };
@@ -62,6 +64,7 @@ export const TAB_GROUPS: TabGroup[] = [
   { key: "meta", label: "メタ分析", tabs: ["matrix", "metaenv", "synergy"] },
   { key: "encyclopedia", label: "図鑑", tabs: ["units", "weapons", "items"] },
   { key: "nations", label: "国", tabs: ["nations"] },
+  { key: "citymap", label: "都市地図", tabs: ["citymap"] },
   { key: "wiki", label: "管理Wiki", tabs: ["wiki"] },
   { key: "settings", label: "環境設定", tabs: ["factions"] },
 ];

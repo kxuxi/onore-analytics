@@ -69,10 +69,27 @@ model FactionColor {
 
 // 管理者ユーザー（自前認証・複数管理者対応。パスワードはハッシュ化して保存）
 model User {
-  id           Int      @id @default(autoincrement())
-  username     String   @unique // ログインID
-  passwordHash String // scrypt によるハッシュ（salt 同梱・平文は保存しない）
-  createdAt    DateTime @default(now())
+  id                      Int      @id @default(autoincrement())
+  username                String   @unique // ログインID
+  passwordHash            String // scrypt によるハッシュ（salt 同梱・平文は保存しない）
+  cityMapSource           String   @default("") // アカウントごとの都市地図（貼り付けた表）
+  cityMapMerchantSettings Json? // アカウントごとの行商予測年月
+  cityScoutReports        CityScoutReport[]
+  createdAt               DateTime @default(now())
+}
+
+// アカウント・都市ごとの最新の偵察結果
+model CityScoutReport {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cityName  String // 表記を正規化した都市名（検索・重複排除用）
+  year      Int
+  month     Int
+  source    String // 表示と再解析用の偵察結果原文
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, cityName])
 }
 
 // 管理者向けWikiページ
