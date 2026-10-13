@@ -37,6 +37,7 @@ import {
   BookIcon,
   LinkIcon,
   GridIcon,
+  MapIcon,
   ActivityIcon,
   TargetIcon,
   LogInIcon,
@@ -92,6 +93,10 @@ const EquipTab = dynamic(
 );
 const NationTab = dynamic(
   () => import("@/components/tabs/NationTab").then((m) => m.NationTab),
+  { loading: renderPageLoading }
+);
+const CityMapTab = dynamic(
+  () => import("@/components/tabs/CityMapTab").then((m) => m.CityMapTab),
   { loading: renderPageLoading }
 );
 const SettingsTab = dynamic(
@@ -157,6 +162,7 @@ const TAB_ICONS: Record<TabKey, ReactNode> = {
   weapons: <SwordIcon />,
   items: <PackageIcon />,
   nations: <FlagIcon />,
+  citymap: <MapIcon />,
   wiki: <BookIcon />,
   factions: <SlidersIcon />,
 };
@@ -170,6 +176,7 @@ const GROUP_ICONS: Record<TabGroupKey, ReactNode> = {
   meta: <GridIcon />,
   encyclopedia: <BookIcon />,
   nations: <FlagIcon />,
+  citymap: <MapIcon />,
   wiki: <BookIcon />,
   settings: <SlidersIcon />,
 };
@@ -194,6 +201,7 @@ const DATA_LAYOUT_TABS = new Set<TabKey>([
   "weapons",
   "items",
   "nations",
+  "citymap",
   "wiki",
   "factions",
 ]);
@@ -275,13 +283,16 @@ export default function HomePage() {
     setSidebarOpen(false);
   }, [setSidebarOpen]);
   const [wikiDirty, setWikiDirty] = useState(false);
-  const confirmWikiNavigation = useCallback(
-    () =>
-      !wikiDirty ||
-      window.confirm(
-        "管理Wikiに未保存の変更があります。変更を破棄して移動しますか？"
-      ),
-    [wikiDirty]
+  const [cityMapDirty, setCityMapDirty] = useState(false);
+  const confirmUnsavedNavigation = useCallback(
+    () => {
+      if (!wikiDirty && !cityMapDirty) return true;
+      const label = cityMapDirty ? "都市地図" : "管理Wiki";
+      return window.confirm(
+        `${label}に未保存の変更があります。変更を破棄して移動しますか？`
+      );
+    },
+    [wikiDirty, cityMapDirty]
   );
   // 未ログイン（管理者以外）が見られるのは公開タブのみ。認証確認中（!authReady）と
   // 管理者は全タブ許可（undefined）にし、保護タブの URL を不用意にフォールバックしない。
@@ -314,7 +325,7 @@ export default function HomePage() {
   } = useAppNavigation({
     onCloseSidebar: closeSidebarOnMobile,
     allowedTabs,
-    confirmNavigation: confirmWikiNavigation,
+    confirmNavigation: confirmUnsavedNavigation,
   });
   const sidebarRef = useModalA11y<HTMLDivElement>(
     isMobile && sidebarOpen,
@@ -520,14 +531,14 @@ export default function HomePage() {
   }, []);
 
   const handleLogout = useCallback(async () => {
-    if (!confirmWikiNavigation()) return;
+    if (!confirmUnsavedNavigation()) return;
     try {
       await logout();
       pushToast("success", "ログアウトしました");
     } catch {
       pushToast("error", "ログアウトに失敗しました");
     }
-  }, [confirmWikiNavigation, logout, pushToast]);
+  }, [confirmUnsavedNavigation, logout, pushToast]);
 
   const handleDeleteBattle = useCallback(
     async (id: number) => {
@@ -913,6 +924,14 @@ export default function HomePage() {
         return (
           <WikiTab onNotify={pushToast} onDirtyChange={setWikiDirty} />
         );
+      case "citymap":
+        return user ? (
+          <CityMapTab
+            key={user.id}
+            accountId={user.id}
+            onDirtyChange={setCityMapDirty}
+          />
+        ) : null;
       case "factions":
         return (
           <SettingsTab
@@ -944,6 +963,7 @@ export default function HomePage() {
     factionColors,
     authReady,
     isAdmin,
+    user,
     themePref,
     handleRegister,
     handleImportStats,
@@ -1180,7 +1200,7 @@ export default function HomePage() {
             aria-labelledby={`group-${activeGroup}`}
             tabIndex={-1}
           >
-          {tab === "wiki" ? (
+          {tab === "wiki" || tab === "citymap" ? (
             !authReady ? (
               <PageLoading />
             ) : isAdmin ? (
@@ -1189,7 +1209,7 @@ export default function HomePage() {
               <div className="panel">
                 <h2>管理者ログインが必要です</h2>
                 <p className="muted">
-                  管理Wikiの閲覧・編集は管理者だけが利用できます。
+                  {TAB_LABELS[tab]}の閲覧・編集にはログインが必要です。
                 </p>
                 <div className="row">
                   <a className="btn btn-primary" href="/login">

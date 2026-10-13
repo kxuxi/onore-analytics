@@ -1,4 +1,4 @@
-export type TabKey = "home" | "history" | "scout" | "db" | "damage" | "units" | "weapons" | "items" | "nations" | "factions" | "wiki" | "unitrank" | "weaponrank" | "itemrank" | "synergy" | "matrix" | "metaenv" | "metrics";
+export type TabKey = "home" | "history" | "scout" | "db" | "damage" | "units" | "weapons" | "items" | "nations" | "citymap" | "factions" | "wiki" | "unitrank" | "weaponrank" | "itemrank" | "synergy" | "matrix" | "metaenv" | "metrics";
 
 export interface Warlord {
   /** 武将名（プライマリキー） */

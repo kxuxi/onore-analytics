@@ -1,0 +1,1 @@
+ALTER TABLE "User" ADD COLUMN "cityMapSource" TEXT NOT NULL DEFAULT '';

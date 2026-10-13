@@ -38,3 +38,4 @@ next-env.d.ts.bak
 /tmp-*.mts
 /tmp-*.ts
 /tmp-*.json
+.env*
