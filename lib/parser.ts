@@ -82,7 +82,7 @@ export function extractBattleUrl(line: string): { line: string; url?: string } {
  */
 function collapseOriginalUnitSpaces(line: string): string {
   return line.replace(
-    /(?:\*|オリジナル兵)(?:(?!v\.?s\.?)[^（(])*?[（(][^（()）]*[）)]/gi,
+    /(?:\*|オリジナル兵)(?:(?!v\.?s\.?)[^（(])*?[（(][^（()）]*[）)](?:[ \t\u3000]*[（(][^（()）]*[）)])*/gi,
     (matched) => matched.replace(/[\s\u3000]+/g, "")
   );
 }
@@ -292,14 +292,19 @@ function sliceWarlord(
  * 兵種名を整形する。
  * 先頭に `*` が付く場合（例: `*ノクスミーティア(カノン砲)`）や
  * 「オリジナル兵」と書かれている場合（例: `オリジナル兵(ドラグーン)`）は、
- * 括弧（半角/全角）内のテキストを採用する（例: `カノン砲` / `ドラグーン`）。
+ * 最後の括弧（半角/全角）内のテキストを採用する（例: `カノン砲` / `ドラグーン`）。
  */
+function lastParenthesizedUnit(token: string): string | undefined {
+  const matches = Array.from(token.matchAll(/[（(]([^（()）]*)[）)]/g));
+  return matches[matches.length - 1]?.[1].trim() || undefined;
+}
+
 function normalizeUnit(unit: string | undefined): string | undefined {
   const u = unit?.trim();
   if (!u) return undefined;
   if (u.startsWith("*") || u.includes("オリジナル兵")) {
-    const m = u.match(/[（(]([^（()）]+)[）)]/);
-    if (m && m[1].trim()) return m[1].trim();
+    const baseUnit = lastParenthesizedUnit(u);
+    if (baseUnit) return baseUnit;
   }
   return u;
 }
@@ -536,14 +541,14 @@ export function isSpecialToken(token: string): boolean {
 
 /**
  * 表示用にトークンを整形する。
- * `*` 始まり、または「オリジナル兵」を含む場合は括弧内テキストを採用する。
+ * `*` 始まり、または「オリジナル兵」を含む場合は最後の括弧内テキストを採用する。
  * `*` 始まりで括弧が無ければ `*` を取り除く。
  */
 export function normalizeDisplayToken(token: string): string {
   const t = token.trim();
   if (t.startsWith("*") || t.includes("オリジナル兵")) {
-    const m = t.match(/[（(]([^（()）]+)[）)]/);
-    if (m && m[1].trim()) return m[1].trim();
+    const baseUnit = lastParenthesizedUnit(t);
+    if (baseUnit) return baseUnit;
     if (t.startsWith("*")) return t.slice(1).trim();
   }
   return t;

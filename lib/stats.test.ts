@@ -703,6 +703,21 @@ function unitLine(opts: {
 }
 
 describe("unitMatchupRanking / userWinRates", () => {
+  it("命名部分にも括弧があるオリジナル兵を最後の括弧内の兵種で集計する", () => {
+    const log = [rec(unitLine({
+      year: 1700,
+      selfName: "甲",
+      selfUnit: "*命名（愛称）（ランセロ）",
+      selfBranch: "騎兵",
+      oppUnit: "ドラグーン",
+      result: "甲の勝利",
+    }))];
+    const outcomes = collectUnitBattles(log, "ランセロ");
+    expect(summarize(outcomes)).toMatchObject({ battles: 1, wins: 1, losses: 0 });
+    expect(collectUnitBattles(log, "愛称")).toHaveLength(0);
+    expect(unitMatchupRanking(outcomes).best[0].unit).toBe("ドラグーン");
+  });
+
   const log: BattleRecord[] = [
     rec(
       unitLine({
