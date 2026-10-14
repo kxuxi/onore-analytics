@@ -2512,6 +2512,17 @@ export function unitCountersBranch(
   return !!(good && b && good.has(b));
 }
 
+export function unitAntiSummary(outcomes: BattleOutcome[], unitTypes: UnitType[]) {
+  const antiIndex = buildAntiIndex(unitTypes);
+  let antiContacts = 0;
+  let antiedContacts = 0;
+  for (const { self, opponent } of outcomes) {
+    if (unitCountersBranch(self.unit, opponent.branch, antiIndex)) antiContacts++;
+    if (unitCountersBranch(opponent.unit, self.branch, antiIndex)) antiedContacts++;
+  }
+  return { antiContacts, antiedContacts };
+}
+
 /** 武将 1 人のアンチ戦闘の集計。 */
 export interface AntiContactStat {
   name: string;
