@@ -109,6 +109,36 @@ describe("5種の詳細画面", () => {
     expect(markup).toContain("武将甲");
   });
 
+  it("相性リストは3件で始まり、続きがある場合だけ追加ボタンを表示する", () => {
+    const cases = [
+      { unit: "敵一", result: "甲の勝利" },
+      { unit: "敵二", result: "甲の勝利" },
+      { unit: "敵三", result: "甲の勝利" },
+      { unit: "敵四", result: "甲の勝利" },
+      { unit: "五分兵", result: "甲の勝利" },
+      { unit: "五分兵", result: "乙の勝利" },
+      { unit: "撤退兵", result: "撤退" },
+    ];
+    const log = cases.map(({ unit, result }, index) => ({
+      line: `【1戦目】 1700年4月 06/01 10:0${index} 京都 東軍 甲 甲家 武特 重騎兵 騎兵 槍 旗 V.S. 西軍 乙 乙家 統特 ${unit} 歩兵 槍 旗 ${result} 12`,
+      term: 150,
+      savedAt: index,
+    }));
+    const markup = renderToStaticMarkup(<UnitDetail name="重騎兵" log={log} {...callbacks} />);
+    expect(markup).toContain('aria-label="相性の良い敵兵種をあと1件表示"');
+    expect(markup).not.toContain("unit-matchups-all");
+    expect(markup.match(/class="detail-rank-row"/g)).toHaveLength(3);
+  });
+
+  it("勝ち越し相手がなくても敵兵種一覧を表示する", () => {
+    const log = [{ ...LOG[0], line: BATTLE_LINE.replace("武将甲の勝利", "武将乙の勝利") }];
+    const markup = renderToStaticMarkup(<UnitDetail name="重騎兵" log={log} {...callbacks} />);
+    expect(markup).toContain("敵兵種との相性");
+    expect(markup).toContain("苦手な敵兵種");
+    expect(markup).not.toContain("unit-matchup-more");
+    expect(markup).toContain("長槍兵");
+  });
+
   it.each([
     { kind: "武器", slot: "weapon" as const, name: "リーチ棒" },
     { kind: "品物", slot: "item" as const, name: "金の宝珠" },

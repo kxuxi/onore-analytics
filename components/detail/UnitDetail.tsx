@@ -52,7 +52,7 @@ export function UnitDetail({
 
   const branch = useMemo(() => unitBranchLabel(outcomes), [outcomes]);
   const unitRanking = useMemo(
-    () => unitMatchupRanking(outcomes),
+    () => unitMatchupRanking(outcomes, Number.POSITIVE_INFINITY),
     [outcomes]
   );
   const users = useMemo(() => userWinRates(outcomes), [outcomes]);
@@ -193,6 +193,7 @@ export function UnitDetail({
           <DetailSummary summary={summary} antiSummary={antiSummary} />
 
           <UnitMatchupRanking
+            key={name}
             ranking={unitRanking}
             onSelectUnit={onSelectUnit}
           />
