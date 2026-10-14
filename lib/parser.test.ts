@@ -410,6 +410,32 @@ describe("国名プレースホルダーの正規化（DB登録）", () => {
 });
 
 describe("normalizeDisplayToken", () => {
+  it.each([
+    "*オリジナル名(愛称)(カノン砲)",
+    "*オリジナル名（愛称）（カノン砲）",
+    "*オリジナル名(愛称)（カノン砲）",
+    "*オリジナル名（愛称）(カノン砲)",
+    "オリジナル兵（愛称）（カノン砲）",
+    "*オリジナル名(愛称)(別名)(カノン砲)",
+  ])("複数の括弧がある %s は最後の括弧内を採用する", (token) => {
+    expect(normalizeDisplayToken(token)).toBe("カノン砲");
+  });
+
+  it.each([
+    "*オリジナル名(愛称)(カノン砲)",
+    "*オリジナル 名前（愛称） （カノン砲）",
+    "オリジナル兵（愛称）(カノン砲)",
+  ])("生ログの保存用・表示用が %s の最後の括弧内で一致する", (token) => {
+    const line = `【1戦目】 1700年4月 06/01 10:00 京都 東軍 甲 甲家 武特 ${token} 弓兵 槍 旗 V.S. 西軍 乙 乙家 統特 ミニエー銃兵 弓兵 馬 旗 甲の勝利 12`;
+    const warlords = parseBattleLine(line);
+    const card = parseBattleCard(line);
+    expect(warlords[0].unit).toBe("カノン砲");
+    expect(warlords[1].unit).toBe("ミニエー銃兵");
+    expect(card?.left.branch).toBe("弓兵");
+    expect(normalizeDisplayToken(card?.left.unit ?? "")).toBe("カノン砲");
+    expect(card?.right.name).toBe("乙");
+  });
+
   it("* 始まり + 括弧は括弧内を採用", () => {
     expect(normalizeDisplayToken("*ノクスミーティア(カノン砲)")).toBe("カノン砲");
   });
