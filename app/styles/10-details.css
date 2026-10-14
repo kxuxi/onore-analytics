@@ -118,6 +118,129 @@
   margin-top: 0;
 }
 
+.unit-summary-overview {
+  display: grid;
+  grid-template-columns: minmax(112px, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+  padding-bottom: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.unit-summary-rate {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.unit-summary-rate > span,
+.unit-summary-totals dt {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+}
+
+.unit-summary-rate strong {
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+.unit-summary-totals {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.unit-summary-totals dd {
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.unit-summary-table {
+  min-width: 0;
+  table-layout: fixed;
+  margin-top: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.unit-summary-table caption {
+  text-align: left;
+  font-size: var(--font-size-xs);
+  color: var(--muted);
+  padding-bottom: 8px;
+}
+
+.unit-summary-table th,
+.unit-summary-table td {
+  padding: 10px 8px;
+  overflow-wrap: anywhere;
+}
+
+.unit-summary-table thead th {
+  position: static;
+  background: transparent;
+  box-shadow: none;
+  letter-spacing: 0;
+}
+
+.unit-summary-table tbody th {
+  font-weight: var(--font-weight-semibold);
+}
+
+.unit-summary-table tbody tr:last-child th,
+.unit-summary-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.unit-summary-table th:first-child,
+.unit-summary-table td:first-child {
+  padding-left: 0;
+}
+
+.unit-summary-table th:last-child,
+.unit-summary-table td:last-child {
+  padding-right: 0;
+  text-align: right;
+}
+
+.unit-summary-record {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+}
+
+.unit-summary-record > span {
+  white-space: nowrap;
+}
+
+.unit-summary-table-rate {
+  font-weight: var(--font-weight-semibold);
+}
+
+.unit-summary-note {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-caption);
+}
+
+@media (max-width: 600px) {
+  .unit-summary-overview {
+    gap: 16px;
+  }
+
+  .unit-summary-totals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .unit-summary-table {
+    font-size: 12px;
+  }
+}
+
 @media (max-width: 600px) {
   .detail-head {
     grid-template-columns: auto minmax(0, 1fr);
