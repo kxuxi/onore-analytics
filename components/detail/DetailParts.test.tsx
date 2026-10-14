@@ -107,6 +107,16 @@ describe("DetailPage", () => {
 });
 
 describe("DetailSummary", () => {
+  it("アンチと被アンチ回数を桁区切りで表示する", () => {
+    const html = renderToStaticMarkup(
+      <DetailSummary summary={SUMMARY} antiSummary={{ antiContacts: 1234, antiedContacts: 0 }} />
+    );
+    expect(html).toContain("アンチ回数");
+    expect(html).toContain("被アンチ回数");
+    expect(html).toContain("1,234");
+    expect(html).toContain('class="value">0</div>');
+  });
+
   it("見出し・既存StatCards・既存WinRateBarを同じ順序で表示する", () => {
     const html = renderToStaticMarkup(<DetailSummary summary={SUMMARY} />);
     const labelledBy = html.match(
@@ -122,6 +132,7 @@ describe("DetailSummary", () => {
     expect(html).toContain("敗北");
     expect(html).toContain("77.8%");
     expect(html).toContain("撤退・引分");
+    expect(html).not.toContain("アンチ回数");
     expect(html.indexOf("戦績サマリー")).toBeLessThan(
       html.indexOf("stat-grid detail-stats")
     );

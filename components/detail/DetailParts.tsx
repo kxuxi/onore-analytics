@@ -133,7 +133,12 @@ export function WinRateBar({ summary }: { summary: StatSummary }) {
 }
 
 /** 詳細画面で共通の主要戦績。既存のカードと勝敗バーを同じ順序で表示する。 */
-export function DetailSummary({ summary }: { summary: StatSummary }) {
+interface DetailSummaryProps {
+  summary: StatSummary;
+  antiSummary?: { antiContacts: number; antiedContacts: number };
+}
+
+export function DetailSummary({ summary, antiSummary }: DetailSummaryProps) {
   const headingId = useId();
 
   return (
@@ -141,7 +146,7 @@ export function DetailSummary({ summary }: { summary: StatSummary }) {
       <h3 id={headingId} className="detail-summary-title">
         戦績サマリー
       </h3>
-      <StatCards summary={summary} />
+      <StatCards summary={summary} antiSummary={antiSummary} />
       <WinRateBar summary={summary} />
     </section>
   );
@@ -189,7 +194,7 @@ export function DetailBattleLogSection({
   );
 }
 
-export function StatCards({ summary }: { summary: StatSummary }) {
+export function StatCards({ summary, antiSummary }: DetailSummaryProps) {
   const rate = formatWinRate(summary.winRate, summary.decided);
   return (
     <div className="stat-grid detail-stats">
@@ -220,6 +225,18 @@ export function StatCards({ summary }: { summary: StatSummary }) {
             {summary.others.toLocaleString("ja-JP")}
           </div>
         </div>
+      )}
+      {antiSummary && (
+        <>
+          <div className="stat">
+            <div className="label">アンチ回数</div>
+            <div className="value">{antiSummary.antiContacts.toLocaleString("ja-JP")}</div>
+          </div>
+          <div className="stat">
+            <div className="label">被アンチ回数</div>
+            <div className="value">{antiSummary.antiedContacts.toLocaleString("ja-JP")}</div>
+          </div>
+        </>
       )}
     </div>
   );

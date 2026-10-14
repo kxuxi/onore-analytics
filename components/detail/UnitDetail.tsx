@@ -10,6 +10,7 @@ import {
   userWinRates,
   unitUsageTrend,
   unitBranchLabel,
+  unitAntiSummary,
 } from "@/lib/stats";
 import { fetchUnitTypes } from "@/lib/api";
 import { parseReqStats, splitGoodAgainst } from "@/lib/unitTypeForm";
@@ -89,6 +90,10 @@ export function UnitDetail({
   );
 
   const goodAgainst = unit ? splitGoodAgainst(unit.goodAgainst) : [];
+  const antiSummary = useMemo(
+    () => units.length > 0 ? unitAntiSummary(outcomes, units) : undefined,
+    [outcomes, units]
+  );
 
   return (
     <DetailPage
@@ -185,7 +190,7 @@ export function UnitDetail({
         />
       ) : (
         <>
-          <DetailSummary summary={summary} />
+          <DetailSummary summary={summary} antiSummary={antiSummary} />
 
           <UnitMatchupRanking
             ranking={unitRanking}

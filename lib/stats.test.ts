@@ -46,6 +46,7 @@ import {
   antiContactRanking,
   buildAntiIndex,
   unitCountersBranch,
+  unitAntiSummary,
   assetMetricRanking,
   factionsInYearRange,
   warlordNamesInLog,
@@ -2055,6 +2056,21 @@ describe("antiContactRanking / buildAntiIndex（指標: アンチ接触）", () 
     expect(idx.get("母衣衆")).toEqual(new Set(["弓兵"]));
     expect(idx.get("南蛮象騎兵")).toEqual(new Set(["弓兵", "壁"]));
     expect(idx.get("雑兵")).toEqual(new Set());
+  });
+
+  it("兵種の攻守両側で相互アンチを数え、対象期のログだけを集計する", () => {
+    const master = [...unitTypes, { ...EMPTY_UNIT, name: "ミニエー銃兵", goodAgainst: "騎兵:" }];
+    const attack = rec(antiLine({ selfName: "攻", selfUnit: "*独自兵(母衣衆)", oppBranch: "弓兵", time: "06/01 10:00" }));
+    const defense = rec("【1戦目】 1700年4月 06/03 10:00 京都 敵国 攻 某家 統特 ミニエー銃兵 弓兵 馬 旗 V.S. 己鯖 守 某家 武特 母衣衆 騎兵 槍 鞎 撤退 12");
+    const otherTerm = rec(antiLine({ selfName: "別期", selfUnit: "母衣衆", oppBranch: "歩兵", time: "06/01 10:02" }));
+    attack.term = 1;
+    defense.term = 1;
+    otherTerm.term = 2;
+    const log = [attack, defense, attack, otherTerm];
+    expect(unitAntiSummary(collectUnitBattles(log.filter((record) => record.term === 1), "母衣衆"), master)).toEqual({ antiContacts: 2, antiedContacts: 2 });
+    expect(unitAntiSummary(collectUnitBattles(log.filter((record) => record.term === 2), "母衣衆"), master)).toEqual({ antiContacts: 0, antiedContacts: 1 });
+    expect(unitAntiSummary([], master)).toEqual({ antiContacts: 0, antiedContacts: 0 });
+    expect(unitAntiSummary(collectUnitBattles([attack], "母衣衆"), [])).toEqual({ antiContacts: 0, antiedContacts: 0 });
   });
 
   it("unitCountersBranch は兵種→相手兵種のアンチ成立を判定する", () => {
