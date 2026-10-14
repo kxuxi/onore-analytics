@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { formatWinRate } from "@/lib/stats";
 import { Section } from "@/components/detail/Section";
+import { ChevronUp } from "@/components/icons";
 import type {
   OpponentUnitStat,
   UnitMatchupRanking as UnitMatchupRankingData,
@@ -44,49 +45,57 @@ function UnitRankRow({
   );
 }
 
-export function UnitMatchupRanking({
-  ranking,
-  onSelectUnit,
-}: {
+function UnitMatchupList({ title, tone, stats, onSelectUnit }: {
+  title: string;
+  tone: "good" | "bad";
+  stats: OpponentUnitStat[];
+  onSelectUnit: (name: string) => void;
+}) {
+  const [visibleCount, setVisibleCount] = useState(3);
+  const listId = useId();
+  const shown = stats.slice(0, visibleCount);
+  const remaining = stats.length - shown.length;
+  if (stats.length === 0) return null;
+  const addLabel = `${title}をあと${Math.min(5, remaining)}件表示`;
+  return (
+    <div className="detail-rank-col">
+      <h4 className={`detail-rank-head detail-rank-head--${tone}`}>{title}</h4>
+      <ol id={listId} className="detail-rank-list">
+        {shown.map((stat, index) => (
+          <UnitRankRow key={stat.unit} rank={index + 1} stat={stat} onSelectUnit={onSelectUnit} />
+        ))}
+      </ol>
+      {stats.length > 3 && (
+        <div className="unit-matchup-actions">
+          <span className="muted">{shown.length} / {stats.length}件</span>
+          {remaining > 0 && (
+            <button type="button" className="btn unit-matchup-more" title={addLabel} aria-label={addLabel} aria-controls={listId}
+              onClick={() => setVisibleCount((count) => Math.min(count + 5, stats.length))}>
+              <span aria-hidden="true">+</span>
+            </button>
+          )}
+          {visibleCount > 3 && (
+            <button type="button" className="btn unit-matchup-more" title={`${title}を3件に戻す`} aria-label={`${title}を3件に戻す`} aria-controls={listId}
+              onClick={() => setVisibleCount(3)}>
+              <ChevronUp />
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function UnitMatchupRanking({ ranking, onSelectUnit }: {
   ranking: UnitMatchupRankingData;
   onSelectUnit: (name: string) => void;
 }) {
-  if (ranking.best.length === 0) return null;
+  if (ranking.best.length === 0 && ranking.worst.length === 0) return null;
   return (
     <Section title="敵兵種との相性" mobileCollapsed>
       <div className="detail-rank-cols">
-        <div className="detail-rank-col">
-          <h4 className="detail-rank-head detail-rank-head--good">
-            相性の良い敵兵種
-          </h4>
-          <ol className="detail-rank-list">
-            {ranking.best.map((s, i) => (
-              <UnitRankRow
-                key={s.unit}
-                rank={i + 1}
-                stat={s}
-                onSelectUnit={onSelectUnit}
-              />
-            ))}
-          </ol>
-        </div>
-        {ranking.worst.length > 0 && (
-          <div className="detail-rank-col">
-            <h4 className="detail-rank-head detail-rank-head--bad">
-              苦手な敵兵種
-            </h4>
-            <ol className="detail-rank-list">
-              {ranking.worst.map((s, i) => (
-                <UnitRankRow
-                  key={s.unit}
-                  rank={i + 1}
-                  stat={s}
-                  onSelectUnit={onSelectUnit}
-                />
-              ))}
-            </ol>
-          </div>
-        )}
+        <UnitMatchupList key={`best-${ranking.best.map((stat) => stat.unit).join("|")}`} title="相性の良い敵兵種" tone="good" stats={ranking.best} onSelectUnit={onSelectUnit} />
+        <UnitMatchupList key={`worst-${ranking.worst.map((stat) => stat.unit).join("|")}`} title="苦手な敵兵種" tone="bad" stats={ranking.worst} onSelectUnit={onSelectUnit} />
       </div>
     </Section>
   );

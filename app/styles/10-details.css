@@ -226,6 +226,23 @@
   line-height: var(--line-height-caption);
 }
 
+.unit-matchup-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 10px;
+  font-size: var(--font-size-xs);
+}
+
+.unit-matchup-more {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  justify-content: center;
+  font-size: 24px;
+}
+
 @media (max-width: 600px) {
   .unit-summary-overview {
     gap: 16px;
