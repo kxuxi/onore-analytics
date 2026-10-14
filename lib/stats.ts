@@ -2514,13 +2514,19 @@ export function unitCountersBranch(
 
 export function unitAntiSummary(outcomes: BattleOutcome[], unitTypes: UnitType[]) {
   const antiIndex = buildAntiIndex(unitTypes);
-  let antiContacts = 0;
-  let antiedContacts = 0;
-  for (const { self, opponent } of outcomes) {
-    if (unitCountersBranch(self.unit, opponent.branch, antiIndex)) antiContacts++;
-    if (unitCountersBranch(opponent.unit, self.branch, antiIndex)) antiedContacts++;
+  const antiOutcomes: BattleOutcome[] = [];
+  const antiedOutcomes: BattleOutcome[] = [];
+  for (const outcome of outcomes) {
+    const { self, opponent } = outcome;
+    if (unitCountersBranch(self.unit, opponent.branch, antiIndex)) antiOutcomes.push(outcome);
+    if (unitCountersBranch(opponent.unit, self.branch, antiIndex)) antiedOutcomes.push(outcome);
   }
-  return { antiContacts, antiedContacts };
+  return {
+    antiContacts: antiOutcomes.length,
+    antiedContacts: antiedOutcomes.length,
+    anti: summarize(antiOutcomes),
+    antied: summarize(antiedOutcomes),
+  };
 }
 
 /** 武将 1 人のアンチ戦闘の集計。 */

@@ -8,7 +8,7 @@ import {
   type ComponentProps,
   type ReactNode,
 } from "react";
-import { formatWinRate, type StatSummary } from "@/lib/stats";
+import { formatWinRate, type StatSummary, type unitAntiSummary } from "@/lib/stats";
 import { ChevronLeft, ShareIcon, CheckIcon } from "@/components/icons";
 import { copyText } from "@/lib/copyText";
 import { BattleLogList } from "@/components/detail/BattleLogList";
@@ -135,7 +135,7 @@ export function WinRateBar({ summary }: { summary: StatSummary }) {
 /** 詳細画面で共通の主要戦績。既存のカードと勝敗バーを同じ順序で表示する。 */
 interface DetailSummaryProps {
   summary: StatSummary;
-  antiSummary?: { antiContacts: number; antiedContacts: number };
+  antiSummary?: ReturnType<typeof unitAntiSummary>;
 }
 
 export function DetailSummary({ summary, antiSummary }: DetailSummaryProps) {
@@ -148,6 +148,40 @@ export function DetailSummary({ summary, antiSummary }: DetailSummaryProps) {
       </h3>
       <StatCards summary={summary} antiSummary={antiSummary} />
       <WinRateBar summary={summary} />
+      {antiSummary && (
+        <>
+          <table className="unit-summary-table">
+            <caption>アンチ別戦績</caption>
+            <thead>
+              <tr>
+                <th scope="col">条件</th>
+                <th scope="col">回数</th>
+                <th scope="col">勝敗</th>
+                <th scope="col">勝率</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { label: "アンチ", contacts: antiSummary.antiContacts, stats: antiSummary.anti },
+                { label: "被アンチ", contacts: antiSummary.antiedContacts, stats: antiSummary.antied },
+              ].map(({ label, contacts, stats }) => (
+                <tr key={label}>
+                  <th scope="row">{label}</th>
+                  <td>{contacts.toLocaleString("ja-JP")}</td>
+                  <td>
+                    <span className="unit-summary-record">
+                      <span className="stat-win-text">{stats.wins.toLocaleString("ja-JP")}勝</span>
+                      <span className="stat-loss-text">{stats.losses.toLocaleString("ja-JP")}敗</span>
+                    </span>
+                  </td>
+                  <td className="unit-summary-table-rate">{formatWinRate(stats.winRate, stats.decided)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="unit-summary-note">相互アンチは両方に含みます。勝率は撤退・引分を除いて算出。</p>
+        </>
+      )}
     </section>
   );
 }
@@ -196,6 +230,29 @@ export function DetailBattleLogSection({
 
 export function StatCards({ summary, antiSummary }: DetailSummaryProps) {
   const rate = formatWinRate(summary.winRate, summary.decided);
+  if (antiSummary) {
+    return (
+      <div className="unit-summary-overview">
+        <div className="unit-summary-rate">
+          <span>全体勝率</span>
+          <strong>{rate}</strong>
+        </div>
+        <dl className="unit-summary-totals">
+          {[
+            { label: "戦闘数", value: summary.battles, className: "" },
+            { label: "勝利", value: summary.wins, className: "stat-win-text" },
+            { label: "敗北", value: summary.losses, className: "stat-loss-text" },
+            { label: "撤退・引分", value: summary.others, className: "stat-other-text" },
+          ].map(({ label, value, className }) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd className={className}>{value.toLocaleString("ja-JP")}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    );
+  }
   return (
     <div className="stat-grid detail-stats">
       <div className="stat">
@@ -225,18 +282,6 @@ export function StatCards({ summary, antiSummary }: DetailSummaryProps) {
             {summary.others.toLocaleString("ja-JP")}
           </div>
         </div>
-      )}
-      {antiSummary && (
-        <>
-          <div className="stat">
-            <div className="label">アンチ回数</div>
-            <div className="value">{antiSummary.antiContacts.toLocaleString("ja-JP")}</div>
-          </div>
-          <div className="stat">
-            <div className="label">被アンチ回数</div>
-            <div className="value">{antiSummary.antiedContacts.toLocaleString("ja-JP")}</div>
-          </div>
-        </>
       )}
     </div>
   );

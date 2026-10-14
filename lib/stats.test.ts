@@ -2067,10 +2067,61 @@ describe("antiContactRanking / buildAntiIndex（指標: アンチ接触）", () 
     defense.term = 1;
     otherTerm.term = 2;
     const log = [attack, defense, attack, otherTerm];
-    expect(unitAntiSummary(collectUnitBattles(log.filter((record) => record.term === 1), "母衣衆"), master)).toEqual({ antiContacts: 2, antiedContacts: 2 });
-    expect(unitAntiSummary(collectUnitBattles(log.filter((record) => record.term === 2), "母衣衆"), master)).toEqual({ antiContacts: 0, antiedContacts: 1 });
-    expect(unitAntiSummary([], master)).toEqual({ antiContacts: 0, antiedContacts: 0 });
-    expect(unitAntiSummary(collectUnitBattles([attack], "母衣衆"), [])).toEqual({ antiContacts: 0, antiedContacts: 0 });
+    const firstTerm = unitAntiSummary(collectUnitBattles(log.filter((record) => record.term === 1), "母衣衆"), master);
+    expect(firstTerm).toMatchObject({ antiContacts: 2, antiedContacts: 2, anti: { others: 2, decided: 0 }, antied: { others: 2, decided: 0 } });
+    expect(unitAntiSummary(collectUnitBattles(log.filter((record) => record.term === 2), "母衣衆"), master)).toMatchObject({ antiContacts: 0, antiedContacts: 1 });
+    expect(unitAntiSummary([], master)).toMatchObject({ antiContacts: 0, antiedContacts: 0, anti: { decided: 0, winRate: 0 }, antied: { decided: 0, winRate: 0 } });
+    expect(unitAntiSummary(collectUnitBattles([attack], "母衣衆"), [])).toMatchObject({ antiContacts: 0, antiedContacts: 0 });
+  });
+
+  it("アンチ・被アンチの勝率はそれぞれ勝敗のついた戦闘だけで計算する", () => {
+    const master = [...unitTypes, { ...EMPTY_UNIT, name: "ミニエー銃兵", goodAgainst: "騎兵:" }];
+    const outcomes = collectUnitBattles([
+      rec(antiLine({ selfName: "甲", selfUnit: "母衣衆", oppBranch: "弓兵", time: "06/01 10:00" })),
+      rec(antiLine({ selfName: "乙", selfUnit: "母衣衆", oppBranch: "歩兵", time: "06/01 10:01" })),
+      rec(antiLine({ selfName: "丙", selfUnit: "母衣衆", oppBranch: "弓兵", time: "06/01 10:02" })),
+    ], "母衣衆");
+    const summary = unitAntiSummary(outcomes.map((outcome) => ({
+      ...outcome,
+      result: outcome.self.name === "甲" ? "win" : outcome.self.name === "乙" ? "loss" : "other",
+    })), master);
+    expect(summary).toMatchObject({
+      antiContacts: 2,
+      antiedContacts: 3,
+      anti: { wins: 1, losses: 0, others: 1, decided: 1, winRate: 1 },
+      antied: { wins: 1, losses: 1, others: 1, decided: 2, winRate: 0.5 },
+    });
+  });
+
+  it("生ログの勝敗と攻守からアンチのみ・被アンチのみ・相互・中立を集計する", () => {
+    const master = [...unitTypes, { ...EMPTY_UNIT, name: "ミニエー銃兵", goodAgainst: "騎兵:" }];
+    const cases = [
+      { side: "left", opponentUnit: "雑兵", opponentBranch: "弓兵", winner: "甲" },
+      { side: "right", opponentUnit: "雑兵", opponentBranch: "弓兵", winner: "乙" },
+      { side: "left", opponentUnit: "ミニエー銃兵", opponentBranch: "歩兵", winner: "乙" },
+      { side: "right", opponentUnit: "ミニエー銃兵", opponentBranch: "歩兵", winner: "乙" },
+      { side: "left", opponentUnit: "ミニエー銃兵", opponentBranch: "弓兵", winner: "甲" },
+      { side: "right", opponentUnit: "ミニエー銃兵", opponentBranch: "弓兵", winner: "甲" },
+      { side: "left", opponentUnit: "雑兵", opponentBranch: "歩兵", winner: "甲" },
+      { side: "right", opponentUnit: "ミニエー銃兵", opponentBranch: "弓兵", winner: null },
+    ];
+    const log = cases.map((testCase, index) => {
+      const self = "東軍 甲 甲家 武特 *独自兵(母衣衆) 騎兵 槍 旗";
+      const opponent = `西軍 乙 乙家 統特 ${testCase.opponentUnit} ${testCase.opponentBranch} 槍 旗`;
+      const left = testCase.side === "left" ? self : opponent;
+      const right = testCase.side === "right" ? self : opponent;
+      const result = testCase.winner ? `${testCase.winner}の勝利` : "撤退";
+      return rec(`【1戦目】 1700年4月 06/01 10:0${index} 京都 ${left} V.S. ${right} ${result} 12`);
+    });
+    const outcomes = collectUnitBattles([...log, log[0]], "母衣衆");
+    expect(outcomes).toHaveLength(8);
+    expect(summarize(outcomes)).toMatchObject({ wins: 4, losses: 3, others: 1 });
+    expect(unitAntiSummary(outcomes, master)).toMatchObject({
+      antiContacts: 5,
+      antiedContacts: 5,
+      anti: { wins: 3, losses: 1, others: 1, decided: 4, winRate: 0.75 },
+      antied: { wins: 2, losses: 2, others: 1, decided: 4, winRate: 0.5 },
+    });
   });
 
   it("unitCountersBranch は兵種→相手兵種のアンチ成立を判定する", () => {

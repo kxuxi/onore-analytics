@@ -107,14 +107,29 @@ describe("DetailPage", () => {
 });
 
 describe("DetailSummary", () => {
-  it("アンチと被アンチ回数を桁区切りで表示する", () => {
+  it("アンチと被アンチ回数・勝率を表示する", () => {
     const html = renderToStaticMarkup(
-      <DetailSummary summary={SUMMARY} antiSummary={{ antiContacts: 1234, antiedContacts: 0 }} />
+      <DetailSummary summary={SUMMARY} antiSummary={{
+        antiContacts: 1234,
+        antiedContacts: 0,
+        anti: { ...SUMMARY, wins: 2, losses: 1, decided: 3, winRate: 2 / 3 },
+        antied: { battles: 0, wins: 0, losses: 0, others: 0, decided: 0, winRate: 0 },
+      }} />
     );
-    expect(html).toContain("アンチ回数");
-    expect(html).toContain("被アンチ回数");
+    expect(html).toContain("全体勝率");
+    expect(html).toContain('<caption>アンチ別戦績</caption>');
+    expect(html).toContain('<th scope="row">アンチ</th>');
+    expect(html).toContain('<th scope="row">被アンチ</th>');
     expect(html).toContain("1,234");
-    expect(html).toContain('class="value">0</div>');
+    expect(html).toContain('<td>0</td>');
+    expect(html).toContain('class="unit-summary-table-rate">66.7%');
+    expect(html).toContain('class="unit-summary-table-rate">—');
+    expect(html).toContain('class="stat-win-text">2勝');
+    expect(html).toContain('class="stat-loss-text">1敗');
+    expect(html).toContain("相互アンチは両方に含みます");
+    expect(html).not.toContain('class="stat-grid detail-stats"');
+    expect(html.indexOf("unit-summary-overview")).toBeLessThan(html.indexOf("wr-bar"));
+    expect(html.indexOf("wr-bar")).toBeLessThan(html.indexOf("unit-summary-table"));
   });
 
   it("見出し・既存StatCards・既存WinRateBarを同じ順序で表示する", () => {
