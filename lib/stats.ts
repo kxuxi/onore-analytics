@@ -1524,10 +1524,10 @@ export interface UnitMatchupRanking {
 }
 
 /**
- * 敵兵種を勝率順に並べ、相性の良い／苦手な兵種 TOP3 を返す。
+ * 敵兵種を勝利数／敗北数順に並べ、相性の良い／苦手な兵種 TOP3 を返す。
  * 勝敗が確定した対戦が 1 度でもある兵種のみ対象。
- * - 相性の良い兵種 = 勝ち越している兵種（勝率 > 50%）を勝率の高い順に。
- * - 苦手な兵種 = 負け越している兵種（勝率 < 50%）を勝率の低い順に。
+ * - 相性の良い兵種 = 勝ち越している兵種（勝率 > 50%）を勝利数の多い順に。
+ * - 苦手な兵種 = 負け越している兵種（勝率 < 50%）を敗北数の多い順に。
  * 勝率 50%（五分）の兵種はどちらにも含めない（同じ兵種が両方に出ない）。
  */
 export function unitMatchupRanking(
@@ -1539,6 +1539,7 @@ export function unitMatchupRanking(
     .filter((s) => s.winRate > 0.5)
     .sort(
       (a, b) =>
+        b.wins - a.wins ||
         b.winRate - a.winRate ||
         b.decided - a.decided ||
         b.battles - a.battles
@@ -1548,6 +1549,7 @@ export function unitMatchupRanking(
     .filter((s) => s.winRate < 0.5)
     .sort(
       (a, b) =>
+        b.losses - a.losses ||
         a.winRate - b.winRate ||
         b.decided - a.decided ||
         b.battles - a.battles

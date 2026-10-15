@@ -107,6 +107,8 @@ describe("5種の詳細画面", () => {
 
     expectCommonTemplate(markup, "兵種", "重騎兵");
     expect(markup).toContain("武将甲");
+    expect(markup).toContain('class="detail-rank-rate">1勝</span>');
+    expect(markup).toContain('class="detail-rank-record">0敗（100.0%）</span>');
   });
 
   it("相性リストは3件で始まり、続きがある場合だけ追加ボタンを表示する", () => {
@@ -137,6 +139,8 @@ describe("5種の詳細画面", () => {
     expect(markup).toContain("苦手な敵兵種");
     expect(markup).not.toContain("unit-matchup-more");
     expect(markup).toContain("長槍兵");
+    expect(markup).toContain('class="detail-rank-rate">1敗</span>');
+    expect(markup).toContain('class="detail-rank-record">0勝（0.0%）</span>');
   });
 
   it.each([
