@@ -7,7 +7,11 @@ import {
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { BattleRecord } from "@/lib/types";
-import { MetricsTab } from "./MetricsTab";
+import {
+  addWarlordTypeSelection,
+  matchesWarlordTypeFilters,
+  MetricsTab,
+} from "./MetricsTab";
 import { RankingTab } from "./RankingTab";
 
 function record(line: string, savedAt: number): BattleRecord {
@@ -82,7 +86,112 @@ describe.each(rankingPages)("$name の国フィルタ", ({ element }) => {
   });
 });
 
+describe("武将ランキングのアンチ数", () => {
+  it("指標一覧にアンチ数を追加し、兵種マスター取得中は待機表示する", () => {
+    const markup = renderToStaticMarkup(
+      <MetricsTab
+        log={LOG}
+        db={{
+          信長: { name: "信長", type: "武特", branch: "騎兵", term: 145, updatedAt: 1 },
+          勝頼: { name: "勝頼", type: "統特", branch: "騎兵", term: 145, updatedAt: 1 },
+          謙信: { name: "謙信", type: "武特", branch: "弓兵", term: 145, updatedAt: 1 },
+        }}
+        onSelectWarlord={callbacks.onSelectWarlord}
+      />
+    );
+    const typeOptions = markup.match(
+      /<span>武将タイプ<\/span>\s*<select[^>]*>([\s\S]*?)<\/select>/
+    )?.[1];
+
+    expect(markup).toContain("アンチ数");
+    expect(markup).toContain("兵種マスターを読み込み中");
+    expect(typeOptions).toContain(
+      '<option value="__exclude-politicians">政治家以外</option>'
+    );
+    expect(typeOptions!.indexOf("政治家以外")).toBeLessThan(
+      typeOptions!.indexOf("武特")
+    );
+    expect(markup).not.toContain('type="checkbox"');
+  });
+});
+
+describe("武将タイプの累積フィルター", () => {
+  it("セレクターで追加した条件を累積し、政治家以外も重ねる", () => {
+    const selected = addWarlordTypeSelection(
+      addWarlordTypeSelection([], "武特"),
+      "統特"
+    );
+    const repeated = addWarlordTypeSelection(selected, "武特");
+
+    expect(selected).toEqual(["武特", "統特"]);
+    expect(repeated).toEqual(["武特", "統特"]);
+    expect(matchesWarlordTypeFilters("武特", selected, false)).toBe(true);
+    expect(matchesWarlordTypeFilters("統特", selected, false)).toBe(true);
+    expect(matchesWarlordTypeFilters("知特", selected, false)).toBe(false);
+    expect(matchesWarlordTypeFilters("政治家", [], true)).toBe(false);
+    expect(matchesWarlordTypeFilters("武特", selected, true)).toBe(true);
+  });
+  it("元のセレクターでタイプを選ぶたびに条件チップを保持する", async () => {
+    vi.resetModules();
+    const actualReact = await vi.importActual<typeof import("react")>(
+      "react"
+    );
+    const state = createStateHarness();
+    vi.doMock("react", () => ({
+      ...actualReact,
+      useState: state.useState,
+      useMemo: (factory: () => unknown) => factory(),
+      useCallback: (callback: unknown) => callback,
+      useEffect: () => undefined,
+    }));
+
+    try {
+      const { MetricsTab: StatefulMetricsTab } = await import("./MetricsTab");
+      const db = {
+        信長: { name: "信長", type: "武特", branch: "騎兵", term: 145, updatedAt: 1 },
+        勝頼: { name: "勝頼", type: "統特", branch: "騎兵", term: 145, updatedAt: 1 },
+      };
+      const props = {
+        log: LOG,
+        db,
+        onSelectWarlord: callbacks.onSelectWarlord,
+      };
+      const render = () => {
+        state.beginRender();
+        return StatefulMetricsTab(props);
+      };
+
+      let tree = render();
+      findSelect(tree, "武将タイプ").props.onChange?.({
+        target: { value: "武特" },
+      });
+      tree = render();
+      expect(activeFilterValues(tree)).toContain("武特");
+
+      findSelect(tree, "武将タイプ").props.onChange?.({
+        target: { value: "統特" },
+      });
+      tree = render();
+      expect(activeFilterValues(tree)).toEqual(
+        expect.arrayContaining(["武特", "統特"])
+      );
+
+      findSelect(tree, "武将タイプ").props.onChange?.({
+        target: { value: "__exclude-politicians" },
+      });
+      tree = render();
+      expect(activeFilterValues(tree)).toEqual(
+        expect.arrayContaining(["武特", "統特", "政治家以外"])
+      );
+    } finally {
+      vi.doUnmock("react");
+      vi.resetModules();
+    }
+  });
+});
+
 interface InspectedElementProps {
+  activeFilters?: { key: string; value: string }[];
   children?: unknown;
   onChange?: (event: { target: { value: string } }) => void;
   onClick?: () => void;
@@ -154,6 +263,16 @@ function rankingRowNames(root: ReactElement): Set<string> {
     if (name) names.add(name);
   });
   return names;
+}
+
+function activeFilterValues(root: ReactElement): string[] {
+  let values: string[] = [];
+  visitElements(root, (element) => {
+    if (element.props.activeFilters) {
+      values = element.props.activeFilters.map((filter) => filter.value);
+    }
+  });
+  return values;
 }
 
 function createStateHarness() {

@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import type { BattleRecord, WarlordMap } from "@/lib/types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { BattleRecord, UnitType, WarlordMap } from "@/lib/types";
+import { fetchUnitTypes } from "@/lib/api";
 import { SearchBox } from "@/components/SearchBox";
 import {
   FilterPanel,
@@ -9,6 +10,7 @@ import {
 } from "@/components/FilterPanel";
 import { PageHeader } from "@/components/layout/PageHeader";
 import {
+  antiContactRanking,
   breakthroughRanking,
   factionsInYearRange,
   formatWinRate,
@@ -33,6 +35,7 @@ interface Props {
 /** 並べ替えの指標。 */
 type SortKey =
   | "ppn"
+  | "antiContacts"
   | "pontaPoint"
   | "winRate"
   | "breakthrough"
@@ -59,6 +62,11 @@ const SORT_OPTIONS: { key: SortKey; label: string; desc: string }[] = [
     key: "ppn",
     label: "PPN",
     desc: RANK_METRIC_DESCRIPTIONS.ppn,
+  },
+  {
+    key: "antiContacts",
+    label: "アンチ数",
+    desc: "兵種の得意兵種に相手の兵種が含まれた戦闘数。出兵・守備の両方を対象にします。",
   },
   {
     key: "pontaPoint",
@@ -102,6 +110,24 @@ const SORT_OPTIONS: { key: SortKey; label: string; desc: string }[] = [
   },
 ];
 
+export function addWarlordTypeSelection(
+  selected: string[],
+  type: string
+): string[] {
+  return !type || selected.includes(type) ? selected : [...selected, type];
+}
+
+export function matchesWarlordTypeFilters(
+  type: string | undefined,
+  selectedTypes: string[],
+  excludePoliticians: boolean
+): boolean {
+  return (
+    (!excludePoliticians || type !== "政治家") &&
+    (selectedTypes.length === 0 || selectedTypes.includes(type ?? ""))
+  );
+}
+
 /** 武将 1 行分の指標（PPN・PontaPoint・抜き数・抜き率をまとめたもの）。 */
 interface MetricRow {
   name: string;
@@ -111,6 +137,10 @@ interface MetricRow {
   warlordType?: string;
   /** PPN = PontaPoint + 抜き率。 */
   ppn: number;
+  /** 兵種の得意兵種で相手兵種に有利を取った戦闘数。 */
+  antiContacts: number;
+  /** アンチ回数ランキングの最低戦闘数フィルター用母数。 */
+  antiBattleCount: number;
   /** PontaPoint = (出兵勝 + 1.4×守備勝) ÷ 戦闘数（撤退戦を除く）。 */
   pontaPoint: number;
   /** 出兵側として勝った戦闘数。 */
@@ -162,6 +192,8 @@ function createMetricRow(
     faction,
     branch,
     ppn: 0,
+    antiContacts: 0,
+    antiBattleCount: 0,
     pontaPoint: 0,
     attackWins: 0,
     defenseWins: 0,
@@ -210,6 +242,8 @@ function metricLabel(r: MetricRow, metric: SortKey): string {
   switch (metric) {
     case "ppn":
       return r.battles > 0 || r.sorties > 0 ? r.ppn.toFixed(3) : "—";
+    case "antiContacts":
+      return r.antiContacts.toLocaleString("ja-JP");
     case "pontaPoint":
       return r.battles > 0 ? formatPontaPoint(r.pontaPoint) : "—";
     case "winRate":
@@ -234,6 +268,8 @@ function metricLabel(r: MetricRow, metric: SortKey): string {
 /** 指標ごとの最低回数フィルターに使う母数。 */
 function metricContactCount(r: MetricRow, metric: SortKey): number {
   switch (metric) {
+    case "antiContacts":
+      return r.antiBattleCount;
     case "attackWinRate":
       return r.attackRounds;
     case "defenseWinRate":
@@ -308,6 +344,11 @@ function MetricRowItem({
             <span className="rank-side-active">
               {formatSweepCounts(r.sweepCounts)}
             </span>
+          ) : metric === "antiContacts" ? (
+            <span className="rank-side-active">
+              アンチを取った戦闘 {r.antiContacts.toLocaleString("ja-JP")}回 ／
+              対象 {r.antiBattleCount.toLocaleString("ja-JP")}戦
+            </span>
           ) : metric === "breakthroughRate" ? (
             <span className="rank-side-active">
               抜き数 {r.breakthrough.toLocaleString("ja-JP")} ／ 出兵{" "}
@@ -360,9 +401,30 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
   const [query, setQuery] = useState("");
   const [faction, setFaction] = useState("");
   const [branch, setBranch] = useState("");
-  const [warlordType, setWarlordType] = useState("");
+  const [warlordTypes, setWarlordTypes] = useState<string[]>([]);
+  const [pendingWarlordType, setPendingWarlordType] = useState("");
+  const [excludePoliticians, setExcludePoliticians] = useState(false);
   const [showFilter, setShowFilter] = useState(DEFAULT_RANKING_FILTERS_OPEN);
   const [periodKey, setPeriodKey] = useState<string>(DEFAULT_PERIOD_KEY);
+  const [unitTypes, setUnitTypes] = useState<UnitType[] | null>(null);
+  const [unitTypesLoading, setUnitTypesLoading] = useState(true);
+  const [unitTypesError, setUnitTypesError] = useState(false);
+
+  const loadUnitTypes = useCallback(async () => {
+    setUnitTypesLoading(true);
+    setUnitTypesError(false);
+    try {
+      setUnitTypes(await fetchUnitTypes());
+    } catch {
+      setUnitTypesError(true);
+    } finally {
+      setUnitTypesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadUnitTypes();
+  }, [loadUnitTypes]);
   const periods = useMemo(() => rankingPeriods(log), [log]);
   const range = useMemo(
     () => periods.find((period) => period.key === periodKey),
@@ -424,6 +486,24 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
       row.defenseSorties = oldRanking.defenseSorties;
       byName.set(oldRanking.name, row);
     }
+    if (unitTypes) {
+      for (const anti of antiContactRanking(
+        log,
+        unitTypes,
+        db,
+        range,
+        faction
+      )) {
+        const row =
+          byName.get(anti.name) ??
+          createMetricRow(anti.name, anti.faction, anti.branch);
+        row.antiContacts = anti.antiContacts;
+        row.antiBattleCount = anti.contacts;
+        row.faction = row.faction ?? anti.faction;
+        row.branch = row.branch ?? anti.branch;
+        byName.set(anti.name, row);
+      }
+    }
     const rows = Array.from(byName.values());
     // 抜き率 = 抜き数 ÷ 出兵数（出兵数 0 は 0）。PPN = PontaPoint + 抜き率。
     for (const r of rows) {
@@ -434,7 +514,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
       r.warlordType = db?.[r.name]?.type?.trim() || undefined;
     }
     return rows;
-  }, [log, db, range, faction]);
+  }, [log, db, range, faction, unitTypes]);
 
   // 兵種の選択肢（集計対象から収集）。
   const branchOptions = useMemo(() => {
@@ -458,11 +538,10 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
           .filter((value): value is string => !!value)
       )
     ).sort((a, b) => a.localeCompare(b, "ja"));
-    if (!warlordType || options.includes(warlordType)) return options;
-    return [...options, warlordType].sort((a, b) =>
+    return Array.from(new Set([...options, ...warlordTypes])).sort((a, b) =>
       a.localeCompare(b, "ja")
     );
-  }, [ranking, warlordType]);
+  }, [ranking, warlordTypes]);
 
   // サマリー：共通フィルターを適用してから、指標ごとの上位 TOP_N を切り出す。
   const summaries = useMemo(
@@ -471,7 +550,11 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
       const filteredBySharedConditions = ranking.filter(
         (row) =>
           (branch ? row.branch === branch : true) &&
-          (warlordType ? row.warlordType === warlordType : true) &&
+          matchesWarlordTypeFilters(
+            row.warlordType,
+            warlordTypes,
+            excludePoliticians
+          ) &&
           (q ? row.name.includes(q) : true)
       );
       return SORT_OPTIONS.map((opt) => {
@@ -488,7 +571,7 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
         };
       });
     },
-    [ranking, query, branch, warlordType, minContacts]
+    [ranking, query, branch, warlordTypes, excludePoliticians, minContacts]
   );
 
   // 詳細：選択中の指標で絞り込み・並べ替えた全ランキング。
@@ -499,11 +582,15 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
       (r) =>
         metricContactCount(r, activeMetric) >= minContacts &&
         (branch ? r.branch === branch : true) &&
-        (warlordType ? r.warlordType === warlordType : true) &&
+        matchesWarlordTypeFilters(
+          r.warlordType,
+          warlordTypes,
+          excludePoliticians
+        ) &&
         (q ? r.name.includes(q) : true)
     );
     return sortByMetric(filtered, activeMetric);
-  }, [ranking, activeMetric, query, branch, warlordType, minContacts]);
+  }, [ranking, activeMetric, query, branch, warlordTypes, excludePoliticians, minContacts]);
 
   const activeOption = activeMetric
     ? SORT_OPTIONS.find((o) => o.key === activeMetric)
@@ -527,21 +614,25 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
   const hasDropdownFilter = !!(
     faction ||
     branch ||
-    warlordType ||
+    warlordTypes.length > 0 ||
+    excludePoliticians ||
     minContacts !== 1
   );
   const hasFilter = !!(
     query ||
     faction ||
     branch ||
-    warlordType ||
+    warlordTypes.length > 0 ||
+    excludePoliticians ||
     minContacts !== 1
   );
   const clearFilters = () => {
     setQuery("");
     setFaction("");
     setBranch("");
-    setWarlordType("");
+    setWarlordTypes([]);
+    setPendingWarlordType("");
+    setExcludePoliticians(false);
     setMinContacts(1);
   };
   const activeFilters: ActiveFilter[] = [
@@ -577,16 +668,25 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
           },
         ]
       : []),
-    ...(warlordType
+    ...(excludePoliticians
       ? [
           {
-            key: "warlord-type",
+            key: "exclude-politicians",
             label: "武将タイプ",
-            value: warlordType,
-            onRemove: () => setWarlordType(""),
+            value: "政治家以外",
+            onRemove: () => setExcludePoliticians(false),
           },
         ]
       : []),
+    ...warlordTypes.map((type) => ({
+      key: `warlord-type:${type}`,
+      label: "武将タイプ",
+      value: type,
+      onRemove: () =>
+        setWarlordTypes((selected) =>
+          selected.filter((value) => value !== type)
+        ),
+    })),
   ];
 
   return (
@@ -629,7 +729,9 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
         activeFilters={activeFilters}
         resultText={
           activeMetric
-            ? `該当 ${detailRows.length.toLocaleString("ja-JP")}名`
+            ? activeMetric === "antiContacts" && unitTypesLoading
+              ? "アンチ数を集計中"
+              : `該当 ${detailRows.length.toLocaleString("ja-JP")}名`
             : `${SORT_OPTIONS.length.toLocaleString("ja-JP")}指標`
         }
       >
@@ -686,10 +788,22 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
             <span>武将タイプ</span>
             <select
               className="select"
-              value={warlordType}
-              onChange={(e) => setWarlordType(e.target.value)}
+              aria-label="武将タイプ"
+              value={pendingWarlordType}
+              onChange={(event) => {
+                const selected = event.target.value;
+                setPendingWarlordType("");
+                if (selected === "__exclude-politicians") {
+                  setExcludePoliticians(true);
+                } else {
+                  setWarlordTypes((current) =>
+                    addWarlordTypeSelection(current, selected)
+                  );
+                }
+              }}
             >
-              <option value="">すべて</option>
+              <option value="">条件を追加</option>
+              <option value="__exclude-politicians">政治家以外</option>
               {warlordTypeOptions.map((value) => (
                 <option key={value} value={value}>
                   {value}
@@ -710,7 +824,9 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
                   <h3>
                     {opt.label}
                     <span className="metric-section-count">
-                      対象{totalCount.toLocaleString("ja-JP")}名
+                      {opt.key === "antiContacts" && unitTypesLoading
+                        ? "集計中"
+                        : `対象${totalCount.toLocaleString("ja-JP")}名`}
                     </span>
                   </h3>
                   <button
@@ -725,7 +841,22 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
                   <summary>算出方法</summary>
                   <p>{opt.desc}</p>
                 </details>
-                {rows.length === 0 ? (
+                {opt.key === "antiContacts" && unitTypesLoading ? (
+                  <p className="metric-section-empty muted" role="status">
+                    兵種マスターを読み込み中…
+                  </p>
+                ) : opt.key === "antiContacts" && unitTypesError ? (
+                  <p className="metric-section-empty" role="alert">
+                    兵種マスターを取得できませんでした。{" "}
+                    <button
+                      type="button"
+                      className="link-like"
+                      onClick={() => void loadUnitTypes()}
+                    >
+                      再試行
+                    </button>
+                  </p>
+                ) : rows.length === 0 ? (
                   <p className="metric-section-empty muted">
                     条件を満たす武将がいません。
                   </p>
@@ -765,7 +896,23 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
           <h3 className="sr-only">{activeLabel}ランキング</h3>
           <p className="metric-section-desc muted">{activeDesc}</p>
 
-          {detailRows.length === 0 ? (
+          {activeMetric === "antiContacts" && unitTypesLoading ? (
+            <div className="empty" role="status">
+              <p className="empty-title">アンチ数を集計中です</p>
+              <p className="empty-hint">兵種マスターを読み込んでいます。</p>
+            </div>
+          ) : activeMetric === "antiContacts" && unitTypesError ? (
+            <div className="empty" role="alert">
+              <p className="empty-title">兵種マスターを取得できませんでした</p>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => void loadUnitTypes()}
+              >
+                再試行
+              </button>
+            </div>
+          ) : detailRows.length === 0 ? (
             <div className="empty">
               <p className="empty-title">条件を満たす武将がいません</p>
               <p className="empty-hint">絞り込み条件を見直してください。</p>

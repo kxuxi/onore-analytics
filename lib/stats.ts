@@ -442,10 +442,10 @@ export interface MatchupRanking {
 }
 
 /**
- * 対戦相手を勝率順に並べ、相性の良い／苦手な相手 TOP3 を返す。
+ * 対戦相手を勝利数／敗北数順に並べ、相性の良い／苦手な相手 TOP3 を返す。
  * 勝敗が確定した対戦が 1 度でもある相手のみ対象。
- * - 相性の良い相手 = 勝ち越している相手（勝率 > 50%）を勝率の高い順に。
- * - 苦手な相手 = 負け越している相手（勝率 < 50%）を勝率の低い順に。
+ * - 相性の良い相手 = 勝ち越している相手（勝率 > 50%）を勝利数の多い順に。
+ * - 苦手な相手 = 負け越している相手（勝率 < 50%）を敗北数の多い順に。
  * 勝率 50%（五分）の相手はどちらにも含めない。良い／苦手は勝率で
  * 明確に分かれるため、同じ相手が両方に出ることはない。
  */
@@ -458,6 +458,7 @@ export function matchupRanking(
     .filter((s) => s.winRate > 0.5)
     .sort(
       (a, b) =>
+        b.wins - a.wins ||
         b.winRate - a.winRate ||
         b.decided - a.decided ||
         b.battles - a.battles
@@ -467,6 +468,7 @@ export function matchupRanking(
     .filter((s) => s.winRate < 0.5)
     .sort(
       (a, b) =>
+        b.losses - a.losses ||
         a.winRate - b.winRate ||
         b.decided - a.decided ||
         b.battles - a.battles
@@ -2561,10 +2563,12 @@ export function antiContactRanking(
   log: BattleRecord[],
   unitTypes: UnitType[],
   db?: WarlordMap,
-  range?: YearRange
+  range?: YearRange,
+  factionFilter?: string
 ): AntiContactStat[] {
   const antiIndex = buildAntiIndex(unitTypes);
   const nameMap = db ? logNameMap(log) : null;
+  const faction = normalizeFactionFilter(factionFilter);
   interface Acc {
     name: string;
     faction?: string;
@@ -2576,9 +2580,11 @@ export function antiContactRanking(
   const sides: SideKey[] = ["left", "right"];
   for (const { record, card } of dedupedCards(log)) {
     if (!withinYearRange(card, range)) continue;
+    if (isWallBattle(card)) continue;
     for (const side of sides) {
       const self = side === "left" ? card.left : card.right;
       const opponent = side === "left" ? card.right : card.left;
+      if (!sideMatchesFaction(self, faction)) continue;
       const rawName = self.name?.trim();
       if (!rawName) continue;
       const name = resolveLogName(nameMap, record.term, self.family, rawName);
@@ -2886,7 +2892,11 @@ export interface EquipSynergyStat {
  * 強いかを数値化する。両方の装備が揃っている側のみ対象（片方でも空・「なし」は除外）。
  * 出兵側・守備側の両方を対象とし、重複行は除外する。
  */
-export function equipSynergy(log: BattleRecord[]): EquipSynergyStat[] {
+export function equipSynergy(
+  log: BattleRecord[],
+  range?: YearRange,
+  warlordTypeFilter?: string
+): EquipSynergyStat[] {
   interface Acc {
     weapon: string;
     item: string;
@@ -2897,11 +2907,14 @@ export function equipSynergy(log: BattleRecord[]): EquipSynergyStat[] {
   }
   const map = new Map<string, Acc>();
   const sides: SideKey[] = ["left", "right"];
+  const warlordType = warlordTypeFilter?.trim();
   for (const { card } of dedupedCards(log)) {
+    if (!withinYearRange(card, range)) continue;
     // 【壁戦】（対人ではなくNPCの壁への攻撃）は武器・品物の組み合わせ統計に含めない。
     if (isWallBattle(card)) continue;
     for (const side of sides) {
       const self = side === "left" ? card.left : card.right;
+      if (warlordType && self.type?.trim() !== warlordType) continue;
       if (!self.equip1 || !self.equip2) continue;
       const weapon = normalizeDisplayToken(self.equip2);
       const item = normalizeDisplayToken(self.equip1);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   DAY_LABELS,
   formatWinRate,
@@ -18,6 +18,7 @@ import { factionNameStyle, type FactionColorMap } from "@/lib/factionColors";
 import type { Warlord } from "@/lib/types";
 import { hasWarlordStats } from "@/lib/warlordStats";
 import { Section } from "@/components/detail/Section";
+import { ChevronUp } from "@/components/icons";
 
 /** 対戦相手名のリンクボタン（クリックでその武将ページへ）。 */
 function OpponentName({
@@ -44,11 +45,13 @@ function OpponentName({
 function RankRow({
   rank,
   stat,
+  tone,
   colors,
   onSelectWarlord,
 }: {
   rank: number;
   stat: OpponentStat;
+  tone: "good" | "bad";
   colors: FactionColorMap;
   onSelectWarlord: (name: string) => void;
 }) {
@@ -67,12 +70,82 @@ function RankRow({
         )}
       </span>
       <span className="detail-rank-rate">
-        {formatWinRate(stat.winRate, stat.decided)}
+        {(tone === "good" ? stat.wins : stat.losses).toLocaleString("ja-JP")}{tone === "good" ? "勝" : "敗"}
       </span>
       <span className="detail-rank-record">
-        {stat.wins.toLocaleString("ja-JP")}勝{stat.losses.toLocaleString("ja-JP")}敗
+        {(tone === "good" ? stat.losses : stat.wins).toLocaleString("ja-JP")}{tone === "good" ? "敗" : "勝"}（{formatWinRate(stat.winRate, stat.decided)}）
       </span>
     </li>
+  );
+}
+
+function OpponentMatchupList({
+  title,
+  tone,
+  stats,
+  colors,
+  onSelectWarlord,
+}: {
+  title: string;
+  tone: "good" | "bad";
+  stats: OpponentStat[];
+  colors: FactionColorMap;
+  onSelectWarlord: (name: string) => void;
+}) {
+  const [visibleCount, setVisibleCount] = useState(3);
+  const listId = useId();
+  const shown = stats.slice(0, visibleCount);
+  const remaining = stats.length - shown.length;
+  if (stats.length === 0) return null;
+  const addLabel = `${title}をあと${Math.min(5, remaining)}件表示`;
+
+  return (
+    <div className="detail-rank-col">
+      <h4 className={`detail-rank-head detail-rank-head--${tone}`}>{title}</h4>
+      <ol id={listId} className="detail-rank-list">
+        {shown.map((stat, index) => (
+          <RankRow
+            key={stat.name}
+            rank={index + 1}
+            stat={stat}
+            tone={tone}
+            colors={colors}
+            onSelectWarlord={onSelectWarlord}
+          />
+        ))}
+      </ol>
+      {stats.length > 3 && (
+        <div className="unit-matchup-actions">
+          <span className="muted">{shown.length} / {stats.length}件</span>
+          {remaining > 0 && (
+            <button
+              type="button"
+              className="btn unit-matchup-more"
+              title={addLabel}
+              aria-label={addLabel}
+              aria-controls={listId}
+              onClick={() =>
+                setVisibleCount((count) => Math.min(count + 5, stats.length))
+              }
+            >
+              <span aria-hidden="true">+</span>
+            </button>
+          )}
+          {visibleCount > 3 && (
+            <button
+              type="button"
+              className="btn unit-matchup-more"
+              title={`${title}を3件に戻す`}
+              aria-label={`${title}を3件に戻す`}
+              aria-controls={listId}
+              onClick={() => setVisibleCount(3)}
+            >
+              <ChevronUp />
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -85,44 +158,24 @@ export function MatchupRanking({
   colors: FactionColorMap;
   onSelectWarlord: (name: string) => void;
 }) {
-  if (ranking.best.length === 0) return null;
+  if (ranking.best.length === 0 && ranking.worst.length === 0) return null;
   return (
     <Section title="相性ランキング" mobileCollapsed>
       <div className="detail-rank-cols">
-        <div className="detail-rank-col">
-          <h4 className="detail-rank-head detail-rank-head--good">
-            相性の良い相手
-          </h4>
-          <ol className="detail-rank-list">
-            {ranking.best.map((s, i) => (
-              <RankRow
-                key={s.name}
-                rank={i + 1}
-                stat={s}
-                colors={colors}
-                onSelectWarlord={onSelectWarlord}
-              />
-            ))}
-          </ol>
-        </div>
-        {ranking.worst.length > 0 && (
-          <div className="detail-rank-col">
-            <h4 className="detail-rank-head detail-rank-head--bad">
-              苦手な相手
-            </h4>
-            <ol className="detail-rank-list">
-              {ranking.worst.map((s, i) => (
-                <RankRow
-                  key={s.name}
-                  rank={i + 1}
-                  stat={s}
-                  colors={colors}
-                  onSelectWarlord={onSelectWarlord}
-                />
-              ))}
-            </ol>
-          </div>
-        )}
+        <OpponentMatchupList
+          title="相性の良い相手"
+          tone="good"
+          stats={ranking.best}
+          colors={colors}
+          onSelectWarlord={onSelectWarlord}
+        />
+        <OpponentMatchupList
+          title="苦手な相手"
+          tone="bad"
+          stats={ranking.worst}
+          colors={colors}
+          onSelectWarlord={onSelectWarlord}
+        />
       </div>
     </Section>
   );

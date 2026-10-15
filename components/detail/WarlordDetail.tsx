@@ -25,7 +25,7 @@ import { Section } from "@/components/detail/Section";
 import {
   DetailBattleLogSection,
   DetailEmptyState,
-  DetailPage,
+  DetailLayout,
   DetailSummary,
 } from "@/components/detail/DetailParts";
 import {
@@ -84,7 +84,10 @@ export function WarlordDetail({
   // 使用兵種の割合は戦闘ログと同じ年フィルターを共有する。
   const yearFilter = useYearRangeFilter(outcomes);
   const usage = useMemo(() => selfUnitStats(yearFilter.filtered), [yearFilter.filtered]);
-  const ranking = useMemo(() => matchupRanking(outcomes), [outcomes]);
+  const ranking = useMemo(
+    () => matchupRanking(outcomes, Number.POSITIVE_INFINITY),
+    [outcomes]
+  );
   const unitStats = useMemo(() => selfUnitStats(outcomes), [outcomes]);
   const heatmap = useMemo(() => winHeatmap(outcomes), [outcomes]);
   const timeline = useMemo(() => factionTimeline(outcomes), [outcomes]);
@@ -183,8 +186,94 @@ export function WarlordDetail({
     </>
   );
 
+  const emptyState = outcomes.length === 0 ? (
+    !dbInfo ? (
+      <DetailEmptyState
+        title="武将が見つかりません"
+        hint={
+          <>
+            「{name}」は現在のDB・戦闘履歴のどちらにも見つかりませんでした。
+            名前が変更・削除されたか、共有リンクが古い可能性があります。
+          </>
+        }
+      />
+    ) : (
+      <>
+        <DetailEmptyState>
+          この武将が登場する戦闘履歴がまだありません。
+        </DetailEmptyState>
+        {canComment && <WarlordComment name={name} />}
+      </>
+    )
+  ) : undefined;
+  const sections = outcomes.length > 0 ? (
+    <>
+      <FactionHistory stints={timeline} colors={colors} />
+      <MatchupRanking
+        ranking={ranking}
+        colors={colors}
+        onSelectWarlord={onSelectWarlord}
+      />
+      <UnitWinRateList units={unitStats} onSelectUnit={onSelectUnit} />
+      <WinHeatmapSection heatmap={heatmap} />
+      {isAdmin && <WinRateTrend data={yearly} />}
+      {canComment && <WarlordComment name={name} />}
+      <Section title="使用兵種の割合" mobileCollapsed>
+        {yearFilter.years.length >= 2 && (
+          <YearRangeFilterBar {...yearFilter} />
+        )}
+        <div className="pie-block">
+          <PieChart data={pieData} />
+          <ul className="pie-legend">
+            {usage.map((u, i) => {
+              const pct =
+                usageTotal > 0
+                  ? Math.round((u.battles / usageTotal) * 100)
+                  : 0;
+              return (
+                <li key={u.unit} className="pie-legend-item">
+                  <span
+                    className="pie-dot"
+                    style={{ background: chartColor(i) }}
+                  />
+                  {u.unit === "不明" ? (
+                    <span className="pie-legend-name muted">不明</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="pie-legend-name link-like"
+                      onClick={() => onSelectUnit(u.unit)}
+                      title={`${u.unit} の戦績を見る`}
+                    >
+                      {u.unit}
+                    </button>
+                  )}
+                  <span className="pie-legend-val">
+                    {u.battles.toLocaleString("ja-JP")}戦 ({pct}%)・勝率{" "}
+                    {formatWinRate(u.winRate, u.decided)}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </Section>
+    </>
+  ) : undefined;
+  const battleLog = outcomes.length > 0 ? (
+    <DetailBattleLogSection
+      count={`${yearFilter.filtered.length}件`}
+      outcomes={outcomes}
+      factionColors={colors}
+      onSelectWarlord={onSelectWarlord}
+      onSelectUnit={onSelectUnit}
+      onSelectEquip={onSelectEquip}
+      yearFilter={yearFilter}
+    />
+  ) : undefined;
+
   return (
-    <DetailPage
+    <DetailLayout
       kind="武将"
       title={name}
       tags={tags}
@@ -243,100 +332,13 @@ export function WarlordDetail({
         ) : undefined
       }
       onBack={onBack}
-    >
-      <AbilityStats warlord={dbInfo} />
-
-      {outcomes.length === 0 ? (
-        !dbInfo ? (
-          <DetailEmptyState
-            title="武将が見つかりません"
-            hint={
-              <>
-                「{name}」は現在のDB・戦闘履歴のどちらにも見つかりませんでした。
-                名前が変更・削除されたか、共有リンクが古い可能性があります。
-              </>
-            }
-          />
-        ) : (
-          <>
-            <DetailEmptyState>
-              この武将が登場する戦闘履歴がまだありません。
-            </DetailEmptyState>
-            {canComment && <WarlordComment name={name} />}
-          </>
-        )
-      ) : (
-        <>
-          <DetailSummary summary={summary} />
-
-          <FactionHistory stints={timeline} colors={colors} />
-
-          <MatchupRanking
-            ranking={ranking}
-            colors={colors}
-            onSelectWarlord={onSelectWarlord}
-          />
-
-          <UnitWinRateList units={unitStats} onSelectUnit={onSelectUnit} />
-
-          <WinHeatmapSection heatmap={heatmap} />
-
-          {isAdmin && <WinRateTrend data={yearly} />}
-
-          {canComment && <WarlordComment name={name} />}
-
-          <Section title="使用兵種の割合" mobileCollapsed>
-            {yearFilter.years.length >= 2 && (
-              <YearRangeFilterBar {...yearFilter} />
-            )}
-            <div className="pie-block">
-              <PieChart data={pieData} />
-              <ul className="pie-legend">
-                {usage.map((u, i) => {
-                  const pct =
-                    usageTotal > 0
-                      ? Math.round((u.battles / usageTotal) * 100)
-                      : 0;
-                  return (
-                    <li key={u.unit} className="pie-legend-item">
-                      <span
-                        className="pie-dot"
-                        style={{ background: chartColor(i) }}
-                      />
-                      {u.unit === "不明" ? (
-                        <span className="pie-legend-name muted">不明</span>
-                      ) : (
-                        <button
-                          type="button"
-                          className="pie-legend-name link-like"
-                          onClick={() => onSelectUnit(u.unit)}
-                          title={`${u.unit} の戦績を見る`}
-                        >
-                          {u.unit}
-                        </button>
-                      )}
-                      <span className="pie-legend-val">
-                        {u.battles.toLocaleString("ja-JP")}戦 ({pct}%)・勝率{" "}
-                        {formatWinRate(u.winRate, u.decided)}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </Section>
-
-          <DetailBattleLogSection
-            count={`${yearFilter.filtered.length}件`}
-            outcomes={outcomes}
-            factionColors={colors}
-            onSelectWarlord={onSelectWarlord}
-            onSelectUnit={onSelectUnit}
-            onSelectEquip={onSelectEquip}
-            yearFilter={yearFilter}
-          />
-        </>
-      )}
-    </DetailPage>
+      profile={<AbilityStats warlord={dbInfo} />}
+      summary={
+        outcomes.length > 0 ? <DetailSummary summary={summary} /> : undefined
+      }
+      emptyState={emptyState}
+      sections={sections}
+      battleLog={battleLog}
+    />
   );
 }

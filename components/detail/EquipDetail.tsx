@@ -15,7 +15,7 @@ import { Section } from "@/components/detail/Section";
 import {
   DetailBattleLogSection,
   DetailEmptyState,
-  DetailPage,
+  DetailLayout,
   DetailSummary,
 } from "@/components/detail/DetailParts";
 import {
@@ -53,64 +53,71 @@ export function EquipDetail({
   const summary = useMemo(() => summarize(outcomes), [outcomes]);
   const unitRanking = useMemo(() => unitMatchupRanking(outcomes), [outcomes]);
   const users = useMemo(() => userWinRates(outcomes), [outcomes]);
-  // この装備をよく持っている兵種（上位）。
   const topUnits = useMemo(
     () => unitUsage(outcomes).filter((u) => u.name !== "不明").slice(0, 8),
     [outcomes]
   );
 
-  return (
-    <DetailPage kind={kind} title={name} onBack={onBack}>
-      {outcomes.length === 0 ? (
-        <DetailEmptyState
-          title={`この${kind}の戦闘履歴がまだありません`}
-          hint={
-            <>
-              「戦闘履歴」タブで戦績を登録すると、この{kind}を装備した戦闘の
-              勝率や使用武将がここに表示されます。
-            </>
-          }
-        />
-      ) : (
+  const summaryContent = outcomes.length > 0 ? (
+    <DetailSummary summary={summary} />
+  ) : undefined;
+  const emptyState = outcomes.length === 0 ? (
+    <DetailEmptyState
+      title={`この${kind}の戦闘履歴がまだありません`}
+      hint={
         <>
-          <DetailSummary summary={summary} />
-
-          <UserWinRateList users={users} onSelectWarlord={onSelectWarlord} />
-
-          <UnitMatchupRanking
-            ranking={unitRanking}
-            onSelectUnit={onSelectUnit}
-          />
-
-          {topUnits.length > 0 && (
-            <Section title="よく使う兵種" mobileCollapsed>
-              <div className="equip-units">
-                {topUnits.map((u) => (
-                  <button
-                    key={u.name}
-                    type="button"
-                    className="pill pill-btn"
-                    onClick={() => onSelectUnit(u.name)}
-                    title={`${u.name} の戦績を見る`}
-                  >
-                    {u.name}
-                    <span className="muted">×{u.count}</span>
-                  </button>
-                ))}
-              </div>
-            </Section>
-          )}
-
-          <DetailBattleLogSection
-            count={`${outcomes.length}件`}
-            outcomes={outcomes}
-            factionColors={colors}
-            onSelectWarlord={onSelectWarlord}
-            onSelectUnit={onSelectUnit}
-            onSelectEquip={onSelectEquip}
-          />
+          「{name}」が戦闘履歴にまだ出ていません。登録すると、この{kind}の使用武将や相性を確認できます。
         </>
+      }
+    />
+  ) : undefined;
+  const sections = outcomes.length > 0 ? (
+    <>
+      <UserWinRateList users={users} onSelectWarlord={onSelectWarlord} />
+      <UnitMatchupRanking
+        ranking={unitRanking}
+        onSelectUnit={onSelectUnit}
+      />
+      {topUnits.length > 0 && (
+        <Section title="よく使う兵種" mobileCollapsed>
+          <div className="equip-units">
+            {topUnits.map((u) => (
+              <button
+                key={u.name}
+                type="button"
+                className="pill pill-btn"
+                onClick={() => onSelectUnit(u.name)}
+                title={`${u.name} の戦績を見る`}
+              >
+                {u.name}
+                <span className="muted">×{u.count}</span>
+              </button>
+            ))}
+          </div>
+        </Section>
       )}
-    </DetailPage>
+    </>
+  ) : undefined;
+  const battleLog = outcomes.length > 0 ? (
+    <DetailBattleLogSection
+      count={`${outcomes.length}件`}
+      outcomes={outcomes}
+      factionColors={colors}
+      onSelectWarlord={onSelectWarlord}
+      onSelectUnit={onSelectUnit}
+      onSelectEquip={onSelectEquip}
+    />
+  ) : undefined;
+
+  return (
+    <DetailLayout
+      kind={kind}
+      title={name}
+      onBack={onBack}
+      summary={summaryContent}
+      emptyState={emptyState}
+      sections={sections}
+      battleLog={battleLog}
+    />
   );
 }

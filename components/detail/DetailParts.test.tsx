@@ -4,6 +4,7 @@ import type { BattleSide } from "@/lib/parser";
 import type { BattleOutcome, StatSummary } from "@/lib/stats";
 import type { YearRangeFilter } from "@/components/detail/YearRangeFilter";
 import {
+  DetailLayout,
   DetailBattleLogSection,
   DetailEmptyState,
   DetailPage,
@@ -106,6 +107,50 @@ describe("DetailPage", () => {
   });
 });
 
+describe("DetailLayout", () => {
+  it("名前付きスロットを共通順序で描画する", () => {
+    const html = renderToStaticMarkup(
+      <DetailLayout
+        kind="兵種"
+        title="重騎兵"
+        onBack={vi.fn()}
+        profile={<p>プロフィール</p>}
+        summary={<p>サマリー</p>}
+        sections={<p>固有セクション</p>}
+        battleLog={<p>戦闘ログ</p>}
+        footer={<p>フッター</p>}
+      />
+    );
+    const positions = ["プロフィール", "サマリー", "固有セクション", "戦闘ログ", "フッター"]
+      .map((text) => html.indexOf(text));
+
+    expect(positions.every((position) => position >= 0)).toBe(true);
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+  });
+
+  it("空状態ではサマリー・セクション・戦闘ログを置き換える", () => {
+    const html = renderToStaticMarkup(
+      <DetailLayout
+        kind="武器"
+        title="村雨"
+        onBack={vi.fn()}
+        profile={<p>プロフィール</p>}
+        summary={<p>サマリー</p>}
+        emptyState={<p>空状態</p>}
+        sections={<p>固有セクション</p>}
+        battleLog={<p>戦闘ログ</p>}
+        footer={<p>フッター</p>}
+      />
+    );
+
+    expect(html.indexOf("プロフィール")).toBeLessThan(html.indexOf("空状態"));
+    expect(html.indexOf("空状態")).toBeLessThan(html.indexOf("フッター"));
+    expect(html).not.toContain("サマリー");
+    expect(html).not.toContain("固有セクション");
+    expect(html).not.toContain("戦闘ログ");
+  });
+});
+
 describe("DetailSummary", () => {
   it("アンチと被アンチ回数・勝率を表示する", () => {
     const html = renderToStaticMarkup(
@@ -128,7 +173,7 @@ describe("DetailSummary", () => {
     expect(html).toContain('class="stat-loss-text">1敗');
     expect(html).toContain("相互アンチは両方に含みます");
     expect(html).not.toContain('class="stat-grid detail-stats"');
-    expect(html.indexOf("unit-summary-overview")).toBeLessThan(html.indexOf("wr-bar"));
+    expect(html.indexOf("detail-summary-overview")).toBeLessThan(html.indexOf("wr-bar"));
     expect(html.indexOf("wr-bar")).toBeLessThan(html.indexOf("unit-summary-table"));
   });
 
@@ -148,10 +193,13 @@ describe("DetailSummary", () => {
     expect(html).toContain("77.8%");
     expect(html).toContain("撤退・引分");
     expect(html).not.toContain("アンチ回数");
+    expect(html).toContain("全体勝率");
+    expect(html).toContain('class="detail-summary-totals"');
+    expect(html).not.toContain('class="stat-grid detail-stats"');
     expect(html.indexOf("戦績サマリー")).toBeLessThan(
-      html.indexOf("stat-grid detail-stats")
+      html.indexOf("detail-summary-overview")
     );
-    expect(html.indexOf("stat-grid detail-stats")).toBeLessThan(
+    expect(html.indexOf("detail-summary-overview")).toBeLessThan(
       html.indexOf("wr-bar")
     );
   });
@@ -167,7 +215,7 @@ describe("DetailSummary", () => {
 
     expect(html).toContain(">兵種</span>");
     expect(html).toContain(">重騎兵</h2>");
-    expect(html).toContain('class="stat-grid detail-stats"');
+    expect(html).toContain('class="detail-summary-overview"');
     expect(html).toContain('class="wr-bar"');
   });
 });

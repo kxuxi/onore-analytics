@@ -486,9 +486,6 @@ export function WikiTab({ onNotify, onDirtyChange }: WikiTabProps) {
                     disabled={pageLoading || saving || deleting}
                   >
                     <span className="wiki-page-link-title">{page.title}</span>
-                    <time dateTime={page.updatedAt}>
-                      {formatDate(page.updatedAt)}
-                    </time>
                   </button>
                 );
               })}
