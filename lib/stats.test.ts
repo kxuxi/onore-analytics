@@ -769,6 +769,30 @@ describe("unitMatchupRanking / userWinRates", () => {
     expect(bestUnits.filter((u) => worstUnits.includes(u))).toHaveLength(0);
   });
 
+  it("勝率より勝利数、敗率より敗北数を優先して順位付けする", () => {
+    const records: BattleRecord[] = [];
+    for (const [unit, wins, losses] of [
+      ["少数全勝", 1, 0],
+      ["多数勝利", 3, 1],
+      ["少数全敗", 0, 1],
+      ["多数敗北", 1, 3],
+    ] as const) {
+      for (let battle = 0; battle < wins + losses; battle++) {
+        records.push(rec(unitLine({
+          year: 1700 + records.length,
+          selfName: "甲",
+          selfUnit: "ランセロ",
+          selfBranch: "騎兵",
+          oppUnit: unit,
+          result: battle < wins ? "甲の勝利" : "敵将の勝利",
+        })));
+      }
+    }
+    const ranking = unitMatchupRanking(collectUnitBattles(records, "ランセロ"));
+    expect(ranking.best.map((stat) => stat.unit)).toEqual(["多数勝利", "少数全勝"]);
+    expect(ranking.worst.map((stat) => stat.unit)).toEqual(["多数敗北", "少数全敗"]);
+  });
+
   it("武将別の勝率を戦闘数の多い順に集計する", () => {
     const users = userWinRates(outcomes);
     expect(users[0].name).toBe("信長"); // 2戦で最多

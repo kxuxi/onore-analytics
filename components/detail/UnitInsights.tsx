@@ -16,10 +16,12 @@ import type {
 function UnitRankRow({
   rank,
   stat,
+  tone,
   onSelectUnit,
 }: {
   rank: number;
   stat: OpponentUnitStat;
+  tone: "good" | "bad";
   onSelectUnit: (name: string) => void;
 }) {
   return (
@@ -36,10 +38,10 @@ function UnitRankRow({
         </button>
       </span>
       <span className="detail-rank-rate">
-        {formatWinRate(stat.winRate, stat.decided)}
+        {(tone === "good" ? stat.wins : stat.losses).toLocaleString("ja-JP")}{tone === "good" ? "勝" : "敗"}
       </span>
       <span className="detail-rank-record">
-        {stat.wins.toLocaleString("ja-JP")}勝{stat.losses.toLocaleString("ja-JP")}敗
+        {(tone === "good" ? stat.losses : stat.wins).toLocaleString("ja-JP")}{tone === "good" ? "敗" : "勝"}（{formatWinRate(stat.winRate, stat.decided)}）
       </span>
     </li>
   );
@@ -62,7 +64,7 @@ function UnitMatchupList({ title, tone, stats, onSelectUnit }: {
       <h4 className={`detail-rank-head detail-rank-head--${tone}`}>{title}</h4>
       <ol id={listId} className="detail-rank-list">
         {shown.map((stat, index) => (
-          <UnitRankRow key={stat.unit} rank={index + 1} stat={stat} onSelectUnit={onSelectUnit} />
+          <UnitRankRow key={stat.unit} rank={index + 1} stat={stat} tone={tone} onSelectUnit={onSelectUnit} />
         ))}
       </ol>
       {stats.length > 3 && (
