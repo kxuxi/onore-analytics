@@ -17,8 +17,8 @@ import { parseReqStats, splitGoodAgainst } from "@/lib/unitTypeForm";
 import { Section } from "@/components/detail/Section";
 import {
   DetailBattleLogSection,
+  DetailLayout,
   DetailEmptyState,
-  DetailPage,
   DetailSummary,
 } from "@/components/detail/DetailParts";
 import {
@@ -95,8 +95,123 @@ export function UnitDetail({
     [outcomes, units]
   );
 
+  const profile = unit ? (
+    <Section title="兵種データ" mobileCollapsed>
+      <dl className="unit-spec">
+        <div className="spec-row">
+          <dt>種類</dt>
+          <dd>{unit.category || "—"}</dd>
+        </div>
+        <div className="spec-row">
+          <dt>攻撃</dt>
+          <dd>{unit.attack}</dd>
+        </div>
+        <div className="spec-row">
+          <dt>防御</dt>
+          <dd>{unit.defense}</dd>
+        </div>
+        <div className="spec-row">
+          <dt>雇用</dt>
+          <dd>{unit.cost || "—"}</dd>
+        </div>
+        <div className="spec-row">
+          <dt>技術</dt>
+          <dd>{unit.tech || "—"}</dd>
+        </div>
+        <div className="spec-row">
+          <dt>年数</dt>
+          <dd>{unit.years || "—"}</dd>
+        </div>
+        <div className="spec-row">
+          <dt>必要能力値</dt>
+          <dd>{unit.reqStats || "—"}</dd>
+        </div>
+        <div className="spec-row">
+          <dt>得意兵種</dt>
+          <dd>
+            {goodAgainst.length > 0 ? (
+              <span className="tag-list">
+                {goodAgainst.map((g) => (
+                  <span key={g} className="tag unit">
+                    {g}
+                  </span>
+                ))}
+              </span>
+            ) : (
+              "—"
+            )}
+          </dd>
+        </div>
+        <div className="spec-row">
+          <dt>施設/国宝</dt>
+          <dd>{unit.facility || "—"}</dd>
+        </div>
+        <div className="spec-row spec-wide">
+          <dt>特殊攻撃</dt>
+          <dd>{unit.special || "—"}</dd>
+        </div>
+        <div className="spec-row spec-wide">
+          <dt>ボーナス</dt>
+          <dd>{unit.bonus || "—"}</dd>
+        </div>
+      </dl>
+    </Section>
+  ) : undefined;
+
+  const summaryContent = outcomes.length > 0 ? (
+    <DetailSummary summary={summary} antiSummary={antiSummary} />
+  ) : undefined;
+  const emptyState = outcomes.length === 0 ? (
+    <DetailEmptyState
+      title="この兵種の戦闘データがありません"
+      hint={
+        <>
+          「{name}」が使われた戦闘履歴が見つかりませんでした。
+          「戦闘履歴」タブで戦績を登録すると、勝率や相性がここに表示されます。
+        </>
+      }
+    />
+  ) : undefined;
+  const sections = outcomes.length > 0 ? (
+    <>
+      <UnitMatchupRanking
+        key={name}
+        ranking={unitRanking}
+        onSelectUnit={onSelectUnit}
+      />
+      <UserWinRateList users={users} onSelectWarlord={onSelectWarlord} />
+      <UsageTrend points={trend} />
+    </>
+  ) : undefined;
+  const battleLog = outcomes.length > 0 ? (
+    <DetailBattleLogSection
+      count={`${outcomes.length}件`}
+      outcomes={outcomes}
+      factionColors={colors}
+      onSelectWarlord={onSelectWarlord}
+      onSelectUnit={onSelectUnit}
+      onSelectEquip={onSelectEquip}
+    />
+  ) : undefined;
+  const footer = editing && unit ? (
+    <UnitEditModal
+      initial={unit}
+      isNew={false}
+      statOptions={statOptions}
+      onClose={() => setEditing(false)}
+      onSaved={() => {
+        setEditing(false);
+        reloadUnits();
+      }}
+      onDeleted={() => {
+        setEditing(false);
+        onBack();
+      }}
+    />
+  ) : undefined;
+
   return (
-    <DetailPage
+    <DetailLayout
       kind="兵種"
       title={name}
       tags={
@@ -114,121 +229,12 @@ export function UnitDetail({
         ) : undefined
       }
       onBack={onBack}
-    >
-      {unit && (
-        <Section title="兵種データ" mobileCollapsed>
-          <dl className="unit-spec">
-            <div className="spec-row">
-              <dt>種類</dt>
-              <dd>{unit.category || "—"}</dd>
-            </div>
-            <div className="spec-row">
-              <dt>攻撃</dt>
-              <dd>{unit.attack}</dd>
-            </div>
-            <div className="spec-row">
-              <dt>防御</dt>
-              <dd>{unit.defense}</dd>
-            </div>
-            <div className="spec-row">
-              <dt>雇用</dt>
-              <dd>{unit.cost || "—"}</dd>
-            </div>
-            <div className="spec-row">
-              <dt>技術</dt>
-              <dd>{unit.tech || "—"}</dd>
-            </div>
-            <div className="spec-row">
-              <dt>年数</dt>
-              <dd>{unit.years || "—"}</dd>
-            </div>
-            <div className="spec-row">
-              <dt>必要能力値</dt>
-              <dd>{unit.reqStats || "—"}</dd>
-            </div>
-            <div className="spec-row">
-              <dt>得意兵種</dt>
-              <dd>
-                {goodAgainst.length > 0 ? (
-                  <span className="tag-list">
-                    {goodAgainst.map((g) => (
-                      <span key={g} className="tag unit">
-                        {g}
-                      </span>
-                    ))}
-                  </span>
-                ) : (
-                  "—"
-                )}
-              </dd>
-            </div>
-            <div className="spec-row">
-              <dt>施設/国宝</dt>
-              <dd>{unit.facility || "—"}</dd>
-            </div>
-            <div className="spec-row spec-wide">
-              <dt>特殊攻撃</dt>
-              <dd>{unit.special || "—"}</dd>
-            </div>
-            <div className="spec-row spec-wide">
-              <dt>ボーナス</dt>
-              <dd>{unit.bonus || "—"}</dd>
-            </div>
-          </dl>
-        </Section>
-      )}
-
-      {outcomes.length === 0 ? (
-        <DetailEmptyState
-          title="この兵種の戦闘データがありません"
-          hint={
-            <>
-              「{name}」が使われた戦闘履歴が見つかりませんでした。
-              「戦闘履歴」タブで戦績を登録すると、勝率や相性がここに表示されます。
-            </>
-          }
-        />
-      ) : (
-        <>
-          <DetailSummary summary={summary} antiSummary={antiSummary} />
-
-          <UnitMatchupRanking
-            key={name}
-            ranking={unitRanking}
-            onSelectUnit={onSelectUnit}
-          />
-
-          <UserWinRateList users={users} onSelectWarlord={onSelectWarlord} />
-
-          <UsageTrend points={trend} />
-
-          <DetailBattleLogSection
-            count={`${outcomes.length}件`}
-            outcomes={outcomes}
-            factionColors={colors}
-            onSelectWarlord={onSelectWarlord}
-            onSelectUnit={onSelectUnit}
-            onSelectEquip={onSelectEquip}
-          />
-        </>
-      )}
-
-      {editing && unit && (
-        <UnitEditModal
-          initial={unit}
-          isNew={false}
-          statOptions={statOptions}
-          onClose={() => setEditing(false)}
-          onSaved={() => {
-            setEditing(false);
-            reloadUnits();
-          }}
-          onDeleted={() => {
-            setEditing(false);
-            onBack();
-          }}
-        />
-      )}
-    </DetailPage>
+      profile={profile}
+      summary={summaryContent}
+      emptyState={emptyState}
+      sections={sections}
+      battleLog={battleLog}
+      footer={footer}
+    />
   );
 }

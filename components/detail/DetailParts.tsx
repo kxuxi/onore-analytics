@@ -116,6 +116,40 @@ export function DetailPage({ children, ...headerProps }: DetailPageProps) {
   );
 }
 
+interface DetailLayoutProps extends Omit<DetailPageProps, "children"> {
+  profile?: ReactNode;
+  summary?: ReactNode;
+  emptyState?: ReactNode;
+  sections?: ReactNode;
+  battleLog?: ReactNode;
+  footer?: ReactNode;
+}
+
+/** 詳細画面の共通本文レイアウト。ページ固有の内容は名前付きスロットで渡す。 */
+export function DetailLayout({
+  profile,
+  summary,
+  emptyState,
+  sections,
+  battleLog,
+  footer,
+  ...pageProps
+}: DetailLayoutProps) {
+  return (
+    <DetailPage {...pageProps}>
+      {profile}
+      {emptyState ?? (
+        <>
+          {summary}
+          {sections}
+          {battleLog}
+        </>
+      )}
+      {footer}
+    </DetailPage>
+  );
+}
+
 export function WinRateBar({ summary }: { summary: StatSummary }) {
   const { wins, losses, decided } = summary;
   const winPct = decided > 0 ? (wins / decided) * 100 : 0;
@@ -146,7 +180,7 @@ export function DetailSummary({ summary, antiSummary }: DetailSummaryProps) {
       <h3 id={headingId} className="detail-summary-title">
         戦績サマリー
       </h3>
-      <StatCards summary={summary} antiSummary={antiSummary} />
+      <StatCards summary={summary} />
       <WinRateBar summary={summary} />
       {antiSummary && (
         <>
@@ -228,61 +262,27 @@ export function DetailBattleLogSection({
   );
 }
 
-export function StatCards({ summary, antiSummary }: DetailSummaryProps) {
+export function StatCards({ summary }: Pick<DetailSummaryProps, "summary">) {
   const rate = formatWinRate(summary.winRate, summary.decided);
-  if (antiSummary) {
-    return (
-      <div className="unit-summary-overview">
-        <div className="unit-summary-rate">
-          <span>全体勝率</span>
-          <strong>{rate}</strong>
-        </div>
-        <dl className="unit-summary-totals">
-          {[
-            { label: "戦闘数", value: summary.battles, className: "" },
-            { label: "勝利", value: summary.wins, className: "stat-win-text" },
-            { label: "敗北", value: summary.losses, className: "stat-loss-text" },
-            { label: "撤退・引分", value: summary.others, className: "stat-other-text" },
-          ].map(({ label, value, className }) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd className={className}>{value.toLocaleString("ja-JP")}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-    );
-  }
   return (
-    <div className="stat-grid detail-stats">
-      <div className="stat">
-        <div className="label">戦闘数</div>
-        <div className="value">{summary.battles.toLocaleString("ja-JP")}</div>
+    <div className="detail-summary-overview">
+      <div className="detail-summary-rate">
+        <span>全体勝率</span>
+        <strong>{rate}</strong>
       </div>
-      <div className="stat">
-        <div className="label">勝利</div>
-        <div className="value stat-win-text">
-          {summary.wins.toLocaleString("ja-JP")}
-        </div>
-      </div>
-      <div className="stat">
-        <div className="label">敗北</div>
-        <div className="value stat-loss-text">
-          {summary.losses.toLocaleString("ja-JP")}
-        </div>
-      </div>
-      <div className="stat">
-        <div className="label">勝率</div>
-        <div className="value">{rate}</div>
-      </div>
-      {summary.others > 0 && (
-        <div className="stat">
-          <div className="label">撤退・引分</div>
-          <div className="value stat-other-text">
-            {summary.others.toLocaleString("ja-JP")}
+      <dl className="detail-summary-totals">
+        {[
+          { label: "戦闘数", value: summary.battles, className: "" },
+          { label: "勝利", value: summary.wins, className: "stat-win-text" },
+          { label: "敗北", value: summary.losses, className: "stat-loss-text" },
+          { label: "撤退・引分", value: summary.others, className: "stat-other-text" },
+        ].map(({ label, value, className }) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd className={className}>{value.toLocaleString("ja-JP")}</dd>
           </div>
-        </div>
-      )}
+        ))}
+      </dl>
     </div>
   );
 }

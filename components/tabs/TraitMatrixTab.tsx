@@ -9,6 +9,7 @@ import {
   collectTraitMatchupBattles,
   formatWinRate,
   META_PERIODS,
+  rankingPeriods,
 } from "@/lib/stats";
 import { BattleLogList } from "@/components/detail/BattleLogList";
 import { CloseIcon } from "@/components/icons";
@@ -21,8 +22,10 @@ interface Props {
   onSelectEquip?: (name: string, slot: "weapon" | "item") => void;
 }
 
-/** 集計期間のプリセット（ゲーム内の年で区切る）。環境ダッシュボードと共通。 */
-type PeriodKey = (typeof META_PERIODS)[number]["key"];
+/** 集計期間のプリセット（全期間・過去10年間・ゲーム内年バケット）。 */
+type PeriodKey =
+  | (typeof META_PERIODS)[number]["key"]
+  | "last10";
 
 /** 統計的に意味を持たせる最小サンプル数（これ未満のマスは「–」表示）。 */
 const MIN_SAMPLE = 5;
@@ -54,9 +57,10 @@ export function TraitMatrixTab({
     null
   );
 
+  const periods = useMemo(() => rankingPeriods(log), [log]);
   const range = useMemo(
-    () => META_PERIODS.find((p) => p.key === period) ?? null,
-    [period]
+    () => periods.find((p) => p.key === period) ?? null,
+    [period, periods]
   );
 
   const { traits, matrix } = useMemo(
@@ -93,7 +97,7 @@ export function TraitMatrixTab({
       />
 
       <div className="tmx-periods" role="group" aria-label="集計期間">
-        {META_PERIODS.map((p) => (
+        {periods.map((p) => (
           <button
             key={p.key}
             type="button"

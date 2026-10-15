@@ -22,7 +22,7 @@ import { Section } from "@/components/detail/Section";
 import {
   DetailBattleLogSection,
   DetailEmptyState,
-  DetailPage,
+  DetailLayout,
   DetailSummary,
 } from "@/components/detail/DetailParts";
 import { BranchWinRates } from "@/components/detail/WarlordInsights";
@@ -121,60 +121,58 @@ export function FactionDetail({
     </>
   );
 
+  const emptyState = outcomes.length === 0 && members.length === 0 ? (
+    <DetailEmptyState
+      title="この国のデータがありません"
+      hint={
+        <>
+          「{name}」が登場する戦闘履歴・所属武将が見つかりませんでした。
+          「戦闘履歴」タブで戦績を登録すると、勝率や主力兵種がここに表示されます。
+        </>
+      }
+    />
+  ) : undefined;
+  const sections = emptyState ? undefined : (
+    <>
+      {canViewLatestUnits && (
+        <LatestUnitsSection
+          groups={currentLatestUnits}
+          onSelectUnit={onSelectUnit}
+        />
+      )}
+      <FactionMembers
+        members={members}
+        onSelectWarlord={onSelectWarlord}
+        onSelectUnit={onSelectUnit}
+      />
+      {outcomes.length > 0 && <BranchWinRates branches={branches} />}
+    </>
+  );
+  const battleLog = outcomes.length > 0 ? (
+    <DetailBattleLogSection
+      count={`${outcomes.length}件`}
+      outcomes={outcomes}
+      factionColors={colors}
+      onSelectWarlord={onSelectWarlord}
+      onSelectUnit={onSelectUnit}
+      onSelectEquip={onSelectEquip}
+    />
+  ) : undefined;
+
   return (
-    <DetailPage
+    <DetailLayout
       kind="国"
       title={name}
       titleColor={factionNameStyle(name, colors)?.color as string | undefined}
       tags={tags}
       onBack={onBack}
-    >
-      {outcomes.length === 0 && members.length === 0 ? (
-        <DetailEmptyState
-          title="この国のデータがありません"
-          hint={
-            <>
-              「{name}」が登場する戦闘履歴・所属武将が見つかりませんでした。
-              「戦闘履歴」タブで戦績を登録すると、勝率や主力兵種がここに表示されます。
-            </>
-          }
-        />
-      ) : (
-        <>
-          {outcomes.length > 0 && (
-            <DetailSummary summary={summary} />
-          )}
-
-          {canViewLatestUnits && (
-            <LatestUnitsSection
-              groups={currentLatestUnits}
-              onSelectUnit={onSelectUnit}
-            />
-          )}
-
-          <FactionMembers
-            members={members}
-            onSelectWarlord={onSelectWarlord}
-            onSelectUnit={onSelectUnit}
-          />
-
-          {outcomes.length > 0 && (
-            <>
-              <BranchWinRates branches={branches} />
-
-              <DetailBattleLogSection
-                count={`${outcomes.length}件`}
-                outcomes={outcomes}
-                factionColors={colors}
-                onSelectWarlord={onSelectWarlord}
-                onSelectUnit={onSelectUnit}
-                onSelectEquip={onSelectEquip}
-              />
-            </>
-          )}
-        </>
-      )}
-    </DetailPage>
+      summary={
+        outcomes.length > 0 ? <DetailSummary summary={summary} /> : undefined
+      }
+      emptyState={emptyState}
+      sections={sections}
+      battleLog={battleLog}
+    />
   );
 }
 

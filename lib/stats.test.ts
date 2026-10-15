@@ -183,13 +183,56 @@ describe("opponentStats / matchupRanking / rivalry", () => {
     const worstNames = r.worst.map((s) => s.name);
     // 重複なし
     expect(bestNames.filter((x) => worstNames.includes(x))).toHaveLength(0);
-    // 良い相手は勝ち越しのみ・勝率降順
+    // 良い相手は勝ち越しのみ・勝利数降順
     expect(bestNames).toEqual(["Aカモ", "B得意"]);
-    // 苦手な相手は負け越しのみ・勝率昇順（一番苦手が先頭）
+    // 苦手な相手は負け越しのみ・敗北数降順（一番苦手が先頭）
     expect(worstNames).toEqual(["Eカモられ", "D苦手"]);
     // 五分(C)はどちらにも出ない
     expect(bestNames).not.toContain("C五分");
     expect(worstNames).not.toContain("C五分");
+  });
+
+  it("勝率より勝利数、敗率より敗北数を優先して順位付けする", () => {
+    const records: BattleRecord[] = [];
+    const cases = [
+      ["少数全勝", 1, 0],
+      ["多数勝利", 3, 1],
+      ["少数全敗", 0, 1],
+      ["多数敗北", 1, 3],
+    ] as const;
+
+    cases.forEach(([opponent, wins, losses], index) => {
+      for (let battle = 0; battle < wins + losses; battle++) {
+        const sequence = records.length;
+        records.push(
+          rec(
+            makeLine({
+              year: 1700 + sequence,
+              time: "04/10 10:00",
+              selfFaction: "織田",
+              selfBranch: "騎兵",
+              opponent,
+              oppFaction: "敵",
+              result: battle < wins ? "信長の勝利" : `${opponent}の勝利`,
+            }),
+            index * 10 + battle
+          )
+        );
+      }
+    });
+
+    const ranking = matchupRanking(
+      collectWarlordBattles(records, "信長"),
+      Number.POSITIVE_INFINITY
+    );
+    expect(ranking.best.map((stat) => stat.name)).toEqual([
+      "多数勝利",
+      "少数全勝",
+    ]);
+    expect(ranking.worst.map((stat) => stat.name)).toEqual([
+      "多数敗北",
+      "少数全敗",
+    ]);
   });
 
   it("collectWarlordBattles は壁戦（対戦相手が壁）を本人の対戦履歴・勝敗から除外する", () => {
@@ -1482,6 +1525,41 @@ describe("equipSynergy", () => {
     expect(equipSynergy(noItem)).toHaveLength(0);
   });
 
+  it("指定したゲーム内年の組み合わせだけ集計する", () => {
+    const log = [
+      rec(line({ result: "信長の勝利", time: "06/10 10:00" }), 1),
+      rec(
+        line({ result: "勝頼の勝利", time: "06/11 11:00" }).replace(
+          "1600年4月",
+          "1610年4月"
+        ),
+        2
+      ),
+    ];
+
+    const stats = equipSynergy(log, { from: 1610, to: 1610 });
+
+    expect(stats).toHaveLength(1);
+    expect(stats[0]).toMatchObject({ battles: 1, wins: 0, losses: 1 });
+  });
+
+  it("武将タイプで絞り込み、該当する陣営の装備だけ集計する", () => {
+    const log = [
+      rec(line({ result: "信長の勝利", time: "06/10 10:00" }), 1),
+      rec(
+        "【1戦目】 1600年4月 06/11 11:00 京都 織田 信長 織田家 武特 騎馬隊 騎兵 なし なし V.S. 武田 勝頼 武田家 統特 足軽隊 歩兵 金の兜 カルバリン砲 勝頼の勝利 12",
+        2
+      ),
+    ];
+
+    expect(equipSynergy(log, undefined, "武特").map((row) => row.weapon)).toEqual([
+      "鬼丸",
+    ]);
+    expect(equipSynergy(log, undefined, "統特").map((row) => row.weapon)).toEqual([
+      "カルバリン砲",
+    ]);
+  });
+
   it("【壁戦】（対人ではなくNPCの壁への攻撃）は武器・品物の組み合わせ統計に含めない", () => {
     const wallLine =
       "【壁戦】 1666年12月 08/04 23:59 熊本 ななせ国 SINCLAIR キャラメルBOX 統特 ランセロ 特殊船 龍の護符 攻城櫓 V.S. エロゲソング同好会 熊本の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3";
@@ -2209,6 +2287,53 @@ describe("antiContactRanking / buildAntiIndex（指標: アンチ接触）", () 
     const r = antiContactRanking([rec(line)], unitTypes).find((x) => x.name === "守")!;
     expect(r.contacts).toBe(1);
     expect(r.antiContacts).toBe(1);
+  });
+
+  it("国フィルターはアンチ回数の対象陣営にだけ適用する", () => {
+    const master = [
+      ...unitTypes,
+      { ...EMPTY_UNIT, name: "ミニエー銃兵", goodAgainst: "騎兵:" },
+    ];
+    const log = [
+      rec(
+        antiLine({
+          selfName: "攻",
+          selfUnit: "母衣衆",
+          oppBranch: "弓兵",
+          oppName: "守",
+          time: "06/05 10:00",
+        })
+      ),
+    ];
+
+    const ownSide = antiContactRanking(log, master, undefined, undefined, "己鯖");
+    const opponentSide = antiContactRanking(
+      log,
+      master,
+      undefined,
+      undefined,
+      "敵国"
+    );
+
+    expect(ownSide).toMatchObject([
+      { name: "攻", contacts: 1, antiContacts: 1 },
+    ]);
+    expect(opponentSide).toMatchObject([
+      { name: "守", contacts: 1, antiContacts: 1 },
+    ]);
+  });
+
+  it("城壁戦は両陣営のアンチ回数から除外する", () => {
+    const wallBattle = rec(
+      "【壁戦】 1666年12月 08/04 23:59 熊本 ななせ国 SINCLAIR キャラメルBOX 統特 モニター艦 特殊船 龍の護符 攻城櫓 V.S. エロゲソング同好会 熊本の守備隊 下級城壁兵 壁 なし なし SINCLAIRの勝利 3"
+    );
+    const master = [
+      ...unitTypes,
+      { ...EMPTY_UNIT, name: "モニター艦", goodAgainst: "壁:" },
+      { ...EMPTY_UNIT, name: "下級城壁兵", goodAgainst: "特殊船:" },
+    ];
+
+    expect(antiContactRanking([wallBattle], master)).toEqual([]);
   });
 
   it("db を渡すと家督名が同じ武将を最新の名前へ統合する", () => {

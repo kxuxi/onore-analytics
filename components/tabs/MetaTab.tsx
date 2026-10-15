@@ -3,7 +3,11 @@
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import type { BattleRecord } from "@/lib/types";
-import { metaOverview, rankingPeriods } from "@/lib/stats";
+import {
+  metaOverview,
+  rankingPeriods,
+  type MetaUnitStat,
+} from "@/lib/stats";
 
 interface Props {
   log: BattleRecord[];
@@ -16,6 +20,18 @@ const TOP_N = 10;
 /** パーセント表示（整数）。 */
 function pct(rate: number): string {
   return `${Math.round(rate * 100)}%`;
+}
+
+export function sortMetaUnitsByBattleCount(
+  units: MetaUnitStat[]
+): MetaUnitStat[] {
+  return [...units].sort(
+    (a, b) =>
+      b.decided - a.decided ||
+      b.appearances - a.appearances ||
+      b.winRate - a.winRate ||
+      a.unit.localeCompare(b.unit, "ja")
+  );
 }
 
 /**
@@ -46,7 +62,11 @@ export function MetaTab({ log, onSelectUnit }: Props) {
 
   // 採用率上位（少なくとも 1 回は登場した兵種のみ）。
   const topUnits = useMemo(
-    () => units.filter((u) => u.appearances > 0).slice(0, TOP_N),
+    () =>
+      sortMetaUnitsByBattleCount(units.filter((u) => u.appearances > 0)).slice(
+        0,
+        TOP_N
+      ),
     [units]
   );
 
@@ -96,7 +116,7 @@ export function MetaTab({ log, onSelectUnit }: Props) {
         <>
           <div className="meta-block">
             <h3 className="meta-h3">
-              採用率 TOP {TOP_N}
+              戦闘数 TOP {TOP_N}
               {type && <span className="meta-h3-tag">{type}</span>}
               <span className="meta-h3-sub">全{totalBattles}戦</span>
             </h3>
@@ -115,7 +135,8 @@ export function MetaTab({ log, onSelectUnit }: Props) {
                       {u.unit}
                     </button>
                     <span className="meta-pick">
-                      採用 <strong>{pct(u.pickRate)}</strong>
+                      戦闘 <strong>{u.decided.toLocaleString("ja-JP")}</strong>戦・採用{" "}
+                      {pct(u.pickRate)}
                     </span>
                   </li>
                 ))}

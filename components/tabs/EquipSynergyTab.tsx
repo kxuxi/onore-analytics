@@ -3,7 +3,13 @@
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import type { BattleRecord } from "@/lib/types";
-import { equipSynergy, formatWinRate } from "@/lib/stats";
+import {
+  equipSynergy,
+  formatWinRate,
+  metaOverview,
+  rankingPeriods,
+  RANKING_LAST10_KEY,
+} from "@/lib/stats";
 import { FilterIcon, CloseIcon } from "@/components/icons";
 import { SearchBox } from "@/components/SearchBox";
 
@@ -33,8 +39,25 @@ export function EquipSynergyTab({ log, onSelectWarlord, onSelectEquip }: Props) 
   const [sortKey, setSortKey] = useState<SortKey>("winRate");
   const [minUses, setMinUses] = useState(10);
   const [showFilter, setShowFilter] = useState(true);
+  const [periodKey, setPeriodKey] = useState(RANKING_LAST10_KEY);
+  const [warlordType, setWarlordType] = useState("");
 
-  const stats = useMemo(() => equipSynergy(log), [log]);
+  const periods = useMemo(() => rankingPeriods(log), [log]);
+  const period = useMemo(
+    () => periods.find((option) => option.key === periodKey),
+    [periodKey, periods]
+  );
+  const periodOptions = periods.filter(
+    (option) => option.key === RANKING_LAST10_KEY || option.key === "all"
+  );
+  const warlordTypeOptions = useMemo(
+    () => metaOverview(log).traits.map((trait) => trait.trait),
+    [log]
+  );
+  const stats = useMemo(
+    () => equipSynergy(log, period, warlordType || undefined),
+    [log, period, warlordType]
+  );
 
   const view = useMemo(() => {
     const k = keyword.trim();
@@ -51,12 +74,14 @@ export function EquipSynergyTab({ log, onSelectWarlord, onSelectEquip }: Props) 
     });
   }, [stats, keyword, sortKey, minUses]);
 
-  const hasDropdownFilter = sortKey !== "winRate" || minUses !== 10;
+  const hasDropdownFilter =
+    sortKey !== "winRate" || minUses !== 10 || warlordType !== "";
   const hasFilter = !!keyword || hasDropdownFilter;
   const clearFilters = () => {
     setKeyword("");
     setSortKey("winRate");
     setMinUses(10);
+    setWarlordType("");
   };
 
   return (
@@ -66,15 +91,20 @@ export function EquipSynergyTab({ log, onSelectWarlord, onSelectEquip }: Props) 
         description="武器と品物の組み合わせごとに勝率を集計します。"
       />
 
-      <div className="stat-grid">
-        <div className="stat">
-          <div className="label">組み合わせ数</div>
-          <div className="value">{stats.length}</div>
-        </div>
-        <div className="stat">
-          <div className="label">絞り込み結果</div>
-          <div className="value">{view.length}</div>
-        </div>
+      <div className="tmx-periods" role="group" aria-label="集計期間">
+        {periodOptions.map((option) => (
+          <button
+            key={option.key}
+            type="button"
+            aria-pressed={periodKey === option.key}
+            className={
+              "tmx-period" + (periodKey === option.key ? " active" : "")
+            }
+            onClick={() => setPeriodKey(option.key)}
+          >
+            {option.label}
+          </button>
+        ))}
       </div>
 
       <p className="sr-only" role="status" aria-live="polite">
@@ -137,6 +167,21 @@ export function EquipSynergyTab({ log, onSelectWarlord, onSelectEquip }: Props) 
               {MIN_USE_OPTIONS.map((v) => (
                 <option key={v} value={v}>
                   {v}回以上
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="filter">
+            <span>武将タイプ</span>
+            <select
+              className="select"
+              value={warlordType}
+              onChange={(event) => setWarlordType(event.target.value)}
+            >
+              <option value="">すべて</option>
+              {warlordTypeOptions.map((type) => (
+                <option key={type} value={type}>
+                  {type}
                 </option>
               ))}
             </select>

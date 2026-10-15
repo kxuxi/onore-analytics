@@ -64,6 +64,7 @@ function expectCommonTemplate(
   expect(markup).toContain(`>${title}</h2>`);
   expect(markup).toContain(`class="detail-kind">${kind}</span>`);
   expect(markup).toContain("戦績サマリー");
+  expect(markup).toContain('class="detail-summary-overview"');
   expect(markup).toContain("戦闘数");
   expect(markup).toContain("戦闘ログ");
   expect(markup).toContain('<ul class="battle-list">');
@@ -92,6 +93,8 @@ describe("5種の詳細画面", () => {
     expectCommonTemplate(markup, "武将", "武将甲");
     expect(markup).toContain("所属国の遍歴");
     expect(markup).toContain('class="detail-rank-row"');
+    expect(markup).toContain('class="detail-rank-rate">1勝</span>');
+    expect(markup).toContain('class="detail-rank-record">0敗（100.0%）</span>');
     expect(markup).not.toContain('class="rank-row"');
     expect(markup).toContain('aria-label="戦績カードを画像として保存"');
     expect(markup).toContain('aria-label="ウォッチリストに追加"');
@@ -141,6 +144,35 @@ describe("5種の詳細画面", () => {
     expect(markup).toContain("長槍兵");
     expect(markup).toContain('class="detail-rank-rate">1敗</span>');
     expect(markup).toContain('class="detail-rank-record">0勝（0.0%）</span>');
+  });
+
+  it("武将の相性ランキングも3件から追加表示できる", () => {
+    const log = ["敵一", "敵二", "敵三", "敵四"].map((opponent, index) => {
+      const time = `06/28 08:0${6 + index}`;
+      return {
+        ...LOG[0],
+        line: BATTLE_LINE.replace("06/28 08:06", time).replace(
+          "武将乙",
+          opponent
+        ),
+        time: `1609年1月 ${time}`,
+        savedAt: index + 1,
+      };
+    });
+    const markup = renderToStaticMarkup(
+      <WarlordDetail
+        name="武将甲"
+        db={DB}
+        log={log}
+        colors={{}}
+        canComment={false}
+        onSelectFaction={vi.fn()}
+        {...callbacks}
+      />
+    );
+
+    expect(markup).toContain('aria-label="相性の良い相手をあと1件表示"');
+    expect(markup.match(/class="detail-rank-row"/g)).toHaveLength(3);
   });
 
   it.each([
