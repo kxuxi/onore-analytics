@@ -123,18 +123,6 @@
   line-height: var(--line-height-control);
 }
 
-.wiki-page-link time {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-2xs);
-  line-height: var(--line-height-caption);
-}
-
 .wiki-sidebar-state {
   margin: 0;
   padding: var(--space-4) var(--space-2);
