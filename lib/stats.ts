@@ -276,9 +276,12 @@ export interface LatestUnitInfo {
  */
 export function latestUnitByWarlord(
   log: BattleRecord[],
-  db?: WarlordMap
+  db?: WarlordMap,
+  options?: { excludeUnits?: Iterable<string> }
 ): Map<string, LatestUnitInfo> {
   const now = new Date();
+  // 除外したい兵種（例: 偵察では「農民」を省いて、農民じゃない最新戦闘を採用する）。
+  const excludeUnits = new Set(options?.excludeUnits ?? []);
   // name -> 最新戦闘（order=在ゲーム年月, t=行動の実時刻でタイブレーク）の兵種。
   const byName = new Map<
     string,
@@ -295,6 +298,7 @@ export function latestUnitByWarlord(
       if (!name) continue;
       const unit = side.unit ? normalizeDisplayToken(side.unit) : "";
       if (!unit) continue; // 兵種が読めない戦闘は最新兵種の候補にしない
+      if (excludeUnits.has(unit)) continue; // 除外兵種は最新兵種の候補にしない
       const prev = byName.get(name);
       if (!prev || order > prev.order || (order === prev.order && t > prev.t)) {
         byName.set(name, { order, t, unit, branch: side.branch?.trim() ?? "" });

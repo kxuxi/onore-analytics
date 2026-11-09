@@ -11,6 +11,10 @@ import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
 import { displayWarlordType } from "@/lib/warlordType";
 import { PageHeader } from "@/components/layout/PageHeader";
 
+// 偵察の兵種表示から省く兵種。農民は初期兵種で情報量が乏しいため、
+// 農民じゃない最新の戦闘の兵種を優先して表示する。
+const SCOUT_EXCLUDED_UNITS = ["農民"] as const;
+
 interface Props {
   db: WarlordMap;
   /** 選択中の期の戦闘ログ。武将ごとの「その期で最後に使った兵種」を出すのに使う。 */
@@ -138,7 +142,11 @@ export function ScoutTab({ db, log, colors, onSelectWarlord }: Props) {
 
   // 選択中の期のログから、武将ごとの「その期で最後に使った兵種」を求める。
   // 名前が同じでも前の期の兵種を引きずらないようにする（家中は household で共有）。
-  const latestUnits = useMemo(() => latestUnitByWarlord(log, db), [log, db]);
+  // 偵察では「農民」を省き、農民じゃない最新の戦闘の兵種を表示する。
+  const latestUnits = useMemo(
+    () => latestUnitByWarlord(log, db, { excludeUnits: SCOUT_EXCLUDED_UNITS }),
+    [log, db]
+  );
 
   const rows = useMemo<ScoutRow[]>(() => {
     const names = splitNames(text);
