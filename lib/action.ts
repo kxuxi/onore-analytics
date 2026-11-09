@@ -30,13 +30,22 @@ export type NoRestLabel = "固定分" | "休養なし" | "末尾固定";
 
 /** この戦数以上の連続「末尾固定」で表示が「固定分」へ進化する閾値。 */
 export const NO_REST_EVOLVE_STREAK = 5;
-const ACTION_DONE_MINUTES = 40;
-const ACTION_READY_MINUTES = 80;
+/** 出兵（または守備敗北）からこの分数が経つと、再び出兵できる。 */
+export const ACTION_DONE_MINUTES = 40;
+/** 出兵からこの分数を超えて観測が無ければ「動向不明」とする。 */
+export const ACTION_READY_MINUTES = 80;
 
+/**
+ * 守備側から見た行動状況のラベル。
+ *  - done     … 出兵直後で、まだ次の出兵ができない（クールタイム）
+ *  - ready    … クールタイムが明け、次の出兵が観測されていない（今いちばん来うる）
+ *  - unknown  … 観測が途切れていて動向が読めない（来うるが確度は低い）
+ *  - depleted … 守備敗北で兵が減っている
+ */
 export const ACTION_LABEL: Record<ActionStatus, string> = {
-  done: "行動済み",
-  ready: "未行動",
-  unknown: "行動可",
+  done: "クールタイム",
+  ready: "出兵可能",
+  unknown: "動向不明",
   depleted: "兵力減",
   none: "データなし",
 };

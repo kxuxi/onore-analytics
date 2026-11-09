@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BattleRecord, Warlord, WarlordMap } from "@/lib/types";
 import { FilterPanel, type ActiveFilter } from "@/components/FilterPanel";
 import { SearchBox } from "@/components/SearchBox";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
-import { normalizationMap } from "@/lib/storage";
+import { lookup, normalizationMap } from "@/lib/storage";
+import { getMyWarlord } from "@/lib/myWarlord";
 import { latestUnitByWarlord } from "@/lib/stats";
 import { displayWarlordType } from "@/lib/warlordType";
 import {
@@ -14,8 +15,19 @@ import {
   formatElapsed,
   getActionInfo,
   STATUS_ORDER,
+  type ActionInfo,
   type ActionStatus,
 } from "@/lib/action";
+import {
+  buildLastTargets,
+  computeForecast,
+  floorToSlot,
+  formatClock,
+  hourlyActivity,
+  latestImportedAt,
+  type Forecast,
+  type LastTarget,
+} from "@/lib/damageForecast";
 import {
   buildActionAvailability,
   type ActionAvailability,
@@ -82,14 +94,8 @@ export function buildDamageCandidates(
   allDb: WarlordMap,
   log: readonly BattleRecord[]
 ): DamageCandidate[] {
-  const canonicalNames = normalizationMap(allDb);
+  const { canonicalNames, canonicalHouseholds } = canonicalMaps(allDb);
   const scopedCanonicalNames = normalizationMap(db);
-  const canonicalHouseholds: Record<string, string> = {};
-  for (const warlord of Object.values(allDb)) {
-    if (!warlord.household) continue;
-    canonicalHouseholds[warlord.household] =
-      canonicalNames[warlord.name] ?? warlord.name;
-  }
   const availabilityByWarlord = buildActionAvailability(
     log,
     canonicalNames,
@@ -173,6 +179,18 @@ export function buildDamageCandidates(
   return candidates;
 }
 
+/** 別名・家督名を代表名へ寄せる対応表（被弾表の候補と出兵先の集計で共有する）。 */
+function canonicalMaps(allDb: WarlordMap) {
+  const canonicalNames = normalizationMap(allDb);
+  const canonicalHouseholds: Record<string, string> = {};
+  for (const warlord of Object.values(allDb)) {
+    if (!warlord.household) continue;
+    canonicalHouseholds[warlord.household] =
+      canonicalNames[warlord.name] ?? warlord.name;
+  }
+  return { canonicalNames, canonicalHouseholds };
+}
+
 const STATUS_CLASS: Record<ActionStatus, string> = {
   done: "status done",
   ready: "status ready",
@@ -181,13 +199,417 @@ const STATUS_CLASS: Record<ActionStatus, string> = {
   none: "status none",
 };
 
-// 集計・フィルタに表示するステータス（none を除く）。ラベルは ACTION_LABEL から導出。
+// 集計・フィルタに表示するステータス（none を除く）。守備側の警戒度が高い順。
 const STATUS_SUMMARY_ORDER = [
   "ready",
-  "unknown",
   "done",
   "depleted",
+  "unknown",
 ] as const;
+
+/** 集計タイルの補足（そのステータスが守備側にとって何を意味するか）。 */
+const STATUS_HINT: Record<(typeof STATUS_SUMMARY_ORDER)[number], string> = {
+  ready: "今すぐ来うる",
+  done: "まもなく出兵可能",
+  depleted: "守備敗北で兵が減少",
+  unknown: "観測が途切れている",
+};
+
+type RoleFilter = "" | "attack" | "defense-only";
+type DamageView = "timeline" | "list";
+
+/** ブラウザに保存する被弾表の表示設定。 */
+interface DamagePrefs {
+  view: DamageView;
+  statusFilter: "" | ActionStatus;
+  includeFactions: string[];
+  excludeFactions: string[];
+  roleFilter: RoleFilter;
+  notify: boolean;
+}
+
+const PREFS_KEY = "onore.damage.prefs.v1";
+const DEFAULT_PREFS: DamagePrefs = {
+  view: "timeline",
+  statusFilter: "",
+  includeFactions: [],
+  excludeFactions: [],
+  // 守備の判断では出兵してこない「守備のみ」の武将はノイズになるため既定で外す。
+  roleFilter: "attack",
+  notify: false,
+};
+
+function readPrefs(): DamagePrefs | null {
+  try {
+    const raw = window.localStorage.getItem(PREFS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<DamagePrefs>;
+    return {
+      ...DEFAULT_PREFS,
+      ...parsed,
+      includeFactions: Array.isArray(parsed.includeFactions)
+        ? parsed.includeFactions
+        : [],
+      excludeFactions: Array.isArray(parsed.excludeFactions)
+        ? parsed.excludeFactions
+        : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writePrefs(prefs: DamagePrefs) {
+  try {
+    window.localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  } catch {
+    // 保存できない環境（プライベートモード等）では、その場限りの設定で動かす。
+  }
+}
+
+/** 並び順をこの分数より長く固定していたら、更新を促す。 */
+const ORDER_STALE_MINUTES = 5;
+/** 最新の観測からこの分数を超えたら、データが古い警告を出す。 */
+const OBSERVATION_STALE_MINUTES = 30;
+/** 固定行動の予測時刻の何分前に通知するか。 */
+const NOTIFY_LEAD_MINUTES = 5;
+
+const minutesBetween = (from: Date, to: Date) =>
+  Math.round((to.getTime() - from.getTime()) / 60000);
+
+/** 「あと12分」「3分前」のような相対表記。 */
+function relativeLabel(target: Date, now: Date): string {
+  const diff = minutesBetween(now, target);
+  if (diff > 0) return `あと${formatElapsed(diff)}`;
+  if (diff === 0) return "まもなく";
+  return `${formatElapsed(-diff)}前`;
+}
+
+interface DamageEntry {
+  key: string;
+  w: Warlord;
+  info: ActionInfo;
+  forecast: Forecast;
+  /** 並び替え・時間帯分けに使う、並び固定時点の判定。 */
+  orderInfo: ActionInfo;
+  orderForecast: Forecast;
+  hasAttack: boolean;
+  canOpenDetail: boolean;
+  actions: string[];
+  lastTarget?: LastTarget;
+  /** 前回の出兵先が自国・同盟（除外する国）だったか。 */
+  targetsMine: boolean;
+}
+
+/** 時間帯分けで「動向不明」の折りたたみに回すか（予測も無く観測が途切れている）。 */
+const isStaleUnknown = (e: DamageEntry) =>
+  e.orderInfo.status === "unknown" && e.orderForecast.predictedAt == null;
+
+function compareEntries(a: DamageEntry, b: DamageEntry): number {
+  const sa = isStaleUnknown(a) ? 1 : 0;
+  const sb = isStaleUnknown(b) ? 1 : 0;
+  if (sa !== sb) return sa - sb;
+  const ta = a.orderForecast.expectedAt?.getTime() ?? Infinity;
+  const tb = b.orderForecast.expectedAt?.getTime() ?? Infinity;
+  if (ta !== tb) return ta - tb;
+  const so =
+    STATUS_ORDER[a.orderInfo.status] - STATUS_ORDER[b.orderInfo.status];
+  if (so !== 0) return so;
+  return a.w.name.localeCompare(b.w.name, "ja");
+}
+
+function fixedBadgeClass(label: ActionInfo["noRestLabel"]): string {
+  if (label === "固定分") return "status no-rest no-rest--evolved";
+  if (label === "休養なし") return "status no-rest no-rest--strict";
+  return "status no-rest no-rest--loose";
+}
+
+/** 固定バッジの本文。連続戦数と「毎時◯5分」を画面上に出す（ツールチップに隠さない）。 */
+function fixedBadgeText(info: ActionInfo, forecast: Forecast): string | null {
+  if (!info.noRestLabel) return null;
+  const streak =
+    info.noRestLabel === "休養なし" ? info.strictStreak : info.noRestStreak;
+  const digit =
+    forecast.fixedDigit != null ? `・毎時◯${forecast.fixedDigit}分` : "";
+  return `${info.noRestLabel} ${streak}戦${digit}`;
+}
+
+/** 行の左端に出す「次に来る時刻」。 */
+function NextAttackTime({ entry, now }: { entry: DamageEntry; now: Date }) {
+  const { info, forecast } = entry;
+  if (forecast.predictedAt) {
+    const spread = forecast.predictedSpread ?? 0;
+    const from = new Date(forecast.predictedAt.getTime() - spread * 60000);
+    return (
+      <div className="dmg-time is-predicted">
+        <span className="dmg-time-main">
+          {spread > 0
+            ? `${formatClock(from)}〜${formatClock(forecast.predictedAt)}`
+            : formatClock(forecast.predictedAt)}
+        </span>
+        <span className="dmg-time-sub">
+          予測・{relativeLabel(forecast.predictedAt, now)}
+        </span>
+      </div>
+    );
+  }
+  if (
+    (info.status === "done" || info.status === "depleted") &&
+    forecast.readyAt
+  ) {
+    return (
+      <div className="dmg-time is-cooldown">
+        <span className="dmg-time-main">{formatClock(forecast.readyAt)}〜</span>
+        <span className="dmg-time-sub">
+          出兵可能まで{relativeLabel(forecast.readyAt, now).replace("あと", "")}
+        </span>
+      </div>
+    );
+  }
+  if (info.status === "ready") {
+    return (
+      <div className="dmg-time is-now">
+        <span className="dmg-time-main">今</span>
+        <span className="dmg-time-sub">いつでも来うる</span>
+      </div>
+    );
+  }
+  return (
+    <div className="dmg-time is-unknown">
+      <span className="dmg-time-main">—</span>
+      <span className="dmg-time-sub">予測できない</span>
+    </div>
+  );
+}
+
+/** 0〜23時の観測件数を単色の濃淡で並べた帯（時間帯の傾向）。 */
+function HourStrip({ counts }: { counts: number[] }) {
+  const max = Math.max(1, ...counts);
+  const total = counts.reduce((a, b) => a + b, 0);
+  const peak = counts.indexOf(Math.max(...counts));
+  return (
+    <div className="dmg-hours">
+      <p className="sr-only">
+        {total > 0
+          ? `観測${total}件。最も多いのは${peak}時台（${counts[peak]}件）`
+          : "観測なし"}
+      </p>
+      <ol className="dmg-hours-strip" aria-hidden="true">
+        {counts.map((c, h) => (
+          <li
+            key={h}
+            className={"dmg-hour" + (c > 0 ? " has" : "")}
+            style={
+              c > 0
+                ? ({ "--dmg-heat": `${Math.round(25 + (c / max) * 75)}%` } as React.CSSProperties)
+                : undefined
+            }
+            title={`${h}時台：${c}件`}
+          />
+        ))}
+      </ol>
+      <div className="dmg-hours-axis" aria-hidden="true">
+        <span>0時</span>
+        <span>6時</span>
+        <span>12時</span>
+        <span>18時</span>
+        <span>24時</span>
+      </div>
+    </div>
+  );
+}
+
+function DamageRow({
+  entry,
+  now,
+  colors,
+  expanded,
+  onToggle,
+  onSelectWarlord,
+}: {
+  entry: DamageEntry;
+  now: Date;
+  colors: FactionColorMap;
+  expanded: boolean;
+  onToggle: () => void;
+  onSelectWarlord: (name: string) => void;
+}) {
+  const { w, info, forecast, hasAttack, canOpenDetail, lastTarget } = entry;
+  const detailId = `dmg-detail-${entry.key}`;
+  const fixedText = fixedBadgeText(info, forecast);
+  const branch = w.branch?.trim();
+  const type = displayWarlordType(w);
+  const recent = entry.actions.slice(-8).reverse();
+
+  return (
+    <li className={"dmg-row" + (entry.targetsMine ? " is-mine" : "")}>
+      <div className="dmg-row-main">
+        <NextAttackTime entry={entry} now={now} />
+        <div className="dmg-who">
+          <div className="dmg-who-line">
+            {canOpenDetail ? (
+              <button
+                type="button"
+                className="link-like dmg-name"
+                onClick={() => onSelectWarlord(w.name)}
+                title={`${w.name} の戦績を見る`}
+              >
+                {w.name}
+              </button>
+            ) : (
+              <span className="dmg-name">{w.name}</span>
+            )}
+            <span className={STATUS_CLASS[info.status]}>
+              {ACTION_LABEL[info.status]}
+            </span>
+            {fixedText && (
+              <span className={fixedBadgeClass(info.noRestLabel)}>
+                {fixedText}
+              </span>
+            )}
+            {!hasAttack && (
+              <span className="status defense-only">守備のみ</span>
+            )}
+            {entry.targetsMine && (
+              <span className="status dmg-mine">⚠ 自国を攻撃</span>
+            )}
+          </div>
+          <div className="dmg-meta">
+            {w.faction ? (
+              <span
+                className="tag faction"
+                style={factionBadgeStyle(w.faction, colors)}
+              >
+                {w.faction}
+              </span>
+            ) : null}
+            {w.unit ? (
+              <span className="tag unit">{w.unit}</span>
+            ) : null}
+            {(branch || type) && (
+              <span className="dmg-meta-text">
+                {[branch, type].filter(Boolean).join("・")}
+              </span>
+            )}
+            {forecast.baseAt && (
+              <span className="dmg-meta-text">
+                {info.status === "depleted" ? "守備敗北" : "前回"}{" "}
+                {formatClock(forecast.baseAt)}（{relativeLabel(forecast.baseAt, now)}）
+              </span>
+            )}
+            {lastTarget && (
+              <span className="dmg-meta-text">
+                → {lastTarget.place ?? "?"}
+                {lastTarget.defenderFaction
+                  ? `（${lastTarget.defenderFaction}${
+                      lastTarget.wall ? "の城壁" : ""
+                    }）`
+                  : ""}
+              </span>
+            )}
+          </div>
+        </div>
+        <button
+          type="button"
+          className="dmg-expand"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          aria-controls={detailId}
+          aria-label={`${w.name} の行動パターンを${expanded ? "閉じる" : "見る"}`}
+        >
+          {expanded ? "▴" : "▾"}
+        </button>
+      </div>
+      {expanded && (
+        <div id={detailId} className="dmg-detail">
+          <div className="dmg-detail-block">
+            <h4 className="dmg-detail-title">時間帯の傾向（今期の観測）</h4>
+            <HourStrip counts={hourlyActivity(entry.actions, now)} />
+          </div>
+          <div className="dmg-detail-block">
+            <h4 className="dmg-detail-title">直近の出兵時刻</h4>
+            {recent.length > 0 ? (
+              <ul className="dmg-chips">
+                {recent.map((a) => (
+                  <li key={a} className="dmg-chip">
+                    {a}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="muted dmg-detail-empty">出兵の観測はありません。</p>
+            )}
+          </div>
+          <div className="dmg-detail-block">
+            <h4 className="dmg-detail-title">前回の攻撃先</h4>
+            {lastTarget ? (
+              <p className="dmg-detail-text">
+                {lastTarget.at} {lastTarget.place ?? ""}{" "}
+                {lastTarget.wall
+                  ? `${lastTarget.defenderFaction ?? ""}の城壁`
+                  : `${lastTarget.defenderFaction ?? ""} ${
+                      lastTarget.defenderName ?? ""
+                    }`}
+              </p>
+            ) : (
+              <p className="muted dmg-detail-empty">記録がありません。</p>
+            )}
+          </div>
+          {canOpenDetail && (
+            <button
+              type="button"
+              className="btn dmg-detail-link"
+              onClick={() => onSelectWarlord(w.name)}
+            >
+              {w.name} の詳細ページを開く
+            </button>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
+/** 国の複数選択（押すたびに選択／解除）。 */
+function FactionChips({
+  label,
+  options,
+  selected,
+  onChange,
+}: {
+  label: string;
+  options: string[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+}) {
+  return (
+    <fieldset className="filter dmg-faction-filter">
+      <legend>{label}</legend>
+      {options.length === 0 ? (
+        <span className="muted">国のデータがありません</span>
+      ) : (
+        <div className="dmg-faction-chips">
+          {options.map((f) => {
+            const on = selected.includes(f);
+            return (
+              <button
+                key={f}
+                type="button"
+                className={"dmg-faction-chip" + (on ? " is-on" : "")}
+                aria-pressed={on}
+                onClick={() =>
+                  onChange(on ? selected.filter((x) => x !== f) : [...selected, f])
+                }
+              >
+                {f}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </fieldset>
+  );
+}
 
 export function DamageTab({
   db,
@@ -197,14 +619,46 @@ export function DamageTab({
   onSelectWarlord,
 }: Props) {
   const [now, setNow] = useState<Date | null>(null);
-  const [statusFilter, setStatusFilter] = useState<"" | ActionStatus>("");
-  const [factionFilter, setFactionFilter] = useState("");
-  const [roleFilter, setRoleFilter] = useState<"" | "attack" | "defense-only">("");
+  // 並び順・時間帯分けを固定する時刻。読んでいる途中で行が入れ替わらないようにする。
+  const [orderNow, setOrderNow] = useState<Date | null>(null);
+  const [prefs, setPrefs] = useState<DamagePrefs>(DEFAULT_PREFS);
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [nameQuery, setNameQuery] = useState("");
   const [showFilter, setShowFilter] = useState(true);
+  const [showUnknown, setShowUnknown] = useState(false);
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const [notifyError, setNotifyError] = useState<string | null>(null);
+  const notifiedRef = useRef(new Set<string>());
+
+  const { view, statusFilter, includeFactions, excludeFactions, roleFilter, notify } =
+    prefs;
+  const updatePrefs = useCallback(
+    (patch: Partial<DamagePrefs>) => setPrefs((p) => ({ ...p, ...patch })),
+    []
+  );
+
+  // 保存済みの表示設定を読み込む。未保存なら「自分の武将」の国を除外（自国）の初期値にする。
+  useEffect(() => {
+    const saved = readPrefs();
+    if (saved) {
+      setPrefs(saved);
+    } else {
+      const me = getMyWarlord();
+      const myFaction = me ? lookup(allDb ?? db, me)?.faction?.trim() : undefined;
+      if (myFaction) setPrefs((p) => ({ ...p, excludeFactions: [myFaction] }));
+    }
+    setPrefsLoaded(true);
+    // 初回のみ。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (prefsLoaded) writePrefs(prefs);
+  }, [prefs, prefsLoaded]);
+
+  const refreshOrder = useCallback(() => setOrderNow(new Date()), []);
 
   // 経過時間をリアルタイム表示するため 30 秒ごとに現在時刻を更新。
-  // タブが非表示の間はインターバルを止め、再表示時に即時更新して再開する。
+  // 通知が無効でタブが非表示の間は止め、再表示時に即時更新して並びも更新する。
   useEffect(() => {
     let id: number | undefined;
     const tick = () => setNow(new Date());
@@ -219,24 +673,46 @@ export function DamageTab({
     };
     const onVisibility = () => {
       if (document.hidden) {
-        stop();
+        if (!notify) stop();
       } else {
         tick();
+        refreshOrder();
         start();
       }
     };
     tick();
-    if (!document.hidden) start();
+    if (!document.hidden || notify) start();
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
       stop();
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, []);
+  }, [notify, refreshOrder]);
+
+  // データや絞り込みが変わったら、その時点の並びに更新する。
+  useEffect(() => {
+    refreshOrder();
+  }, [
+    log,
+    db,
+    allDb,
+    statusFilter,
+    includeFactions,
+    excludeFactions,
+    roleFilter,
+    nameQuery,
+    view,
+    refreshOrder,
+  ]);
 
   const candidates = useMemo(
     () => buildDamageCandidates(db, allDb ?? db, log),
     [db, allDb, log]
+  );
+  const maps = useMemo(() => canonicalMaps(allDb ?? db), [allDb, db]);
+  const lastTargets = useMemo(
+    () => buildLastTargets(log, maps.canonicalNames, maps.canonicalHouseholds),
+    [log, maps]
   );
 
   // 選択中の期のログから、武将ごとの「その期で最後に使った兵種」を求める。
@@ -245,23 +721,11 @@ export function DamageTab({
     [log, allDb, db]
   );
 
-  const rows = useMemo(() => {
-    if (!now) return [];
-    const q = nameQuery.trim().toLowerCase();
-
-    const merged: {
-      w: Warlord;
-      info: ReturnType<typeof getActionInfo>;
-      hasAttack: boolean;
-      canOpenDetail: boolean;
-    }[] = candidates.map(
-      ({
-        warlord,
-        actionWarlord,
-        availability,
-        hasAttack,
-        canOpenDetail,
-      }) => {
+  const entries = useMemo<DamageEntry[]>(() => {
+    if (!now || !orderNow) return [];
+    const mine = new Set(excludeFactions);
+    return candidates.map(
+      ({ warlord, actionWarlord, availability, hasAttack, canOpenDetail }) => {
         // 名前が同じでも前の期の兵種を引きずらないよう、その期の最新兵種で上書きする。
         const latest = latestUnits.get(warlord.name);
         const w = latest
@@ -271,41 +735,100 @@ export function DamageTab({
               unit: latest.unit || warlord.unit,
             }
           : warlord;
+        const info = getActionInfo(actionWarlord, now, availability);
+        const orderInfo = getActionInfo(actionWarlord, orderNow, availability);
+        const canonical = maps.canonicalNames[w.name] ?? w.name;
+        const lastTarget = lastTargets.get(canonical);
+        const actions = Array.from(
+          new Set([
+            ...(actionWarlord.actions ?? []),
+            ...(availability?.latestAttackAt ? [availability.latestAttackAt] : []),
+          ])
+        ).sort();
         return {
+          key: w.name,
           w,
-          info: getActionInfo(actionWarlord, now, availability),
+          info,
+          forecast: computeForecast(info, now),
+          orderInfo,
+          orderForecast: computeForecast(orderInfo, orderNow),
           hasAttack,
           canOpenDetail,
+          actions,
+          lastTarget,
+          targetsMine:
+            !!lastTarget?.defenderFaction && mine.has(lastTarget.defenderFaction),
         };
       }
     );
+  }, [candidates, latestUnits, lastTargets, maps, now, orderNow, excludeFactions]);
 
-    return merged
+  // ステータス以外の絞り込みを適用した行（集計タイルの母数）。
+  const baseRows = useMemo(() => {
+    const q = nameQuery.trim().toLowerCase();
+    const include = new Set(includeFactions);
+    const exclude = new Set(excludeFactions);
+    return entries
       .filter((r) => r.info.status !== "none")
-      .filter((r) => (statusFilter ? r.info.status === statusFilter : true))
-      .filter((r) => (factionFilter ? r.w.faction === factionFilter : true))
+      .filter((r) =>
+        include.size > 0 ? include.has(r.w.faction?.trim() ?? "") : true
+      )
+      .filter((r) => !exclude.has(r.w.faction?.trim() ?? ""))
       .filter((r) => {
         if (roleFilter === "attack") return r.hasAttack;
         if (roleFilter === "defense-only") return !r.hasAttack;
         return true;
       })
-      .filter((r) => (q ? r.w.name.toLowerCase().includes(q) : true))
-      .sort((a, b) => {
-        // 行動可 → 不明 → 行動済みの順。
-        // 同ステータス内は経過時間の昇順（短い＝さっき行動可になった人が上）。
-        const so = STATUS_ORDER[a.info.status] - STATUS_ORDER[b.info.status];
-        if (so !== 0) return so;
-        return (a.info.minutes ?? 0) - (b.info.minutes ?? 0);
-      });
-  }, [
-    candidates,
-    latestUnits,
-    now,
-    statusFilter,
-    factionFilter,
-    roleFilter,
-    nameQuery,
-  ]);
+      .filter((r) => (q ? r.w.name.toLowerCase().includes(q) : true));
+  }, [entries, nameQuery, includeFactions, excludeFactions, roleFilter]);
+
+  const rows = useMemo(
+    () =>
+      baseRows
+        .filter((r) => (statusFilter ? r.info.status === statusFilter : true))
+        .sort(compareEntries),
+    [baseRows, statusFilter]
+  );
+
+  const counts = useMemo(() => {
+    const c: Record<(typeof STATUS_SUMMARY_ORDER)[number], number> = {
+      ready: 0,
+      done: 0,
+      depleted: 0,
+      unknown: 0,
+    };
+    for (const r of baseRows) {
+      if (r.info.status in c) c[r.info.status as keyof typeof c]++;
+    }
+    return c;
+  }, [baseRows]);
+
+  // 時間帯ビュー：今すぐ／10分ごとの枠／動向不明（折りたたみ）。
+  const timeline = useMemo(() => {
+    if (!orderNow) return { nowRows: [], slots: [], unknownRows: [] };
+    const nowRows: DamageEntry[] = [];
+    const unknownRows: DamageEntry[] = [];
+    const slotMap = new Map<number, DamageEntry[]>();
+    for (const r of rows) {
+      if (isStaleUnknown(r)) {
+        unknownRows.push(r);
+        continue;
+      }
+      const at = r.orderForecast.expectedAt;
+      if (!at || at.getTime() <= orderNow.getTime()) {
+        nowRows.push(r);
+        continue;
+      }
+      const key = floorToSlot(at).getTime();
+      const list = slotMap.get(key) ?? [];
+      list.push(r);
+      slotMap.set(key, list);
+    }
+    const slots = Array.from(slotMap.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([start, list]) => ({ start: new Date(start), rows: list }));
+    return { nowRows, slots, unknownRows };
+  }, [rows, orderNow]);
 
   // 国の選択肢（行動時刻を持つ武将の勢力名）
   const factionOptions = useMemo(() => {
@@ -322,32 +845,94 @@ export function DamageTab({
     ).sort((a, b) => a.localeCompare(b, "ja"));
   }, [candidates]);
 
-  const counts = useMemo(() => {
-    const c = {
-      done: 0,
-      ready: 0,
-      unknown: 0,
-      depleted: 0,
-      defenseOnly: 0,
-    };
-    for (const { info, hasAttack } of rows) {
-      if (info.status === "done") c.done++;
-      else if (info.status === "ready") c.ready++;
-      else if (info.status === "unknown") c.unknown++;
-      else if (info.status === "depleted") c.depleted++;
-      if (!hasAttack) c.defenseOnly++;
+  // データの新しさ：最新の観測時刻と最終取り込み時刻。
+  const freshness = useMemo(() => {
+    if (!now) return null;
+    let latest: Date | null = null;
+    for (const e of entries) {
+      const at = e.forecast.baseAt;
+      if (at && (!latest || at > latest)) latest = at;
     }
-    return c;
-  }, [rows]);
+    const imported = latestImportedAt(log);
+    return {
+      latestObservedAt: latest,
+      importedAt: imported != null ? new Date(imported) : null,
+      stale:
+        latest == null ||
+        minutesBetween(latest, now) > OBSERVATION_STALE_MINUTES,
+    };
+  }, [entries, log, now]);
+
+  // 固定行動の予測時刻が近づいたら通知する（表示中の絞り込み対象のみ・1予測につき1回）。
+  useEffect(() => {
+    if (!notify || !now || typeof Notification === "undefined") return;
+    if (Notification.permission !== "granted") return;
+    for (const r of rows) {
+      const p = r.forecast.predictedAt;
+      if (!p) continue;
+      const until = minutesBetween(now, p);
+      if (until < 0 || until > NOTIFY_LEAD_MINUTES) continue;
+      const key = `${r.w.name}@${p.getTime()}`;
+      if (notifiedRef.current.has(key)) continue;
+      notifiedRef.current.add(key);
+      try {
+        new Notification(`${r.w.name} が ${formatClock(p)} ごろ出兵予測`, {
+          body: [r.w.faction, r.w.unit, fixedBadgeText(r.info, r.forecast)]
+            .filter(Boolean)
+            .join("・"),
+          tag: key,
+        });
+      } catch {
+        // 通知を出せない環境では何もしない。
+      }
+    }
+  }, [notify, now, rows]);
+
+  const toggleNotify = async () => {
+    setNotifyError(null);
+    if (notify) {
+      updatePrefs({ notify: false });
+      return;
+    }
+    if (typeof Notification === "undefined") {
+      setNotifyError("このブラウザは通知に対応していません。");
+      return;
+    }
+    const permission =
+      Notification.permission === "default"
+        ? await Notification.requestPermission()
+        : Notification.permission;
+    if (permission === "granted") updatePrefs({ notify: true });
+    else
+      setNotifyError(
+        "通知が許可されていません。ブラウザの設定でこのサイトの通知を許可してください。"
+      );
+  };
+
+  const toggleExpanded = (key: string) =>
+    setExpanded((cur) => {
+      const next = new Set(cur);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   // 検索ボックスとは別にトグルするドロップダウン系の絞り込み。
-  const hasDropdownFilter = !!(statusFilter || factionFilter || roleFilter);
-  const hasFilter = !!(nameQuery || statusFilter || factionFilter || roleFilter);
+  const hasDropdownFilter = !!(
+    statusFilter ||
+    includeFactions.length ||
+    excludeFactions.length ||
+    roleFilter
+  );
+  const hasFilter = !!(nameQuery || hasDropdownFilter);
   const clearFilters = () => {
     setNameQuery("");
-    setStatusFilter("");
-    setFactionFilter("");
-    setRoleFilter("");
+    updatePrefs({
+      statusFilter: "",
+      includeFactions: [],
+      excludeFactions: [],
+      roleFilter: "",
+    });
   };
   const activeFilters: ActiveFilter[] = [
     ...(statusFilter
@@ -356,17 +941,27 @@ export function DamageTab({
             key: "status",
             label: "ステータス",
             value: ACTION_LABEL[statusFilter],
-            onRemove: () => setStatusFilter(""),
+            onRemove: () => updatePrefs({ statusFilter: "" }),
           },
         ]
       : []),
-    ...(factionFilter
+    ...(includeFactions.length
       ? [
           {
-            key: "faction",
+            key: "include",
             label: "国",
-            value: factionFilter,
-            onRemove: () => setFactionFilter(""),
+            value: includeFactions.join("・"),
+            onRemove: () => updatePrefs({ includeFactions: [] }),
+          },
+        ]
+      : []),
+    ...(excludeFactions.length
+      ? [
+          {
+            key: "exclude",
+            label: "除外",
+            value: excludeFactions.join("・"),
+            onRemove: () => updatePrefs({ excludeFactions: [] }),
           },
         ]
       : []),
@@ -376,76 +971,147 @@ export function DamageTab({
             key: "role",
             label: "役割",
             value: roleFilter === "attack" ? "出兵あり" : "守備のみ",
-            onRemove: () => setRoleFilter(""),
+            onRemove: () => updatePrefs({ roleFilter: "" }),
           },
         ]
       : []),
   ];
 
+  const orderAge = now && orderNow ? minutesBetween(orderNow, now) : 0;
+  const orderStale = orderAge >= ORDER_STALE_MINUTES;
+
+  const renderRows = (list: DamageEntry[]) => (
+    <ul className="dmg-list">
+      {list.map((entry) => (
+        <DamageRow
+          key={entry.key}
+          entry={entry}
+          now={now!}
+          colors={colors}
+          expanded={expanded.has(entry.key)}
+          onToggle={() => toggleExpanded(entry.key)}
+          onSelectWarlord={onSelectWarlord}
+        />
+      ))}
+    </ul>
+  );
+
   return (
     <section className="panel">
       <PageHeader
         title="被弾表（行動状況）"
-        description={
-          <>
-            出兵・守備の観測時刻と勝敗から行動状況を判定します。
-            出兵後は40分未満={ACTION_LABEL.done} / 40分以上1時間20分未満=
-            {ACTION_LABEL.ready} / 1時間20分以上={ACTION_LABEL.unknown}。
-            守備敗北後は40分未満={ACTION_LABEL.depleted} / 40分以上=
-            {ACTION_LABEL.unknown}です。
-          </>
-        }
+        description="観測した出兵・守備の時刻から、敵武将が次にいつ出兵してくるかを予測します。"
       />
-      <p className="muted" style={{ margin: 0, fontSize: 12 }}>
-        最終更新{" "}
-        {now ? now.toLocaleTimeString("ja-JP", { hour12: false }) : "--:--:--"}
-        （30秒ごとに自動更新）
-      </p>
 
-      <div className="stat-grid">
-        {STATUS_SUMMARY_ORDER.map((s) => (
-          <div className="stat" key={s}>
-            <div className="label">{ACTION_LABEL[s]}</div>
-            <div className="value">{counts[s].toLocaleString("ja-JP")}</div>
-          </div>
-        ))}
-        <div className="stat">
-          <div className="label">守備のみ</div>
-          <div className="value">{counts.defenseOnly.toLocaleString("ja-JP")}</div>
-        </div>
+      <div
+        className={"dmg-freshness" + (freshness?.stale ? " is-stale" : "")}
+        role="status"
+      >
+        {freshness?.stale && <span aria-hidden="true">⚠</span>}
+        <span>
+          最新の観測{" "}
+          <strong>
+            {freshness?.latestObservedAt
+              ? `${formatClock(freshness.latestObservedAt)}（${relativeLabel(
+                  freshness.latestObservedAt,
+                  now!
+                )}）`
+              : "なし"}
+          </strong>
+        </span>
+        <span className="muted">
+          最終取り込み{" "}
+          {freshness?.importedAt
+            ? `${formatClock(freshness.importedAt)}（${relativeLabel(
+                freshness.importedAt,
+                now!
+              )}）`
+            : "—"}
+        </span>
+        {freshness?.stale && (
+          <span className="dmg-freshness-warn">
+            観測が{OBSERVATION_STALE_MINUTES}
+            分以上途絶えています。戦闘ログを取り込むと予測が正確になります。
+          </span>
+        )}
+      </div>
+
+      <div className="stat-grid dmg-stats">
+        {STATUS_SUMMARY_ORDER.map((s) => {
+          const active = statusFilter === s;
+          return (
+            <button
+              type="button"
+              className={"stat dmg-stat" + (active ? " is-active" : "")}
+              key={s}
+              aria-pressed={active}
+              onClick={() => updatePrefs({ statusFilter: active ? "" : s })}
+            >
+              <span className="label">
+                <span className={STATUS_CLASS[s]}>{ACTION_LABEL[s]}</span>
+              </span>
+              <span className="value">{counts[s].toLocaleString("ja-JP")}</span>
+              <span className="dmg-stat-hint muted">{STATUS_HINT[s]}</span>
+            </button>
+          );
+        })}
       </div>
 
       <details className="badge-legend">
-        <summary>バッジの見方</summary>
+        <summary>見方</summary>
         <ul className="badge-legend-list">
           <li>
-            <span className="status depleted">{ACTION_LABEL.depleted}</span>
+            <span className="status ready">{ACTION_LABEL.ready}</span>
             <span className="muted">
-              直近の守備敗北から40分未満です。40分経過後は行動可になります。
+              出兵から40分以上1時間20分未満。クールタイムが明け、次の出兵がまだ観測されていません。
             </span>
           </li>
           <li>
-            <span className="status defense-only">守備のみ</span>
+            <span className="status done">{ACTION_LABEL.done}</span>
             <span className="muted">
-              守備でのみ観測されている武将です（出兵履歴がないため固定バッジは付きません）。
+              出兵から40分未満。左端の時刻（〜）から出兵できるようになります。
+            </span>
+          </li>
+          <li>
+            <span className="status depleted">{ACTION_LABEL.depleted}</span>
+            <span className="muted">
+              守備敗北から40分未満。40分経過後は出兵できるようになります。
+            </span>
+          </li>
+          <li>
+            <span className="status unknown">{ACTION_LABEL.unknown}</span>
+            <span className="muted">
+              出兵から1時間20分以上観測がありません。来うるものの、時刻は読めません。
             </span>
           </li>
           <li>
             <span className="status no-rest no-rest--loose">末尾固定</span>
             <span className="muted">
-              行動時刻の「分」の1の位が2戦以上そろっている（休養を挟まず連続行動の疑い）。
+              行動時刻の「分」の1の位が2戦以上そろっている。次は約60分後（10分早まることあり）と予測します。
             </span>
           </li>
           <li>
             <span className="status no-rest no-rest--strict">休養なし</span>
             <span className="muted">
-              直近2戦以上がちょうど60分間隔で並んでいる。
+              直近2戦以上がちょうど60分間隔。次はちょうど60分後と予測します。
             </span>
           </li>
           <li>
             <span className="status no-rest no-rest--evolved">固定分</span>
             <span className="muted">
               末尾固定が5戦以上連続。固定行動の可能性が高い。
+            </span>
+          </li>
+          <li>
+            <span className="status dmg-mine">⚠ 自国を攻撃</span>
+            <span className="muted">
+              前回の出兵先が「除外する国（自国・同盟）」でした。
+            </span>
+          </li>
+          <li>
+            <span className="status defense-only">守備のみ</span>
+            <span className="muted">
+              守備でのみ観測されている武将です（「役割」を「すべて」にすると表示されます）。
             </span>
           </li>
         </ul>
@@ -468,173 +1134,150 @@ export function DamageTab({
         activeFilters={activeFilters}
         resultText={`表示 ${rows.length.toLocaleString("ja-JP")}件`}
       >
-          <label className="filter">
-            <span>ステータス</span>
-            <select
-              className="select"
-              value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(e.target.value as "" | ActionStatus)
-              }
-            >
-              <option value="">すべて</option>
-              {STATUS_SUMMARY_ORDER.map((s) => (
-                <option key={s} value={s}>
-                  {ACTION_LABEL[s]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="filter">
-            <span>国</span>
-            <select
-              className="select"
-              value={factionFilter}
-              onChange={(e) => setFactionFilter(e.target.value)}
-            >
-              <option value="">すべて</option>
-              {factionOptions.map((v) => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="filter">
-            <span>役割</span>
-            <select
-              className="select"
-              value={roleFilter}
-              onChange={(e) =>
-                setRoleFilter(e.target.value as "" | "attack" | "defense-only")
-              }
-            >
-              <option value="">すべて</option>
-              <option value="attack">出兵あり</option>
-              <option value="defense-only">守備のみ</option>
-            </select>
-          </label>
+        <label className="filter">
+          <span>ステータス</span>
+          <select
+            className="select"
+            value={statusFilter}
+            onChange={(e) =>
+              updatePrefs({ statusFilter: e.target.value as "" | ActionStatus })
+            }
+          >
+            <option value="">すべて</option>
+            {STATUS_SUMMARY_ORDER.map((s) => (
+              <option key={s} value={s}>
+                {ACTION_LABEL[s]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="filter">
+          <span>役割</span>
+          <select
+            className="select"
+            value={roleFilter}
+            onChange={(e) =>
+              updatePrefs({ roleFilter: e.target.value as RoleFilter })
+            }
+          >
+            <option value="">すべて</option>
+            <option value="attack">出兵あり</option>
+            <option value="defense-only">守備のみ</option>
+          </select>
+        </label>
+        <FactionChips
+          label="表示する国（未選択ならすべて）"
+          options={factionOptions}
+          selected={includeFactions}
+          onChange={(next) => updatePrefs({ includeFactions: next })}
+        />
+        <FactionChips
+          label="除外する国（自国・同盟）"
+          options={factionOptions}
+          selected={excludeFactions}
+          onChange={(next) => updatePrefs({ excludeFactions: next })}
+        />
       </FilterPanel>
 
-      <div className="table-wrap">
-        {rows.length === 0 ? (
-          <div className="empty">
-            <p className="empty-title">表示できる行動データがありません</p>
-            <p className="empty-hint">
-              「戦闘履歴」タブで戦績を貼り付けて登録すると、各武将の行動時刻から
-              行動状況を判定してここに表示します。
-              絞り込みを設定している場合はステータス・国・役割の条件を見直してください。
-            </p>
-          </div>
-        ) : (
-          <table className="table-card">
-            <caption className="sr-only">
-              武将ごとの行動状況、所属国、タイプ、兵種、判定時刻の一覧
-            </caption>
-            <thead>
-              <tr>
-                <th>状況</th>
-                <th>国</th>
-                <th>武将名</th>
-                <th>タイプ</th>
-                <th>兵種タイプ</th>
-                <th>兵種名</th>
-                <th>判定時刻</th>
-                <th>経過</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(({ w, info, hasAttack, canOpenDetail }) => (
-                <tr key={w.name}>
-                  <td className="cell-block" data-label="状況">
-                    <span className="status-stack">
-                      <span className={STATUS_CLASS[info.status]}>
-                        {ACTION_LABEL[info.status]}
-                      </span>
-                      {!hasAttack && (
-                        <span
-                          className="status defense-only"
-                          title="守備でのみ観測されています"
-                        >
-                          守備のみ
-                        </span>
-                      )}
-                      {info.noRestLabel && (
-                        <span
-                          className={
-                            info.noRestLabel === "固定分"
-                              ? "status no-rest no-rest--evolved"
-                              : info.noRestLabel === "休養なし"
-                                ? "status no-rest no-rest--strict"
-                                : "status no-rest no-rest--loose"
-                          }
-                          title={`末尾固定 ${info.noRestStreak}戦連続 / 休養なし ${info.strictStreak}戦連続`}
-                        >
-                          {info.noRestLabel}
-                        </span>
-                      )}
-                    </span>
-                  </td>
-                  <td data-label="国">
-                    {w.faction ? (
-                      <span
-                        className="tag faction"
-                        style={factionBadgeStyle(w.faction, colors)}
-                      >
-                        {w.faction}
-                      </span>
-                    ) : (
-                      <span className="muted">-</span>
-                    )}
-                  </td>
-                  <td className="cell-title">
-                    {canOpenDetail ? (
-                      <button
-                        type="button"
-                        className="link-like"
-                        onClick={() => onSelectWarlord(w.name)}
-                        title={`${w.name} の戦績を見る`}
-                      >
-                        {w.name}
-                      </button>
-                    ) : (
-                      <span>{w.name}</span>
-                    )}
-                  </td>
-                  <td data-label="タイプ">
-                    <span className="tag type">{displayWarlordType(w)}</span>
-                  </td>
-                  <td data-label="兵種タイプ">
-                    <span className="tag branch">{w.branch}</span>
-                  </td>
-                  <td data-label="兵種名">
-                    {w.unit ? (
-                      <span className="tag unit">{w.unit}</span>
-                    ) : (
-                      <span className="muted">-</span>
-                    )}
-                  </td>
-                  <td
-                    className="muted"
-                    data-label="判定時刻"
-                    style={{ fontSize: 12 }}
-                    title={
-                      info.status === "depleted"
-                        ? "兵力減の原因となった守備敗北時刻"
-                        : "行動状況の判定に使用した時刻"
-                    }
-                  >
-                    {info.actionAt ?? "-"}
-                  </td>
-                  <td className="muted" data-label="経過" style={{ fontSize: 12 }}>
-                    {formatElapsed(info.minutes)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+      <div className="dmg-toolbar">
+        <div className="dmg-view" role="group" aria-label="表示方法">
+          <button
+            type="button"
+            className={"dmg-view-btn" + (view === "timeline" ? " is-on" : "")}
+            aria-pressed={view === "timeline"}
+            onClick={() => updatePrefs({ view: "timeline" })}
+          >
+            時間帯
+          </button>
+          <button
+            type="button"
+            className={"dmg-view-btn" + (view === "list" ? " is-on" : "")}
+            aria-pressed={view === "list"}
+            onClick={() => updatePrefs({ view: "list" })}
+          >
+            一覧
+          </button>
+        </div>
+        <button
+          type="button"
+          className={"btn dmg-reorder" + (orderStale ? " is-stale" : "")}
+          onClick={refreshOrder}
+        >
+          並びを更新
+          <span className="dmg-reorder-sub">
+            {orderNow ? `${formatClock(orderNow)}時点` : ""}
+          </span>
+        </button>
+        <button
+          type="button"
+          className={"btn dmg-notify" + (notify ? " is-on" : "")}
+          aria-pressed={notify}
+          onClick={toggleNotify}
+          title={`固定行動の予測時刻の${NOTIFY_LEAD_MINUTES}分前に通知します`}
+        >
+          {notify ? "🔔 通知オン" : "🔕 予測の5分前に通知"}
+        </button>
       </div>
+      {notifyError && <p className="dmg-notify-error">{notifyError}</p>}
+
+      {rows.length === 0 ? (
+        <div className="empty">
+          <p className="empty-title">表示できる行動データがありません</p>
+          <p className="empty-hint">
+            「戦闘履歴」タブで戦績を貼り付けて登録すると、各武将の行動時刻から
+            行動状況を判定してここに表示します。
+            絞り込みを設定している場合はステータス・国・役割の条件を見直してください。
+          </p>
+        </div>
+      ) : view === "list" ? (
+        renderRows(rows)
+      ) : (
+        <div className="dmg-timeline">
+          {timeline.nowRows.length > 0 && (
+            <section className="dmg-slot is-now" aria-label="今すぐ出兵できる">
+              <h3 className="dmg-slot-title">
+                今すぐ出兵できる
+                <span className="dmg-slot-count">{timeline.nowRows.length}人</span>
+              </h3>
+              {renderRows(timeline.nowRows)}
+            </section>
+          )}
+          {timeline.slots.map((slot) => {
+            const end = new Date(slot.start.getTime() + 10 * 60000);
+            return (
+              <section
+                key={slot.start.getTime()}
+                className="dmg-slot"
+                aria-label={`${formatClock(slot.start)}から${formatClock(end)}`}
+              >
+                <h3 className="dmg-slot-title">
+                  {formatClock(slot.start)}〜{formatClock(end)}
+                  <span className="dmg-slot-count">{slot.rows.length}人</span>
+                </h3>
+                {renderRows(slot.rows)}
+              </section>
+            );
+          })}
+          {timeline.unknownRows.length > 0 && (
+            <section className="dmg-slot is-unknown" aria-label="動向不明">
+              <h3 className="dmg-slot-title">
+                <button
+                  type="button"
+                  className="dmg-slot-toggle"
+                  aria-expanded={showUnknown}
+                  onClick={() => setShowUnknown((v) => !v)}
+                >
+                  {showUnknown ? "▴" : "▾"} 動向不明（1時間20分以上観測なし）
+                  <span className="dmg-slot-count">
+                    {timeline.unknownRows.length}人
+                  </span>
+                </button>
+              </h3>
+              {showUnknown && renderRows(timeline.unknownRows)}
+            </section>
+          )}
+        </div>
+      )}
     </section>
   );
 }

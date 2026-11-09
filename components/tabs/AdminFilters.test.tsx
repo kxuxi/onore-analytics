@@ -92,8 +92,9 @@ describe("DamageTab", () => {
     expect(markup).toContain('aria-expanded="true"');
     expect(markup).toContain('aria-controls="damage-filters-fields"');
     expect(markup).toContain("ステータス</span><select");
-    expect(markup).toContain("国</span><select");
     expect(markup).toContain("役割</span><select");
+    expect(markup).toContain("<legend>表示する国（未選択ならすべて）</legend>");
+    expect(markup).toContain("<legend>除外する国（自国・同盟）</legend>");
     expect(markup).toContain('<option value="depleted">兵力減</option>');
     expect(markup).toContain(">表示 0件</p>");
     expect(markup).toContain("表示できる行動データがありません");
