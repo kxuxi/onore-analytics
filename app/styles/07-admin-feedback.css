@@ -619,66 +619,8 @@ button.tag.faction-link:focus-visible {
   font-weight: var(--font-weight-semibold);
 }
 
-/* ---------- 被弾表：次に来る時刻を軸にしたレイアウト ---------- */
+/* ---------- 被弾表：攻めてくる時刻・タイプ・前回出兵・固定だけの表 ---------- */
 
-/* データの新しさ（最新の観測・最終取り込み）。古ければ警告色＋アイコン＋文言。 */
-.dmg-freshness {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 14px;
-  margin: 0;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-}
-.dmg-freshness.is-stale {
-  padding: 8px 12px;
-  border: 1px solid color-mix(in srgb, var(--color-warning-text) 45%, var(--border));
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--color-warning-text) 10%, transparent);
-  color: var(--color-warning-text);
-}
-.dmg-freshness-warn {
-  flex-basis: 100%;
-}
-
-/* 集計タイル（押すとそのステータスで絞り込み）。 */
-.dmg-stats {
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-}
-.dmg-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  text-align: left;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-.dmg-stat:hover {
-  border-color: var(--accent);
-}
-.dmg-stat.is-active {
-  border-color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent);
-}
-.dmg-stat:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
-}
-.dmg-stat .label {
-  letter-spacing: 0;
-}
-.dmg-stat .value {
-  margin-top: 2px;
-  font-variant-numeric: tabular-nums;
-}
-.dmg-stat-hint {
-  font-size: 11px;
-}
-
-/* 国の複数選択チップ。 */
 .dmg-faction-filter {
   border: 0;
   margin: 0;
@@ -723,327 +665,120 @@ button.tag.faction-link:focus-visible {
 /* 表示切替・並び更新・通知。 */
 .dmg-toolbar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  justify-content: flex-end;
   gap: 8px;
+  margin: 10px 0 8px;
 }
-.dmg-view {
-  display: inline-flex;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 2px;
-}
-.dmg-view-btn {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  font: inherit;
+.dmg-reorder,
+.dmg-notify {
   font-size: 13px;
-  padding: 6px 14px;
-  border-radius: 999px;
-  cursor: pointer;
-  min-height: 32px;
-}
-.dmg-view-btn.is-on {
-  background: var(--accent);
-  color: var(--color-on-accent, #fff);
-  font-weight: var(--font-weight-semibold);
-}
-.dmg-reorder {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  margin-left: auto;
 }
 .dmg-reorder-sub {
-  font-size: 11px;
+  margin-left: 6px;
+  font-size: 12px;
   color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-.dmg-reorder.is-stale {
-  border-color: var(--color-warning-text);
-  color: var(--color-warning-text);
 }
 .dmg-notify.is-on {
+  color: var(--accent-strong);
   border-color: var(--accent);
-  color: var(--color-interactive-text, var(--accent));
 }
 .dmg-notify-error {
-  margin: 0;
-  font-size: 12px;
+  margin: 0 0 8px;
+  font-size: 13px;
   color: var(--color-danger-text);
 }
 
-/* 時間帯の枠。 */
-.dmg-timeline {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.dmg-slot {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.panel .dmg-slot-title {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin: 0;
-  font-size: 13px;
-  font-weight: var(--font-weight-semibold);
-  color: var(--text);
+.dmg-table {
+  width: 100%;
+  min-width: 0;
+  border-collapse: collapse;
   font-variant-numeric: tabular-nums;
 }
-.dmg-slot.is-now .dmg-slot-title {
-  color: var(--color-success-text);
+.dmg-table th,
+.dmg-table td {
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
 }
-.dmg-slot-count {
+.dmg-table thead th {
   font-size: 12px;
-  font-weight: var(--font-weight-regular);
+  font-weight: var(--font-weight-medium);
   color: var(--muted);
-}
-.dmg-slot-toggle {
-  appearance: none;
-  border: 0;
-  background: none;
-  padding: 0;
-  font: inherit;
-  color: var(--muted);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 8px;
-  min-height: 32px;
-}
-
-/* 1人＝1行（2段）。左に「次に来る時刻」、右に誰・何で・前回どこへ。 */
-.dmg-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-}
-.dmg-row + .dmg-row {
-  border-top: 1px solid var(--border);
-}
-.dmg-row.is-mine {
-  box-shadow: inset 3px 0 0 var(--color-danger-text);
-}
-.dmg-row-main {
-  display: grid;
-  grid-template-columns: 8.5em minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-}
-.dmg-time {
-  display: flex;
-  flex-direction: column;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.25;
 }
 .dmg-time-main {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: var(--font-weight-bold);
-  white-space: nowrap;
-}
-.dmg-time-sub {
-  font-size: 11px;
-  color: var(--muted);
-  white-space: nowrap;
-}
-.dmg-time.is-now .dmg-time-main {
-  color: var(--color-success-text);
-}
-.dmg-time.is-predicted .dmg-time-main {
-  color: var(--color-danger-text);
-}
-.dmg-time.is-unknown .dmg-time-main {
-  color: var(--muted);
-}
-.dmg-who {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-.dmg-who-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-.dmg-who-line .status {
-  margin-left: 0;
-  padding: 2px 8px;
-  min-width: 0;
-}
-.dmg-name {
-  font-size: 15px;
-  font-weight: var(--font-weight-semibold);
-}
-.status.dmg-mine {
-  color: var(--color-danger-text);
-  background: color-mix(in srgb, var(--color-danger-text) 12%, transparent);
-  border-color: color-mix(in srgb, var(--color-danger-text) 40%, transparent);
-}
-.dmg-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 8px;
-  font-size: 12px;
-}
-.dmg-meta .tag {
-  font-size: 11px;
-}
-.dmg-meta-text {
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-.dmg-expand {
-  appearance: none;
-  width: 36px;
-  height: 36px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 14px;
-}
-.dmg-expand:hover {
-  border-color: var(--accent);
   color: var(--text);
 }
-.dmg-expand:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+.dmg-time-main.is-now {
+  color: var(--color-danger-text);
+}
+.dmg-time-main.is-muted {
+  color: var(--muted);
+  font-weight: var(--font-weight-medium);
+}
+.dmg-time-sub {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+.dmg-table .dmg-name-cell {
+  font-weight: var(--font-weight-medium);
+  white-space: normal;
+  min-width: 6em;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.dmg-name {
+  text-align: left;
+  font-size: 14px;
+}
+.dmg-type,
+.dmg-last {
+  font-size: 14px;
+}
+.dmg-fixed {
+  font-size: 13px;
+  color: var(--muted);
+}
+.dmg-fixed.is-strong {
+  color: var(--text);
+  font-weight: var(--font-weight-semibold);
 }
 
-/* 行の展開：時間帯の傾向・直近の出兵時刻・前回の攻撃先。 */
-.dmg-detail {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px 20px;
-  padding: 10px 12px 12px calc(8.5em + 24px);
-  background: color-mix(in srgb, var(--panel-2) 60%, transparent);
-  border-top: 1px dashed var(--border);
+.dmg-unknown {
+  margin-top: 14px;
 }
-.panel .dmg-detail-title {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: var(--font-weight-semibold);
-  color: var(--muted);
-}
-.dmg-detail-text,
-.dmg-detail-empty {
-  margin: 0;
+.dmg-unknown-toggle {
+  font: inherit;
   font-size: 13px;
-}
-.dmg-detail-link {
-  justify-self: start;
-  align-self: end;
-}
-.dmg-chips {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.dmg-chip {
-  padding: 1px 8px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-}
-.dmg-hours-strip {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(24, minmax(0, 1fr));
-  gap: 2px;
-}
-.dmg-hour {
-  height: 18px;
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--text) 7%, transparent);
-}
-.dmg-hour.has {
-  background: color-mix(in srgb, var(--accent) var(--dmg-heat, 50%), transparent);
-}
-.dmg-hours-axis {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 2px;
-  font-size: 10px;
   color: var(--muted);
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  cursor: pointer;
 }
 
 @media (max-width: 640px) {
-  .stat-grid.dmg-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .dmg-table th,
+  .dmg-table td {
+    padding: 7px 4px;
   }
-  /* 補足情報は1項目ずつ改行せず、文章のように折り返して行の高さを抑える。 */
-  .dmg-meta {
-    display: block;
-    line-height: 1.9;
-  }
-  .dmg-meta > * {
-    margin-right: 6px;
-    white-space: nowrap;
-  }
-  .dmg-meta .tag {
-    display: inline-flex;
-    vertical-align: 1px;
-  }
-  /* モバイルは「時刻（横並び）＋展開ボタン」の下に、武将の情報を全幅で置く。 */
-  .dmg-row-main {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "time expand"
-      "who who";
-    gap: 4px 8px;
-    padding: 8px 10px;
-    align-items: center;
-  }
-  .dmg-row-main > .dmg-time {
-    grid-area: time;
-    flex-direction: row;
-    align-items: baseline;
-    gap: 8px;
-  }
-  .dmg-row-main > .dmg-who {
-    grid-area: who;
-  }
-  .dmg-row-main > .dmg-expand {
-    grid-area: expand;
+  .dmg-table th:first-child,
+  .dmg-table td:first-child {
+    padding-left: 0;
   }
   .dmg-time-main {
-    font-size: 14px;
+    font-size: 15px;
   }
-  .dmg-time.is-predicted .dmg-time-main {
-    white-space: normal;
+  .dmg-name,
+  .dmg-type,
+  .dmg-last {
+    font-size: 13px;
   }
-  .dmg-name {
-    font-size: 14px;
-  }
-  .dmg-expand {
-    width: 32px;
-    height: 32px;
-  }
-  .dmg-detail {
-    padding: 10px;
-  }
-  .dmg-reorder {
-    margin-left: 0;
+  .dmg-fixed {
+    font-size: 12px;
   }
 }

@@ -12,11 +12,14 @@ import { splitGoodAgainst } from "./unitTypeForm";
 import type { BattleRecord, UnitType, WarlordMap } from "./types";
 import {
   MATCHUP_TRAITS,
+  META_BASELINE_PRIOR_BATTLES,
   META_MIN_TIER_DECIDED,
   META_PERIODS,
   RANKING_LAST10_KEY,
   metaTier,
   type MetaOverview,
+  type MetaUnitUsage,
+  type MetaUnitUser,
   type MetaPeriod,
   type MetaTraitStat,
   type MetaUnitStat,
@@ -30,13 +33,15 @@ export {
   META_PERIODS,
   RANKING_LAST10_KEY,
   metaTier,
-};
+} from "./stats/meta";
 export type {
   MetaOverview,
   MetaPeriod,
   MetaTier,
   MetaTraitStat,
   MetaUnitStat,
+  MetaUnitUsage,
+  MetaUnitUser,
   TraitMatchupCell,
   TraitMatchupMatrix,
   YearRange,
@@ -3249,4 +3254,120 @@ export function metaOverview(
   traitStats.sort((x, y) => y.appearances - x.appearances);
 
   return { totalBattles, units: unitStats, traits: traitStats };
+}
+
+/**
+ * 兵種ごとの「誰が使っているか」と、使い手の普段の勝率との比較。
+ *
+ * 上手な武将が弱い兵種を使って勝っているのか、兵種そのものが強いのかを見分けるため、
+ * 使い手ごとに「その兵種以外での勝率」（普段の勝率）を求め、兵種での確定戦数で
+ * 加重平均して「この使い手たちなら普通はこのくらい勝つ」という期待勝率を出す。
+ * 兵種の勝率 − 期待勝率（lift）がプラスなら兵種が押し上げている。
+ *
+ * 範囲・タイプの絞り込みは metaOverview と同じ（壁戦は除外）。普段の勝率は
+ * 同じ期間内の、タイプを問わない全戦績から求める（実力は武将に付くため）。
+ */
+export function metaUnitUsage(
+  log: BattleRecord[],
+  range?: YearRange,
+  typeFilter?: string
+): Map<string, MetaUnitUsage> {
+  const typeOf = typeFilter?.trim() || null;
+  const nameMap = logNameMap(log);
+
+  interface Tally {
+    battles: number;
+    wins: number;
+    losses: number;
+  }
+  const blank = (): Tally => ({ battles: 0, wins: 0, losses: 0 });
+  const add = (t: Tally, result: OutcomeResult) => {
+    t.battles++;
+    if (result === "win") t.wins++;
+    else if (result === "loss") t.losses++;
+  };
+
+  // 武将の全戦績（普段の勝率の母数）と、兵種 → 武将 → 戦績。
+  const overall = new Map<string, Tally>();
+  const byUnit = new Map<string, Map<string, Tally>>();
+  // 武将 → 兵種 → 戦績（タイプ絞り込みに関係なく、普段の勝率から差し引く分）。
+  const byUserUnit = new Map<string, Map<string, Tally>>();
+
+  for (const { record, card } of dedupedCards(log)) {
+    if (!withinYearRange(card, range)) continue;
+    if (isWallBattle(card)) continue;
+    for (const key of ["left", "right"] as const) {
+      const side = card[key];
+      const name = resolveLogName(nameMap, record.term, side.family, side.name);
+      if (!name) continue;
+      const result = outcomeForSide(card.winner, key);
+      let o = overall.get(name);
+      if (!o) overall.set(name, (o = blank()));
+      add(o, result);
+
+      const unit = side.unit ? normalizeDisplayToken(side.unit) : "";
+      if (!unit) continue;
+      let uu = byUserUnit.get(name);
+      if (!uu) byUserUnit.set(name, (uu = new Map()));
+      let own = uu.get(unit);
+      if (!own) uu.set(unit, (own = blank()));
+      add(own, result);
+
+      if (typeOf != null && side.type?.trim() !== typeOf) continue;
+      let users = byUnit.get(unit);
+      if (!users) byUnit.set(unit, (users = new Map()));
+      let t = users.get(name);
+      if (!t) users.set(name, (t = blank()));
+      add(t, result);
+    }
+  }
+
+  const k = META_BASELINE_PRIOR_BATTLES;
+  const result = new Map<string, MetaUnitUsage>();
+  for (const [unit, usersMap] of byUnit) {
+    let weighted = 0;
+    let weightedDecided = 0;
+    let unitWins = 0;
+    const users: MetaUnitUser[] = [];
+    for (const [name, t] of usersMap) {
+      const all = overall.get(name) ?? blank();
+      // 普段の勝率は「この兵種で戦った全戦（タイプ問わず）」を除いて求める。
+      const own = byUserUnit.get(name)?.get(unit) ?? t;
+      const otherWins = all.wins - own.wins;
+      const otherDecided = all.wins + all.losses - (own.wins + own.losses);
+      const baselineRate = (otherWins + k / 2) / (otherDecided + k);
+      const decided = t.wins + t.losses;
+      users.push({
+        name,
+        battles: t.battles,
+        wins: t.wins,
+        losses: t.losses,
+        decided,
+        winRate: decided > 0 ? t.wins / decided : 0,
+        baselineDecided: otherDecided,
+        baselineRate,
+      });
+      weighted += baselineRate * decided;
+      weightedDecided += decided;
+      unitWins += t.wins;
+    }
+    users.sort(
+      (a, b) =>
+        b.battles - a.battles ||
+        b.decided - a.decided ||
+        b.winRate - a.winRate ||
+        a.name.localeCompare(b.name, "ja")
+    );
+    const expectedRate = weightedDecided > 0 ? weighted / weightedDecided : null;
+    const winRate = weightedDecided > 0 ? unitWins / weightedDecided : null;
+    result.set(unit, {
+      unit,
+      users,
+      userCount: users.length,
+      expectedRate,
+      lift:
+        expectedRate != null && winRate != null ? winRate - expectedRate : null,
+    });
+  }
+  return result;
 }

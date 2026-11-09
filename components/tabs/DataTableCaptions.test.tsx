@@ -72,13 +72,16 @@ describe("データ表のcaption", () => {
     expect(markup).toContain('<option value="統特">統特</option>');
   });
 
-  it("環境ダッシュボードは戦闘数順で、採用率も併記する", () => {
+  it("環境ダッシュボードは戦闘数順を既定にし、勝敗を表示し採用率は出さない", () => {
     const markup = renderToStaticMarkup(
       <MetaTab log={SYNERGY_LOG} onSelectUnit={vi.fn()} />
     );
 
-    expect(markup).toContain("戦闘数 TOP 10");
-    expect(markup).toContain("戦闘 <strong>10</strong>戦・採用");
+    expect(markup).toContain(
+      'aria-pressed="true" class="tmx-period meta-sort-btn active">戦闘数</button>'
+    );
+    expect(markup).toMatch(/\d+勝\d+敗/);
+    expect(markup).not.toContain("採用");
   });
 
   it("相性表の軸を読み上げ専用captionで説明する", () => {

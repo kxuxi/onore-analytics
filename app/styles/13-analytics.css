@@ -310,6 +310,58 @@
   padding: 1px 7px;
 }
 
+.meta-filter-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 8px;
+}
+.meta-filter-narrow.meta-filter-select {
+  min-width: 100px;
+}
+
+/* 一覧の見出し・並び順・凡例 */
+.meta-listhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.meta-listhead .meta-h3 {
+  margin: 0;
+  flex-wrap: wrap;
+}
+.meta-sort {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.meta-sort-btn {
+  font-size: 12px;
+}
+.meta-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.meta-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.meta-legend-mark {
+  width: 2px;
+  height: 12px;
+  background: var(--text);
+}
+
+/* 兵種の行 */
 .meta-units {
   list-style: none;
   margin: 0;
@@ -319,40 +371,188 @@
   gap: 8px;
 }
 .meta-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
   background: var(--panel-2);
   border: 1px solid var(--border);
   border-radius: 10px;
 }
+.meta-row-main {
+  display: grid;
+  grid-template-columns: 24px minmax(8em, 1fr) minmax(200px, 1.6fr) 4.5em;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+}
 .meta-rank {
-  flex: 0 0 auto;
-  width: 24px;
   text-align: center;
   font-weight: var(--font-weight-bold);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
-.meta-name {
-  flex: 1 1 auto;
+.meta-who {
   min-width: 0;
+}
+.meta-name {
   text-align: left;
   font-weight: var(--font-weight-semibold);
   font-size: 14px;
 }
-.meta-pick {
-  flex: 0 0 auto;
-  font-size: 13px;
+.meta-sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  font-size: 12px;
   color: var(--muted);
+  margin-top: 2px;
+}
+.meta-rate {
+  min-width: 0;
+}
+.meta-rate-nums {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.meta-rate-main {
+  font-size: 16px;
+  font-weight: var(--font-weight-bold);
+  color: var(--text);
+}
+.meta-wl {
+  font-size: 12px;
+  color: var(--muted);
+}
+.meta-rate-cmp {
+  font-size: 12px;
+  color: var(--muted);
+  margin-left: auto;
+}
+.meta-lift {
+  color: var(--text);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* 勝率の棒：塗り＝勝率、縦線＝使い手の普段、点線＝50% */
+.meta-bar {
+  position: relative;
+  height: 8px;
+  margin-top: 4px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--muted) 16%, transparent);
+}
+.meta-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 4px;
+  background: var(--chart-primary);
+}
+.meta-bar-half {
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  bottom: -2px;
+  border-left: 1px dashed var(--muted);
+}
+.meta-bar-mark {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--text);
+  box-shadow: 0 0 0 2px var(--panel-2);
+  border-radius: 1px;
+}
+
+.meta-users-btn {
+  justify-self: end;
+  font: inherit;
+  font-size: 12px;
+  color: var(--accent-strong);
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  cursor: pointer;
   white-space: nowrap;
 }
-.meta-pick strong {
-  color: var(--text);
-  font-size: 14px;
-  font-weight: var(--font-weight-bold);
+.meta-users-btn:hover {
+  text-decoration: underline;
 }
+
+/* 使用者の内訳 */
+.meta-users {
+  border-top: 1px solid var(--border);
+  padding: 8px 12px 10px 48px;
+  overflow-x: auto;
+}
+.meta-users-table {
+  width: 100%;
+  min-width: 0;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.meta-users-table th,
+.meta-users-table td {
+  padding: 5px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.meta-users-table thead th {
+  font-size: 12px;
+  font-weight: var(--font-weight-medium);
+  color: var(--muted);
+}
+.meta-users-table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+.meta-users-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.meta-users-table tbody th {
+  font-weight: var(--font-weight-semibold);
+}
+.meta-cell-sub {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+.meta-more {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .meta-row-main {
+    grid-template-columns: 20px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "rank who users"
+      "rate rate rate";
+    gap: 8px 10px;
+  }
+  .meta-rank {
+    grid-area: rank;
+  }
+  .meta-who {
+    grid-area: who;
+  }
+  .meta-users-btn {
+    grid-area: users;
+  }
+  .meta-rate {
+    grid-area: rate;
+  }
+  .meta-users {
+    padding-left: 12px;
+  }
+  .meta-users-table th,
+  .meta-users-table td {
+    padding: 5px 6px;
+  }
+}
+
 /* 時間帯・曜日別ヒートマップ */
 .heatmap-wrap {
   overflow-x: auto;
