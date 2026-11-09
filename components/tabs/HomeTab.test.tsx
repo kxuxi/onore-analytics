@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { BattleRecord } from "@/lib/types";
-import { describeWinLossTrend, HomeTab } from "./HomeTab";
+import { HomeTab } from "./HomeTab";
 
 const callbacks = {
   onSelectWarlord: vi.fn(),
@@ -69,36 +69,34 @@ describe("HomeTab", () => {
     expect(html).not.toContain('role="combobox"');
   });
 
-  it("勝敗グラフを色と線種で識別し、数値要約と表captionを提供する", () => {
+  it("出兵勝率・守備勝率・使用兵種の割合を表示し、旧セクションは表示しない", () => {
     vi.stubGlobal("document", {
       cookie: "onore_my_warlord=%E4%BF%A1%E9%95%B7",
     });
+    // 信長は出兵側（左）で 1勝1敗。
     const html = renderHome([
       battleRecord(1600, 1, "勝頼", "信長の勝利"),
       battleRecord(1601, 2, "謙信", "謙信の勝利"),
     ]);
 
-    expect(html).toContain("var(--chart-win)");
-    expect(html).toContain("var(--chart-loss)");
-    expect(html).toContain("home-line-path--wins");
-    expect(html).toContain("home-line-path--losses");
-    expect(html).toContain("勝利数（実線）・敗北数（破線）");
-    expect(html).toContain("home-series-line--wins");
-    expect(html).toContain("home-series-line--losses");
-    expect(html).toContain("1600年から1601年までの勝敗数推移");
-    expect(html).toContain(
-      '<caption class="sr-only">最近の戦闘結果（直近5戦）</caption>'
-    );
+    expect(html).toContain("あなたの成績");
+    expect(html).toContain("出兵勝率");
+    expect(html).toContain("守備勝率");
+    expect(html).toContain("50.0%");
+    expect(html).toContain("この期の戦闘はありません。");
+    expect(html).toContain("使用兵種の割合");
+    expect(html).toContain("鉄砲隊");
+    // 使用兵種は出兵・守備の 2 列。信長は出兵のみなので守備列は空表示。
+    expect(html).toContain('<h4 class="home-usage-title">⚔️ 出兵</h4>');
+    expect(html).toContain('<h4 class="home-usage-title">🏯 守備</h4>');
+    expect(html).toContain("計 2戦");
+    expect(html).toContain("計 0戦");
+    // 棒の長さは勝率（100%基準）。鉄砲隊は 1勝1敗なので 50%。
+    expect(html).toContain('class="home-usage-fill" style="width:50%"');
 
-    const singleYearHtml = renderHome([
-      battleRecord(1600, 1, "勝頼", "信長の勝利"),
-    ]);
-    expect(singleYearHtml).toContain(
-      '<circle class="home-line-dot home-line-dot--wins"'
-    );
-    expect(singleYearHtml).toContain(
-      '<rect class="home-line-dot home-line-dot--losses"'
-    );
+    expect(html).not.toContain("勝敗数の推移");
+    expect(html).not.toContain("最近の戦闘結果");
+    expect(html).not.toContain("ウォッチリスト");
   });
 
   it("管理者かつonUpdateStats指定時、自分のステータス編集フォームを既存値付きで表示する", () => {
@@ -136,11 +134,13 @@ describe("HomeTab", () => {
     expect(html).toContain('value="102.5"');
     expect(html).toContain('value="50000"');
 
-    // 知力84・計略102.5 → 判定値158.5。120・150（計7件）は解放済み、160から先が未解放（次の3件を表示）。
+    // 知力84・計略102.5 → 判定値158.5。次は判定値160（あと計略P +2 または 知力 +3）。
     expect(html).toContain("計略解放まで");
-    expect(html).toContain("解放済み（7件）を表示");
+    expect(html).toContain("解放済み（55件）を表示");
+    expect(html).toContain("判定値 160");
     expect(html).toContain("両者武将アタック封印");
     expect(html).toContain("あと計略P +2");
+    expect(html).toContain("あと計略P +2 または 知力 +3");
 
     // 政治72・最大徴兵兵数50000（初期値） → 50000/(72*2)+1=348.22...
     expect(html).toContain("徴兵時の治安減少値");
@@ -209,11 +209,11 @@ describe("HomeTab", () => {
 
     expect(html).toContain("計略解放まで");
     expect(html).toContain("すべて解放済みです");
-    expect(html).toContain("解放済み（18件）を表示");
+    expect(html).toContain("解放済み（80件）を表示");
     expect(html).not.toContain("あと計略P");
   });
 
-  it("「計略解放まで」は未解放の直近3件だけを表示し、解放済みが無ければトグルも出さない", () => {
+  it("「計略解放まで」は次の閾値2段ぶんだけを表示する", () => {
     vi.stubGlobal("document", {
       cookie: "onore_my_warlord=%E4%BF%A1%E9%95%B7",
     });
@@ -236,12 +236,15 @@ describe("HomeTab", () => {
       />
     );
 
-    expect(html).toContain("計略発動条件：先制");
-    expect(html).toContain("武将アタック+10%");
-    expect(html).toContain("兵種アタック+10%");
-    // 4件目以降は表示しない（次の3件まで）。
-    expect(html).not.toContain("敵〇〇アタック（計略）半減");
-    expect(html).not.toContain("解放済み");
+    // 知力0・計略0 → 判定値0。次は 20（攻撃力+20% など）と 30。
+    expect(html).toContain("判定値 20");
+    expect(html).toContain("攻撃力+20%");
+    expect(html).toContain("判定値 30");
+    expect(html).toContain("防御力+20%");
+    // 3段目（40）以降は表示しない。
+    expect(html).not.toContain("判定値 40");
+    // 出現判定0の項目（攻撃力+10% など）は最初から解放済み。
+    expect(html).toContain("解放済み（4件）を表示");
   });
 
   it("政治力が未設定なら「徴兵時の治安減少値」は表示しない", () => {
@@ -298,65 +301,24 @@ describe("HomeTab", () => {
     // 徴兵数未入力のため治安減少量は「—」。
     expect(html).toContain(">—<");
   });
-});
 
-describe("describeWinLossTrend", () => {
-  it("対象期間、合計勝敗、最多勝利・敗北を数値で説明する", () => {
-    expect(
-      describeWinLossTrend([
-        {
-          year: 1600,
-          battles: 2,
-          wins: 2,
-          losses: 0,
-          decided: 2,
-          winRate: 1,
-        },
-        {
-          year: 1601,
-          battles: 0,
-          wins: 0,
-          losses: 0,
-          decided: 0,
-          winRate: 0,
-        },
-        {
-          year: 1602,
-          battles: 3,
-          wins: 1,
-          losses: 2,
-          decided: 3,
-          winRate: 1 / 3,
-        },
-      ])
-    ).toBe(
-      "1600年から1602年までの勝敗数推移。期間合計3勝2敗。最多勝利は1600年の2勝、最多敗北は1602年の2敗"
-    );
-  });
+  it("使用兵種が7種以上なら上位6種だけ表示し、残りはトグルで開く", () => {
+    vi.stubGlobal("document", {
+      cookie: "onore_my_warlord=%E4%BF%A1%E9%95%B7",
+    });
+    const units = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛"];
+    const log = units.map((u, i) => ({
+      ...battleRecord(1600, i + 1, `敵${i}`, "信長の勝利"),
+      line: battleRecord(1600, i + 1, `敵${i}`, "信長の勝利").line.replace(
+        "鉄砲隊",
+        u
+      ),
+    }));
+    const html = renderHome(log);
 
-  it("戦闘がない場合を明示する", () => {
-    expect(describeWinLossTrend([])).toBe(
-      "勝敗数の年別推移。戦闘データなし"
-    );
-  });
-
-  it("表示中の系列だけを説明する", () => {
-    const data = [
-      {
-        year: 1600,
-        battles: 3,
-        wins: 2,
-        losses: 1,
-        decided: 3,
-        winRate: 2 / 3,
-      },
-    ];
-
-    expect(describeWinLossTrend(data, ["wins"])).toBe(
-      "1600年の勝利数推移。期間合計2勝。最多勝利は1600年の2勝"
-    );
-    expect(describeWinLossTrend(data, ["losses"])).toBe(
-      "1600年の敗北数推移。期間合計1敗。最多敗北は1600年の1敗"
-    );
+    expect(html).toContain("残り2種を表示");
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).not.toContain("その他");
+    expect((html.match(/class="home-usage-row"/g) ?? []).length).toBe(6);
   });
 });
