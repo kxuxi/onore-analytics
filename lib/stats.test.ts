@@ -593,6 +593,29 @@ describe("latestUnitByWarlord", () => {
     expect(m.get("山田")).toEqual({ unit: "剛弓", branch: "弓兵" });
     expect(m.get("山田改")).toEqual({ unit: "剛弓", branch: "弓兵" });
   });
+
+  it("excludeUnits を渡すと除外兵種を飛ばし、除外じゃない最新戦闘の兵種を返す", () => {
+    const log = [
+      rec(uline({ year: 1700, self: "鞠", unit: "国崩し", branch: "弓兵" }), 1),
+      // 在ゲーム年が新しいが農民なので、excludeUnits 指定時は候補から外れる。
+      rec(uline({ year: 1702, self: "鞠", unit: "農民", branch: "歩兵" }), 2),
+    ];
+    // 除外なし（既定）は新しい農民を返す。
+    expect(latestUnitByWarlord(log).get("鞠")).toEqual({
+      unit: "農民",
+      branch: "歩兵",
+    });
+    // 農民を除外すると、農民じゃない最新戦闘の兵種を返す。
+    expect(
+      latestUnitByWarlord(log, undefined, { excludeUnits: ["農民"] }).get("鞠")
+    ).toEqual({ unit: "国崩し", branch: "弓兵" });
+  });
+
+  it("全戦闘が除外兵種のみなら、その武将は結果に含めない（呼び出し側で DB にフォールバック）", () => {
+    const log = [rec(uline({ year: 1700, self: "畑", unit: "農民", branch: "歩兵" }), 1)];
+    const m = latestUnitByWarlord(log, undefined, { excludeUnits: ["農民"] });
+    expect(m.has("畑")).toBe(false);
+  });
 });
 
 describe("latestUnitsByBranch", () => {
