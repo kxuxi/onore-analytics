@@ -90,3 +90,38 @@ export function metaTier(
   if (winRate >= 0.45) return "B";
   return "C";
 }
+
+/**
+ * 使い手の「普段の勝率」を出すときの事前分布（50% を k 戦ぶん足して縮める）。
+ * 対戦数の少ない武将の勝率が極端な値（1戦1勝＝100%）になるのを防ぐ。
+ */
+export const META_BASELINE_PRIOR_BATTLES = 6;
+/** 兵種の使い手1人ぶんの集計。 */
+export interface MetaUnitUser {
+  /** 代表名（名寄せ済み） */
+  name: string;
+  /** その兵種での登場数 */
+  battles: number;
+  wins: number;
+  losses: number;
+  decided: number;
+  /** その兵種での勝率 */
+  winRate: number;
+  /** その兵種以外での確定戦数（普段の勝率の母数） */
+  baselineDecided: number;
+  /** 普段の勝率（その兵種以外の戦績を 50% に向けて縮めた値） */
+  baselineRate: number;
+}
+
+/** 兵種ごとの使い手の内訳。 */
+export interface MetaUnitUsage {
+  unit: string;
+  users: MetaUnitUser[];
+  /** 使い手の人数 */
+  userCount: number;
+  /** 使い手の普段の勝率を確定戦数で加重平均したもの（確定戦が無ければ null） */
+  expectedRate: number | null;
+  /** 兵種の勝率 − 使い手の普段の勝率（確定戦が無ければ null） */
+  lift: number | null;
+}
+

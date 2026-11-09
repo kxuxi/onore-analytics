@@ -871,7 +871,13 @@ export default function HomePage() {
           />
         );
       case "metaenv":
-        return <MetaTab log={filteredBattleLog} onSelectUnit={selectUnit} />;
+        return (
+          <MetaTab
+            log={filteredBattleLog}
+            onSelectUnit={selectUnit}
+            onSelectWarlord={selectWarlordNormalized}
+          />
+        );
       case "metrics":
         return (
           <MetricsTab
