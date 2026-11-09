@@ -157,7 +157,7 @@ describe("getActionInfo の兵力減判定", () => {
     });
 
     expect(info.status).toBe("unknown");
-    expect(ACTION_LABEL[info.status]).toBe("行動可");
+    expect(ACTION_LABEL[info.status]).toBe("動向不明");
     expect(info.actionAt).toBe(at(10, 0));
     expect(info.minutes).toBe(40);
   });
@@ -179,7 +179,7 @@ describe("getActionInfo の兵力減判定", () => {
     });
 
     expect(info.status).toBe("done");
-    expect(ACTION_LABEL[info.status]).toBe("行動済み");
+    expect(ACTION_LABEL[info.status]).toBe("クールタイム");
     expect(info.actionAt).toBe(at(10, 0));
   });
 
