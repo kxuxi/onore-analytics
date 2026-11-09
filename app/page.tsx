@@ -780,8 +780,6 @@ export default function HomePage() {
             db={latestDbByName}
             colors={factionColors}
             isAdmin={isAdmin}
-            watchlist={watchlist}
-            onToggleWatch={handleToggleWatch}
             onSelectWarlord={selectWarlordNormalized}
             onSelectUnit={selectUnit}
             onSelectFaction={selectFaction}

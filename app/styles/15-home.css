@@ -384,6 +384,281 @@
   color: var(--muted);
 }
 
+/* --- カード内の補足文（本文より小さく、見出しより弱く） --- */
+.home-card-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.home-card-em {
+  color: var(--text);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+/* .panel h2 の汎用見出しスタイルより優先して、武将名を主役の大きさにする。 */
+.panel .home-hero-name {
+  margin: 2px 0 8px;
+  font-size: 26px;
+  color: var(--text);
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: var(--font-weight-bold);
+}
+
+/* --- ヒーロー本体：通算KPI（主）＋出兵/守備の内訳（従） --- */
+.home-hero-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 20px;
+  align-items: stretch;
+}
+.home-kpi {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.home-kpi-label {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: var(--font-weight-medium);
+}
+.home-kpi-val {
+  font-size: 44px;
+  line-height: 1;
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.home-kpi-meta {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 4px;
+}
+.home-splits {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.home-split {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--panel-2) 70%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  min-width: 0;
+}
+.panel .home-split-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--muted);
+}
+.home-split-rate {
+  font-size: 28px;
+  line-height: 1.1;
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+.home-split-meta {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 6px;
+}
+.home-split .wr-bar {
+  margin-top: auto;
+}
+.home-split-empty {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
+/* --- 使用兵種の割合：単色の横棒リスト（名前→棒→数値を 1 行で読む） --- */
+.home-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.home-card-head .home-card-title {
+  white-space: nowrap;
+}
+.home-card-aside {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.home-usage {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.home-usage-row {
+  display: grid;
+  grid-template-columns: minmax(6em, 10em) minmax(0, 1fr) 6.5em 7.5em;
+  align-items: center;
+  column-gap: 14px;
+  min-height: 32px;
+  font-size: 13px;
+}
+.home-usage-name {
+  font-weight: var(--font-weight-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-usage-track {
+  display: block;
+  height: 10px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  overflow: hidden;
+}
+.home-usage-fill {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent);
+}
+/* 棒が表すのは勝率なので、棒の隣の勝率を主、使用割合を従にする。 */
+.home-usage-wr {
+  text-align: right;
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.home-usage-share {
+  text-align: right;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.home-usage-count {
+  display: inline-block;
+  min-width: 3.4em;
+  margin-left: 6px;
+}
+
+/* 出兵・守備の 2 列。列幅が狭いので行は「名前・数値」＋棒の 2 段にする。 */
+.home-usage-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 28px;
+}
+.home-usage-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.panel .home-usage-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.home-usage-cols .home-usage {
+  gap: 10px;
+}
+.home-usage-cols .home-usage-row {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "name wr share"
+    "track track track";
+  row-gap: 5px;
+  min-height: 0;
+}
+.home-usage-cols .home-usage-name {
+  grid-area: name;
+}
+.home-usage-cols .home-usage-track {
+  grid-area: track;
+  height: 8px;
+}
+.home-usage-cols .home-usage-wr {
+  grid-area: wr;
+}
+.home-usage-cols .home-usage-share {
+  grid-area: share;
+  min-width: 6em;
+}
+
+/* --- 計算結果（治安減少量）：答えを主役に --- */
+.home-result {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  column-gap: 12px;
+  row-gap: 2px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel-2) 70%, transparent);
+}
+.home-result-label {
+  font-size: 13px;
+  color: var(--muted);
+}
+.home-result-val {
+  font-size: 28px;
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  justify-self: end;
+}
+.home-result-sub {
+  grid-column: 1 / -1;
+  font-size: 12px;
+}
+
+/* --- 自分のステータス（折りたたみ） --- */
+.home-editor-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+  min-height: var(--touch-target, 40px);
+}
+.home-editor-summary::-webkit-details-marker {
+  display: none;
+}
+.home-editor-hint {
+  font-size: 13px;
+}
+.home-editor-hint::after {
+  content: " ▾";
+}
+.home-editor[open] .home-editor-hint::after {
+  content: " ▴";
+}
+.home-editor-summary:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
+/* details は閉じていても中身のスロットが flex の gap を受けるため、block にして余白を自前で付ける。 */
+.home-editor {
+  display: block;
+}
+.home-editor[open] > :not(summary) {
+  margin-top: 12px;
+}
+.home-editor:not([open]) {
+  padding-block: 8px;
+}
+.home-editor-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 /* --- 勝率の推移（折れ線・複数系列） --- */
 .home-series-hint {
   margin: 0 0 8px;
@@ -497,16 +772,7 @@
   font-weight: var(--font-weight-semibold);
 }
 
-/* --- 最近の戦闘結果（表） --- */
-.home-recent-table .num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-.home-recent-time {
-  white-space: nowrap;
-  font-size: 13px;
-  color: var(--muted);
-}
+/* --- 勝敗の色 --- */
 .home-res-win {
   color: var(--color-success-text);
   font-weight: var(--font-weight-semibold);
@@ -519,81 +785,75 @@
   color: var(--muted);
 }
 
-/* --- ウォッチリスト（お気に入り武将・管理者のみ） --- */
-.home-watchlist-count {
-  margin-left: 6px;
-  padding: 1px 7px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: var(--font-weight-bold);
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
-  color: var(--color-interactive-text);
-}
-.home-watchlist-empty {
-  font-size: 13px;
-  line-height: 1.5;
-}
-.home-watchlist-list {
+/* --- 計略解放まで（次の閾値ごとに「あといくつで何が解放されるか」） --- */
+.home-unlock-tiers {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 12px;
 }
-.home-watchlist-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.home-watchlist-name {
-  font-size: 15px;
-  font-weight: var(--font-weight-semibold);
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.home-watchlist-remove {
-  appearance: none;
-  border: 0;
-  background: none;
-  color: var(--medal-gold-fg, #f0b429);
-  cursor: pointer;
-  padding: 2px;
-  margin-left: auto;
-  display: inline-flex;
-  border-radius: 6px;
-}
-.home-watchlist-remove:hover {
-  color: color-mix(in srgb, var(--medal-gold-fg, #f0b429) 70%, var(--text));
-}
-.home-watchlist-remove:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-/* --- 計略解放まで --- */
-.home-unlock-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.home-unlock-tier {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-.home-unlock-row {
+.home-unlock-tier-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 2px 12px;
 }
-.home-unlock-label {
+.home-unlock-threshold {
   font-size: 14px;
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
 }
-.home-unlock-list--unlocked {
-  margin-top: 10px;
+.home-unlock-need {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.home-unlock-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.home-unlock-chip {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1.6;
+  background: color-mix(in srgb, var(--panel-2) 70%, transparent);
+}
+.home-unlock-chip.is-done {
+  color: var(--muted);
+}
+.home-unlock-done {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.home-unlock-done-group {
+  display: grid;
+  grid-template-columns: 7em minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+.home-unlock-done-cat {
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--muted);
+  padding-top: 3px;
+}
+.home-unlock-done-items {
+  margin: 0;
 }
 
 @media (max-width: 960px) {
@@ -621,8 +881,49 @@
   .home-hero-stats {
     grid-template-columns: repeat(2, 1fr);
   }
-  .home-hero-name {
+  .panel .home-hero-name {
     font-size: 22px;
+  }
+  .home-hero-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .home-kpi-val {
+    font-size: 40px;
+  }
+  .home-usage-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .home-usage {
+    gap: 10px;
+  }
+  .home-usage-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "name wr share"
+      "track track track";
+    row-gap: 6px;
+    min-height: 0;
+  }
+  .home-usage-name {
+    grid-area: name;
+  }
+  .home-usage-track {
+    grid-area: track;
+    height: 8px;
+  }
+  .home-usage-share {
+    grid-area: share;
+  }
+  .home-usage-wr {
+    grid-area: wr;
+  }
+  .home-usage-share {
+    min-width: 6em;
+  }
+  .home-unlock-done-group {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
   }
 }
 
