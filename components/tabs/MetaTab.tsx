@@ -61,11 +61,11 @@ function pct(rate: number): string {
   return `${Math.round(rate * 100)}%`;
 }
 
-/** 差をポイント表示（+8pt / −3pt / ±0pt）。 */
+/** 勝率の差を表示（+8% / −3% / ±0%）。 */
 function pt(diff: number): string {
   const n = Math.round(diff * 100);
-  if (n === 0) return "±0pt";
-  return `${n > 0 ? "+" : "−"}${Math.abs(n)}pt`;
+  if (n === 0) return "±0%";
+  return `${n > 0 ? "+" : "−"}${Math.abs(n)}%`;
 }
 
 export function sortMetaUnitsByBattleCount(

@@ -8,11 +8,9 @@ import { UnitEditModal } from "@/components/tabs/UnitEditModal";
 import {
   EMPTY_UNIT,
   parseReqStats,
-  splitGoodAgainst,
   parseUnitTypesTsv,
   BASE_STAT_OPTIONS,
 } from "@/lib/unitTypeForm";
-import { FilterPanel, type ActiveFilter } from "@/components/FilterPanel";
 import { SearchBox } from "@/components/SearchBox";
 import { PageHeader } from "@/components/layout/PageHeader";
 import {
@@ -21,23 +19,12 @@ import {
   type ImportMessageValue,
 } from "@/components/ImportFeedback";
 import { UnitCatalogResults } from "./UnitCatalogResults";
+import { CatalogListHead, CatalogSelect, CatalogToolbar } from "./CatalogParts";
 import {
-  UNIT_CATALOG_COLUMNS,
+  UNIT_CATALOG_SORT_OPTIONS,
   filterAndSortUnitCatalog,
-  type UnitCatalogFilters,
-  type UnitCatalogSortDirection,
   type UnitCatalogSortKey,
 } from "./unitCatalog";
-
-const FILTER_LABELS: Partial<Record<UnitCatalogSortKey, string>> = {
-  category: "種類",
-  goodAgainst: "得意兵種",
-  attack: "攻撃",
-  defense: "防御",
-  cost: "雇用",
-  reqStats: "必要能力値",
-  bonus: "ボーナス",
-};
 
 export function UnitTab({
   onSelectUnit,
@@ -55,10 +42,8 @@ export function UnitTab({
   const [units, setUnits] = useState<UnitType[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<UnitCatalogSortKey>("name");
-  const [sortDir, setSortDir] =
-    useState<UnitCatalogSortDirection>("asc");
-  const [filters, setFilters] = useState<UnitCatalogFilters>({});
-  const [showFilter, setShowFilter] = useState(true);
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("");
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
@@ -114,15 +99,6 @@ export function UnitTab({
     [units]
   );
 
-  // 得意兵種フィルタ用: 全兵種から個別トークンを収集
-  const goodAgainstOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(units.flatMap((u) => splitGoodAgainst(u.goodAgainst)))
-      ).sort((a, b) => a.localeCompare(b, "ja")),
-    [units]
-  );
-
   // 必要能力値セレクタの候補（基本候補 + データ中に現れるもの）
   const statOptions = useMemo(() => {
     const found = units
@@ -132,45 +108,8 @@ export function UnitTab({
   }, [units]);
 
   const filtered = useMemo(
-    () => filterAndSortUnitCatalog(baseUnits, filters, sortKey, sortDir),
-    [baseUnits, filters, sortKey, sortDir]
-  );
-
-  const toggleSort = (key: UnitCatalogSortKey) => {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
-  };
-
-  const setFilter = (key: UnitCatalogSortKey, value: string) => {
-    setFilters((cur) => ({ ...cur, [key]: value }));
-  };
-
-  const hasFilter = Object.values(filters).some((v) => !!v && !!v.trim());
-  // 検索ボックス（兵種名）とは別管理の項目フィルター。「フィルター」ボタンの強調用。
-  const hasDropdownFilter = Object.entries(filters).some(
-    ([k, v]) => k !== "name" && !!v && !!v.trim()
-  );
-
-  const clearFilters = () => setFilters({});
-
-  const activeFilters: ActiveFilter[] = UNIT_CATALOG_COLUMNS.flatMap(
-    (column) => {
-      if (column.key === "name") return [];
-      const value = filters[column.key]?.trim();
-      if (!value) return [];
-      return [
-        {
-          key: column.key,
-          label: FILTER_LABELS[column.key] ?? column.label,
-          value,
-          onRemove: () => setFilter(column.key, ""),
-        },
-      ];
-    }
+    () => filterAndSortUnitCatalog(baseUnits, { query, category }, sortKey),
+    [baseUnits, query, category, sortKey]
   );
 
   const openNew = () => {
@@ -218,30 +157,31 @@ export function UnitTab({
 
   return (
     <section className="panel catalog-panel">
-      <PageHeader title="兵種図鑑" />
+      <PageHeader
+        title="兵種図鑑"
+        actions={
+          isAdmin && (
+            <>
+              <button type="button" className="btn" onClick={openNew}>
+                兵種を追加
+              </button>
+              <button
+                type="button"
+                className={"btn import-toggle" + (showImport ? " active" : "")}
+                onClick={() => setShowImport((v) => !v)}
+                aria-expanded={showImport}
+                aria-controls={importIds.body}
+                id={importIds.toggle}
+              >
+                <span>一括インポート</span>
+              </button>
+            </>
+          )
+        }
+      />
 
       {isAdmin && (
         <>
-          <div className="row">
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={openNew}
-            >
-              兵種を追加
-            </button>
-            <button
-              type="button"
-              className={"btn import-toggle" + (showImport ? " active" : "")}
-              onClick={() => setShowImport((v) => !v)}
-              aria-expanded={showImport}
-              aria-controls={importIds.body}
-              id={importIds.toggle}
-            >
-              <span>一括インポート</span>
-            </button>
-          </div>
-
           {showImport && (
             <div className="import-block">
               <fieldset
@@ -317,134 +257,46 @@ export function UnitTab({
         </p>
       )}
 
-      <FilterPanel
-        id="unit-catalog-filters"
-        search={
-          <SearchBox
-            value={filters.name ?? ""}
-            onChange={(v) => setFilter("name", v)}
-            placeholder="兵種名で絞り込み"
-          />
-        }
-        expanded={showFilter}
-        onToggle={() => setShowFilter((v) => !v)}
-        toggleActive={showFilter || hasDropdownFilter}
-        hasActiveFilters={hasFilter}
-        onClear={clearFilters}
-        activeFilters={activeFilters}
-        resultText={
-          loading
-            ? "兵種を読み込み中…"
-            : hasFilter
-            ? `全${baseUnits.length.toLocaleString("ja-JP")}件中 ${filtered.length.toLocaleString("ja-JP")}件`
-            : `全${baseUnits.length.toLocaleString("ja-JP")}件`
-        }
-      >
-        <label className="filter">
-          <span>種類</span>
-          <select
-            className="select"
-            value={filters.category ?? ""}
-            onChange={(e) => setFilter("category", e.target.value)}
-          >
-            <option value="">すべて</option>
-            {categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="filter">
-          <span>得意兵種</span>
-          <select
-            className="select"
-            value={filters.goodAgainst ?? ""}
-            onChange={(e) => setFilter("goodAgainst", e.target.value)}
-          >
-            <option value="">すべて</option>
-            {goodAgainstOptions.map((g) => (
-              <option key={g} value={g}>
-                {g}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="filter">
-          <span>攻撃</span>
-          <input
-            className="text-input"
-            inputMode="numeric"
-            value={filters.attack ?? ""}
-            onChange={(e) => setFilter("attack", e.target.value)}
-            placeholder="数値で絞り込み"
-            autoCapitalize="off"
-            autoCorrect="off"
-          />
-        </label>
-        <label className="filter">
-          <span>防御</span>
-          <input
-            className="text-input"
-            inputMode="numeric"
-            value={filters.defense ?? ""}
-            onChange={(e) => setFilter("defense", e.target.value)}
-            placeholder="数値で絞り込み"
-            autoCapitalize="off"
-            autoCorrect="off"
-          />
-        </label>
-        <label className="filter">
-          <span>雇用</span>
-          <input
-            className="text-input"
-            value={filters.cost ?? ""}
-            onChange={(e) => setFilter("cost", e.target.value)}
-            placeholder="例: 金:600"
-            autoCapitalize="off"
-            autoCorrect="off"
-          />
-        </label>
-        <label className="filter">
-          <span>必要能力値</span>
-          <input
-            className="text-input"
-            value={filters.reqStats ?? ""}
-            onChange={(e) => setFilter("reqStats", e.target.value)}
-            placeholder="例: 統率"
-            autoCapitalize="off"
-            autoCorrect="off"
-          />
-        </label>
-        <label className="filter">
-          <span>ボーナス</span>
-          <input
-            className="text-input"
-            value={filters.bonus ?? ""}
-            onChange={(e) => setFilter("bonus", e.target.value)}
-            placeholder="ボーナスで絞り込み"
-            autoCapitalize="off"
-            autoCorrect="off"
-          />
-        </label>
-      </FilterPanel>
+      <CatalogToolbar>
+        <SearchBox
+          value={query}
+          onChange={setQuery}
+          placeholder="兵種名・得意・ボーナスで検索"
+          ariaLabel="兵種名・得意・ボーナスで検索"
+        />
+        <CatalogSelect
+          id="unit-catalog-category"
+          label="種類"
+          value={category}
+          options={[
+            { value: "", label: "すべて" },
+            ...categories.map((c) => ({ value: c, label: c })),
+          ]}
+          onChange={setCategory}
+        />
+      </CatalogToolbar>
 
       {loading ? (
+        <p className="muted catalog-none">兵種を読み込み中…</p>
+      ) : baseUnits.length === 0 ? (
         <div className="empty">
-          <p className="empty-title">兵種を読み込み中…</p>
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="empty">
-          <p className="empty-title">兵種がありません</p>
+          <p className="empty-title">兵種のデータがありません</p>
         </div>
       ) : (
-        <UnitCatalogResults
-          units={filtered}
-          sortKey={sortKey}
-          sortDirection={sortDir}
-          onSort={toggleSort}
-          onSelectUnit={onSelectUnit}
-        />
+        <>
+          <CatalogListHead
+            total={baseUnits.length}
+            shown={filtered.length}
+            sort={sortKey}
+            options={UNIT_CATALOG_SORT_OPTIONS}
+            onSort={setSortKey}
+          />
+          {filtered.length === 0 ? (
+            <p className="muted catalog-none">該当する兵種がありません。</p>
+          ) : (
+            <UnitCatalogResults units={filtered} onSelectUnit={onSelectUnit} />
+          )}
+        </>
       )}
 
       {adding && (

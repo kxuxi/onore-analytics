@@ -19,45 +19,41 @@ const ENTRY: EquipStat = {
   ],
 };
 
-function renderResults(noun: string, slotLabel: string) {
-  return renderToStaticMarkup(
+const render = (noun: string, entries: EquipStat[] = [ENTRY]) =>
+  renderToStaticMarkup(
     <EquipCatalogResults
-      entries={[ENTRY]}
+      entries={entries}
       noun={noun}
-      slotLabel={slotLabel}
       onSelectWarlord={vi.fn()}
       onSelectEquip={vi.fn()}
     />
   );
-}
 
 describe("EquipCatalogResults", () => {
-  it("武器のDesktop5列とカードで同じ集計値・導線名を表示する", () => {
-    const html = renderResults("武器", "武将の持つ武器");
+  it("名前・使用・勝率（勝敗）・主な使い手を1つの表に出す", () => {
+    const html = render("武器");
 
-    for (const heading of [
-      "武将の持つ武器",
-      "使用回数",
-      "勝率",
-      "攻 / 守",
-      "主な使用武将",
-    ]) {
-      expect(html).toContain(heading);
+    for (const heading of ["武器", "使用", "勝率", "主な使い手"]) {
+      expect(html).toContain(`>${heading}</th>`);
     }
-    for (const value of ["名刀", "12", "70.0%", "7/10", "8 / 4", "武将甲"]) {
+    for (const value of ["名刀", "12回", "70.0%", "7勝3敗", "武将甲", "×7"]) {
       expect(html).toContain(value);
     }
-    expect(html).toContain('class="table-wrap catalog-full-table"');
-    expect(html).toContain('aria-label="武器一覧"');
-    expect(html).toContain("一覧の詳細を表示");
-    expect(html).toContain('class="sr-only">：名刀</span>');
+    expect(html).toContain("<caption class=\"sr-only\">武器図鑑</caption>");
+    // 攻守の内訳とカード表示は持たない。
+    expect(html).not.toContain("攻 / 守");
+    expect(html).not.toContain("catalog-card");
   });
 
-  it("品物の公開表記をそのまま切り替える", () => {
-    const html = renderResults("品物", "武将の持つ品物");
-
-    expect(html).toContain("武将の持つ品物");
+  it("品物の表記に切り替える", () => {
+    const html = render("品物");
+    expect(html).toContain(">品物</th>");
     expect(html).toContain("品物図鑑");
-    expect(html).toContain('aria-label="品物一覧"');
+  });
+
+  it("勝敗が決まっていない装備の勝率は - にする", () => {
+    const html = render("武器", [{ ...ENTRY, decided: 0, wins: 0, losses: 0 }]);
+    expect(html).not.toContain("勝率</span>");
+    expect(html).toContain('class="catalog-dash">-<');
   });
 });
