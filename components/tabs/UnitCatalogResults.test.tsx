@@ -18,86 +18,46 @@ const UNIT: UnitType = {
   bonus: "兵種アタック+5%",
 };
 
-function renderResults(
-  sortKey: "name" | "attack" = "name",
-  sortDirection: "asc" | "desc" = "asc"
-) {
-  return renderToStaticMarkup(
-    <UnitCatalogResults
-      units={[UNIT]}
-      sortKey={sortKey}
-      sortDirection={sortDirection}
-      onSort={vi.fn()}
-      onSelectUnit={vi.fn()}
-    />
+const render = (units: UnitType[] = [UNIT]) =>
+  renderToStaticMarkup(
+    <UnitCatalogResults units={units} onSelectUnit={vi.fn()} />
   );
-}
 
 describe("UnitCatalogResults", () => {
-  it("Desktop表の既存8列と全値を維持し、カードも同じ兵種を表示する", () => {
-    const html = renderResults();
+  it("名前・攻撃・防御・得意・雇用/必要/ボーナスを1つの表に出す", () => {
+    const html = render();
 
-    for (const heading of [
-      "兵種",
-      "種類",
-      "得意",
-      "攻",
-      "防",
-      "雇用",
-      "必要",
-      "ボーナス",
-    ]) {
-      expect(html).toContain(`>${heading}<`);
+    for (const heading of ["兵種", "攻撃", "防御", "得意", "雇用・必要能力・ボーナス"]) {
+      expect(html).toContain(`>${heading}</th>`);
     }
     for (const value of [
       "テスト騎兵",
-      "騎兵",
-      "歩兵",
-      "弓兵",
+      '<span class="catalog-sub">騎兵</span>',
       "80",
       "40",
-      "金:500",
-      "統率:70",
+      "歩兵・弓兵",
+      "金:500・統率:70",
       "兵種アタック+5%",
     ]) {
       expect(html).toContain(value);
     }
-    expect(
-      html.match(/title="テスト騎兵 の詳細を見る"/g)
-    ).toHaveLength(2);
-    expect(html).toContain('class="table-wrap catalog-full-table"');
-    expect(html).toContain('class="catalog-card-list"');
-    expect(html).toContain("一覧の詳細を表示");
-    expect(html).toContain('class="sr-only">：テスト騎兵</span>');
+    expect(html.match(/title="テスト騎兵 の詳細を見る"/g)).toHaveLength(1);
+    // カード表示・アコーディオンは持たない。
+    expect(html).not.toContain("catalog-card");
+    expect(html).not.toContain("一覧の詳細を表示");
   });
 
-  it("兵種タイプを詳細導線を持たない静的ラベルとして表示する", () => {
-    const html = renderResults();
-
-    expect(
-      html.match(
-        /<span class="tag branch" data-unit-type-label="static">騎兵<\/span>/g
-      )
-    ).toHaveLength(2);
-    expect(html).not.toMatch(/<(?:a|button)[^>]*>騎兵<\/(?:a|button)>/);
+  it("一覧にない詳細専用項目は出さない", () => {
+    const html = render();
+    for (const hidden of ["技術:20", "3年", "厩舎", "突撃"]) {
+      expect(html).not.toContain(hidden);
+    }
   });
 
-  it("現在の並び順をDesktop見出しと狭幅用コントロールのARIAへ反映する", () => {
-    const html = renderResults("attack", "desc");
-
-    expect(html).toContain('aria-sort="descending"');
-    expect(html.match(/aria-sort="none"/g)).toHaveLength(7);
-    expect(html).toContain("攻は現在降順。昇順へ切り替える");
-    expect(html).toContain("攻を昇順へ切り替える");
-    expect(html).toContain('value="attack" selected=""');
-  });
-
-  it("一覧にない詳細専用項目は追加しない", () => {
-    const html = renderResults();
-
-    expect(html).not.toContain("技術:20");
-    expect(html).not.toContain("3年");
-    expect(html).not.toContain("厩舎");
-    expect(html).not.toContain("突撃");
+  it("得意・補足が無い兵種は - を表示する", () => {
+    const html = render([
+      { ...UNIT, goodAgainst: "", cost: "", reqStats: "", bonus: "" },
+    ]);
+    expect(html.match(/class="catalog-dash">-</g)).toHaveLength(2);
   });
 });

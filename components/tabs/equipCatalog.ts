@@ -6,9 +6,9 @@ export const EQUIP_CATALOG_SORT_OPTIONS: {
   key: EquipCatalogSortKey;
   label: string;
 }[] = [
-  { key: "battles", label: "使用回数（多い順）" },
-  { key: "winRate", label: "勝率（高い順）" },
-  { key: "name", label: "名前（あいうえお順）" },
+  { key: "battles", label: "使用回数" },
+  { key: "winRate", label: "勝率" },
+  { key: "name", label: "名前" },
 ];
 
 /** 勝率の信頼度を確保するための最低使用回数の選択肢。 */

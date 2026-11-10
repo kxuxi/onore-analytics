@@ -1,242 +1,208 @@
-/* 兵種・武器・品物図鑑 */
+/* 兵種・武器・品物図鑑（3つとも同じ骨格: 検索+絞り込み / 件数+並び / 表） */
+.catalog-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+.catalog-toolbar > .search-box {
+  flex: 1 1 260px;
+}
+.catalog-select {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+.catalog-select .select {
+  min-width: 112px;
+}
+.catalog-panel .select,
+.catalog-panel .search-input {
+  min-height: var(--touch-target);
+}
+
+.catalog-listhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-2);
+}
+.catalog-count {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+.catalog-sort {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.catalog-sort-btn {
+  font-size: 12px;
+}
+.catalog-none {
+  margin: var(--space-4) 0;
+}
+
 .catalog-results {
   container: catalog-results / inline-size;
   min-width: 0;
 }
 
-.catalog-card-list,
-.catalog-compact-sort {
-  display: none;
+.catalog-table {
+  width: 100%;
+  min-width: 0;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
 }
-
-.catalog-panel .select,
-.catalog-panel .text-input,
-.catalog-panel .search-input {
-  min-height: var(--touch-target);
-}
-
-.catalog-clickable-row {
-  cursor: pointer;
-}
-
-.catalog-secondary-text {
+.catalog-table th {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
   color: var(--muted);
   font-size: var(--font-size-xs);
-  overflow-wrap: anywhere;
+  font-weight: var(--font-weight-medium);
+  text-align: left;
+  white-space: nowrap;
 }
-
-.catalog-full-table .unit-table {
-  min-width: 900px;
-  table-layout: fixed;
-}
-
-.catalog-full-table .unit-table th:nth-child(1) { width: 16%; }
-.catalog-full-table .unit-table th:nth-child(2) { width: 9%; }
-.catalog-full-table .unit-table th:nth-child(3) { width: 14%; }
-.catalog-full-table .unit-table th:nth-child(4),
-.catalog-full-table .unit-table th:nth-child(5) { width: 6%; }
-.catalog-full-table .unit-table th:nth-child(6) { width: 10%; }
-.catalog-full-table .unit-table th:nth-child(7) { width: 12%; }
-
-.catalog-full-table .unit-table th,
-.catalog-full-table .unit-table td,
-.catalog-full-table .equip-catalog-table th,
-.catalog-full-table .equip-catalog-table td {
-  overflow-wrap: anywhere;
-}
-
-.catalog-full-table .unit-table .th-sort {
-  min-height: var(--touch-target);
+.catalog-table td {
   padding: var(--space-2) var(--space-3);
-}
-
-.catalog-full-table .equip-catalog-table {
-  min-width: 720px;
-}
-
-.catalog-card-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  gap: var(--space-3);
-}
-
-.catalog-card {
-  min-width: 0;
-  overflow: hidden;
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-sm);
-}
-
-.catalog-card > article {
-  min-width: 0;
-  padding: var(--space-3);
-}
-
-.catalog-unit-card-action {
-  cursor: pointer;
-}
-
-.catalog-card-header {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.catalog-name-button,
-.catalog-equip-button {
-  min-width: 0;
-  min-height: var(--touch-target);
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
   overflow-wrap: anywhere;
+}
+.catalog-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.catalog-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.catalog-table td.num {
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-semibold);
+}
+
+.catalog-name {
+  width: 13em;
+}
+.catalog-table-unit .num {
+  width: 4.5em;
+}
+.catalog-table-unit .catalog-good,
+.catalog-table-unit th:nth-child(4) {
+  width: 9em;
+}
+.catalog-table-equip .catalog-n1,
+.catalog-table-equip th:nth-child(2) {
+  width: 6em;
+}
+.catalog-table-equip .catalog-n2,
+.catalog-table-equip th:nth-child(3) {
+  width: 7em;
 }
 
 .catalog-name-button {
-  min-width: var(--target-size-minimum);
-  padding: var(--space-2) 0;
-  font-size: var(--font-size-body);
-  font-weight: var(--font-weight-semibold);
-  text-align: left;
-}
-
-.catalog-equip-button {
-  padding: var(--space-2) var(--space-3);
+  padding: 0;
   font-size: var(--font-size-control);
   font-weight: var(--font-weight-semibold);
   text-align: left;
-}
-
-.catalog-primary-stats,
-.catalog-detail-list {
-  margin: 0;
-}
-
-.catalog-primary-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1px;
-  margin-top: var(--space-2);
-  overflow: hidden;
-  background: var(--border);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-}
-
-.catalog-primary-stats > div {
-  min-width: 0;
-  padding: var(--space-2);
-  background: var(--panel);
-}
-
-.catalog-primary-stats dt,
-.catalog-detail-list dt {
-  color: var(--muted);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  line-height: var(--line-height-caption);
-}
-
-.catalog-primary-stats dd,
-.catalog-detail-list dd {
-  min-width: 0;
-  margin: var(--space-1) 0 0;
-  color: var(--text);
-  font-size: var(--font-size-control);
-  font-weight: var(--font-weight-semibold);
   overflow-wrap: anywhere;
 }
-
-.catalog-primary-stats dd {
-  font-variant-numeric: tabular-nums;
-}
-
-.catalog-primary-stats.equip-catalog-primary {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.catalog-card-details {
-  margin-top: var(--space-2);
-  border-top: 1px solid var(--border);
-}
-
-.catalog-card-details > summary {
-  display: flex;
-  min-height: var(--touch-target);
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
+.catalog-sub {
+  display: block;
+  margin-top: 2px;
   color: var(--muted);
-  cursor: pointer;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  line-height: var(--line-height-control);
-  list-style: none;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
 }
-
-.catalog-card-details > summary::-webkit-details-marker {
-  display: none;
+.catalog-note,
+.catalog-good {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
 }
-
-.catalog-card-details > summary::after {
-  content: "＋";
-  color: var(--accent);
-  font-size: var(--font-size-body);
+.catalog-note-line {
+  display: block;
 }
-
-.catalog-card-details[open] > summary::after {
-  content: "−";
+.catalog-note-line + .catalog-note-line {
+  margin-top: 2px;
 }
-
-.catalog-details-open {
-  display: none;
+.catalog-dash {
+  color: var(--muted);
 }
-
-.catalog-card-details[open] .catalog-details-closed {
-  display: none;
-}
-
-.catalog-card-details[open] .catalog-details-open {
-  display: inline;
-}
-
-.catalog-detail-list {
-  display: grid;
-  gap: 1px;
-  padding-top: var(--space-1);
-  overflow: hidden;
-  background: var(--border);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-}
-
-.catalog-detail-list > div {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: minmax(88px, 0.4fr) minmax(0, 1fr);
-  gap: var(--space-3);
-  padding: var(--space-2);
-  background: var(--panel);
-}
-
-.catalog-detail-list dd {
-  margin-top: 0;
-}
-
-.catalog-card .tag-list,
-.catalog-card .equip-users {
-  min-width: 0;
+.catalog-users {
+  display: flex;
   flex-wrap: wrap;
+  gap: 2px 12px;
+}
+.catalog-users .link-like {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+.catalog-user-count {
+  margin-left: 2px;
+  color: var(--muted);
+  font-weight: var(--font-weight-regular);
+}
+/* 表の見出しがある幅では、セル内のラベルは出さない。 */
+.catalog-num-label {
+  display: none;
 }
 
-.catalog-card .equip-users .link-like {
-  min-height: var(--touch-target);
-  padding: var(--space-2) 0;
+/* 狭い幅: 見出しを隠し、1行目に名前と数値、2行目以降に補足を並べる。 */
+@container catalog-results (max-width: 600px) {
+  .catalog-table thead {
+    display: none;
+  }
+  .catalog-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "name n1 n2"
+      "good good good"
+      "note note note";
+    column-gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .catalog-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+  .catalog-table td {
+    width: auto;
+    padding: 0;
+    border: 0;
+  }
+  .catalog-name { grid-area: name; }
+  .catalog-n1 { grid-area: n1; }
+  .catalog-n2 { grid-area: n2; }
+  .catalog-good { grid-area: good; margin-top: var(--space-1); }
+  .catalog-note { grid-area: note; margin-top: var(--space-1); }
+  .catalog-num-label {
+    display: inline;
+    margin-right: 4px;
+    color: var(--muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-regular);
+  }
+  .catalog-n2 .catalog-sub {
+    text-align: right;
+  }
+  /* 補足が無い行は詰める。 */
+  .catalog-good:has(> .catalog-dash:only-child),
+  .catalog-note:has(> .catalog-dash:only-child) {
+    display: none;
+  }
 }
 
-.catalog-card .equip-decided {
+.equip-decided {
   display: block;
   margin: var(--space-1) 0 0;
   white-space: nowrap;
