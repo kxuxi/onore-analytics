@@ -52,6 +52,37 @@ function record(
   return { id, line, term, savedAt: id };
 }
 
+describe("直近の戦闘が出兵か守備か", () => {
+  it("守備が出兵より後なら（勝敗を問わず）守備、後から出兵すれば出兵", () => {
+    const record = (id: number, line: string): BattleRecord =>
+      ({ id, term: 1, savedAt: id, line }) as BattleRecord;
+    const log = [
+      record(1, battleLine({ time: "04/10 10:00", result: "信長の勝利" })),
+      // 信長が守備（勝頼の出兵を撃退）
+      record(
+        2,
+        battleLine({
+          time: "04/10 10:20",
+          left: "勝頼",
+          right: "信長",
+          result: "信長の勝利",
+        })
+      ),
+    ];
+    const result = buildActionAvailability(log);
+    expect(result.get("信長")).toMatchObject({
+      lastBattleWasDefense: true,
+      latestDefenseAt: "04/10 10:20",
+      latestAttackAt: "04/10 10:00",
+      depletedByDefenseLoss: false,
+    });
+    expect(result.get("勝頼")).toMatchObject({
+      lastBattleWasDefense: false,
+      latestAttackAt: "04/10 10:20",
+    });
+  });
+});
+
 describe("buildActionAvailability", () => {
   it("守備敗北を兵力減として保持する", () => {
     const availability = buildActionAvailability([

@@ -27,14 +27,14 @@ import {
 } from "@/lib/actionObservation";
 
 /**
- * 家督名（household）が同じ武将（＝同一人物の旧名）の行動時刻をすべて合算する。
+ * 家督名（household）が同じ武将（＝同一人物の旧名）の出兵時刻をすべて合算する。
+ * lastActionAt は守備の時刻も含むため混ぜない（前回出兵・固定判定が狂う）。
  * "MM/DD HH:mm" はゼロ埋め固定長のため辞書順ソートで時刻順になる。
  */
 function mergeAliasActions(aliases: (Warlord | undefined)[]): string[] {
   const set = new Set<string>();
   for (const w of aliases) {
     for (const a of w?.actions ?? []) if (a) set.add(a);
-    if (w?.lastActionAt) set.add(w.lastActionAt);
   }
   return Array.from(set).sort();
 }
@@ -250,13 +250,18 @@ interface DamageEntry {
   /** 並び替えに使う、並び固定時点の見込み。 */
   orderInfo: ActionInfo;
   orderForecast: Forecast;
-  /** 前回の出兵時刻（"MM/DD HH:mm"）。守備敗北は含めない。 */
-  lastAttackAt?: string;
+  /** 直近の戦闘が守備だったか（列分けに使う）。 */
+  lastWasDefense: boolean;
+  /** 直近の戦闘の時刻（"MM/DD HH:mm"）。守備が直近なら守備、そうでなければ出兵。 */
+  lastBattleAt?: string;
 }
 
-/** 予測も無く観測が途切れている（攻めてくる時刻が読めない）。 */
+/**
+ * 予測も無く観測が途切れている（攻めてくる時刻が読めない）。
+ * 行の「来る時刻」と食い違わないよう、並び固定時点ではなく現在の状況で分ける。
+ */
 const isUnreadable = (e: DamageEntry) =>
-  e.orderInfo.status === "unknown" && e.orderForecast.predictedAt == null;
+  e.info.status === "unknown" && e.forecast.predictedAt == null;
 
 function compareEntries(a: DamageEntry, b: DamageEntry): number {
   const ta = a.orderForecast.expectedAt?.getTime() ?? Infinity;
@@ -275,7 +280,7 @@ function compareEntries(a: DamageEntry, b: DamageEntry): number {
 function fixedText(info: ActionInfo, forecast: Forecast): string | null {
   if (!info.noRestLabel || forecast.fixedDigit == null) return null;
   if (info.noRestLabel === "休養なし") {
-    const m = forecast.baseAt?.getMinutes();
+    const m = forecast.attackAt?.getMinutes();
     return m != null ? `毎時:${String(m).padStart(2, "0")}` : "休養なし";
   }
   const head = info.noRestLabel === "固定分" ? "固定" : "末尾";
@@ -353,7 +358,7 @@ function DamageTable({
                 </button>
               </td>
               <td className="dmg-type">{displayWarlordType(e.w) || "—"}</td>
-              <td className="dmg-last">{clockOf(e.lastAttackAt) ?? "—"}</td>
+              <td className="dmg-last">{clockOf(e.lastBattleAt) ?? "—"}</td>
               <td
                 className={
                   "dmg-fixed" +
@@ -498,18 +503,19 @@ export function DamageTab({ db, allDb, log, onSelectWarlord }: Props) {
       .map(({ warlord, actionWarlord, availability }) => {
         const info = getActionInfo(actionWarlord, now, availability);
         const orderInfo = getActionInfo(actionWarlord, orderNow, availability);
-        const attacks = [
-          ...(actionWarlord.actions ?? []),
-          ...(availability?.latestAttackAt ? [availability.latestAttackAt] : []),
-        ].sort();
+        const lastWasDefense = availability?.lastBattleWasDefense === true;
         return {
+          lastWasDefense,
+          lastBattleAt:
+            (lastWasDefense ? availability?.latestDefenseAt : undefined) ??
+            info.attackAt ??
+            undefined,
           key: warlord.name,
           w: warlord,
           info,
           forecast: computeForecast(info, now),
           orderInfo,
           orderForecast: computeForecast(orderInfo, orderNow),
-          lastAttackAt: attacks[attacks.length - 1],
         };
       });
   }, [candidates, now, orderNow]);
@@ -529,6 +535,10 @@ export function DamageTab({ db, allDb, log, onSelectWarlord }: Props) {
   }, [entries, nameQuery, includeFactions, excludeFactions]);
 
   const readable = rows.filter((r) => !isUnreadable(r));
+  const groups = [
+    { key: "attack", label: "前回は出兵", entries: readable.filter((r) => !r.lastWasDefense) },
+    { key: "defense", label: "前回は守備", entries: readable.filter((r) => r.lastWasDefense) },
+  ];
   const unreadable = rows.filter(isUnreadable);
 
   // 国の選択肢（行動時刻を持つ武将の勢力名）
@@ -538,7 +548,8 @@ export function DamageTab({ db, allDb, log, onSelectWarlord }: Props) {
         candidates
           .filter(
             ({ actionWarlord, availability }) =>
-              actionWarlord.lastActionAt || availability?.latestAttackAt
+              (actionWarlord.actions?.length ?? 0) > 0 ||
+              availability?.latestAttackAt
           )
           .map(({ warlord }) => warlord.faction?.trim())
           .filter((v): v is string => !!v)
@@ -686,11 +697,24 @@ export function DamageTab({ db, allDb, log, onSelectWarlord }: Props) {
       ) : (
         <>
           {readable.length > 0 && (
-            <DamageTable
-              entries={readable}
-              now={now}
-              onSelectWarlord={onSelectWarlord}
-            />
+            <div className="dmg-columns">
+              {groups.map((g) => (
+                <section key={g.key} className="dmg-column">
+                  <h3 className="dmg-column-title">
+                    {g.label} <span>{g.entries.length}人</span>
+                  </h3>
+                  {g.entries.length > 0 ? (
+                    <DamageTable
+                      entries={g.entries}
+                      now={now}
+                      onSelectWarlord={onSelectWarlord}
+                    />
+                  ) : (
+                    <p className="muted">該当なし</p>
+                  )}
+                </section>
+              ))}
+            </div>
           )}
           {unreadable.length > 0 && (
             <div className="dmg-unknown">

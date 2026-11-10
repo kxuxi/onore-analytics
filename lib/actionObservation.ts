@@ -17,6 +17,8 @@ interface AvailabilityAccumulator {
   latestAttack?: BattleEventPosition;
   latestAttackProfile?: WallAttackProfile;
   latestDefenseLoss?: BattleEventPosition;
+  /** 勝敗を問わない最新の守備。 */
+  latestDefense?: BattleEventPosition;
 }
 
 const ACTION_TIME_YEAR_MINUTES = 12 * 32 * 24 * 60;
@@ -34,6 +36,10 @@ export interface ActionAvailability {
   latestAttackProfile?: WallAttackProfile;
   /** 兵力減の原因になった守備敗北時刻（例: 06/15 12:51）。 */
   defenseLossAt?: string;
+  /** 勝敗を問わない最新の守備時刻。 */
+  latestDefenseAt?: string;
+  /** 直近の戦闘が守備だったか（出兵と同時刻なら守備を優先）。 */
+  lastBattleWasDefense: boolean;
 }
 
 function parseGameMonthOrder(value: string | undefined): number | null {
@@ -204,6 +210,9 @@ export function buildActionAvailability(
         defenderName,
         record.term
       );
+      if (defender) {
+        defender.latestDefense = keepLatest(defender.latestDefense, position);
+      }
       if (defender && card.winner === "left") {
         defender.latestDefenseLoss = keepLatest(
           defender.latestDefenseLoss,
@@ -250,8 +259,14 @@ export function buildActionAvailability(
       defenseLoss != null &&
       (state.latestAttack == null ||
         compareEventPosition(defenseLoss, state.latestAttack) >= 0);
+    const defense = state.latestDefense;
     result.set(name, {
       term: state.term,
+      latestDefenseAt: defense?.actionAt,
+      lastBattleWasDefense:
+        defense != null &&
+        (state.latestAttack == null ||
+          compareEventPosition(defense, state.latestAttack) >= 0),
       depletedByDefenseLoss,
       latestAttackAt: state.latestAttack?.actionAt,
       latestAttackProfile: state.latestAttackProfile,

@@ -84,6 +84,21 @@ describe("computeForecast", () => {
     expect(formatClock(f.readyAt!)).toBe("21:40");
   });
 
+  it("兵力減が明けた後は、守備敗北ではなく最新の出兵時刻から予測する", () => {
+    // 19:05, 20:05 と出兵 → 20:12 守備敗北 → 20:55 時点。次は 21:05。
+    const now = new Date(2026, 6, 25, 20, 55);
+    const info = getActionInfo(
+      warlord(["07/25 19:05", "07/25 20:05"]),
+      now,
+      { depletedByDefenseLoss: true, defenseLossAt: "07/25 20:12" }
+    );
+    const f = computeForecast(info, now);
+    expect(info.status).toBe("ready");
+    expect(formatClock(f.predictedAt!)).toBe("21:05");
+    expect(f.fixedDigit).toBe(5);
+    expect(formatClock(f.attackAt!)).toBe("20:05");
+  });
+
   it("観測時刻が無ければすべて null", () => {
     const now = new Date(2026, 6, 25, 21, 10);
     const f = computeForecast(getActionInfo(warlord([]), now), now);
