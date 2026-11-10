@@ -341,6 +341,25 @@ export function latestUnitByWarlord(
 }
 
 /** 勝利数・敗北数・勝率などを集計する。 */
+/** 出兵（左側）と守備（右側）に分ける。武将の戦績（collectWarlordBattles）は壁戦を含まない。 */
+export function splitBySide<T extends { side: SideKey }>(
+  outcomes: T[]
+): { attack: T[]; defense: T[] } {
+  const attack: T[] = [];
+  const defense: T[] = [];
+  for (const o of outcomes) (o.side === "left" ? attack : defense).push(o);
+  return { attack, defense };
+}
+
+/** 出兵・守備それぞれの戦績。 */
+export function summarizeBySide(outcomes: BattleOutcome[]): {
+  attack: StatSummary;
+  defense: StatSummary;
+} {
+  const { attack, defense } = splitBySide(outcomes);
+  return { attack: summarize(attack), defense: summarize(defense) };
+}
+
 export function summarize(outcomes: BattleOutcome[]): StatSummary {
   let wins = 0;
   let losses = 0;

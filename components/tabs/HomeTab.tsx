@@ -1,5 +1,7 @@
 "use client";
 
+import { ShowMoreButton } from "@/components/ShowMoreButton";
+import { SideWinRate } from "@/components/SideWinRate";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { BattleRecord, Warlord, WarlordMap } from "@/lib/types";
@@ -9,6 +11,8 @@ import { getMyWarlord, setMyWarlord } from "@/lib/myWarlord";
 import {
   collectWarlordBattles,
   summarize,
+  summarizeBySide,
+  splitBySide,
   latestSelfProfile,
   selfUnitStats,
   formatWinRate,
@@ -373,39 +377,6 @@ function ConscriptionSecurityCard({
   );
 }
 
-/**
- * ヒーロー内の「出兵勝率」「守備勝率」タイル。通算勝率の内訳として左右に並べ、
- * 攻めと守りのどちらが得意かを同じ尺度で見比べられるようにする。
- */
-function SideWinRateTile({
-  title,
-  summary,
-}: {
-  title: string;
-  summary: StatSummary;
-}) {
-  return (
-    <div className="home-split">
-      <h3 className="home-split-title">{title}</h3>
-      {summary.battles === 0 ? (
-        <p className="home-split-empty muted">この期の戦闘はありません。</p>
-      ) : (
-        <>
-          <div className="home-split-rate">
-            {formatWinRate(summary.winRate, summary.decided)}
-          </div>
-          <div className="home-split-meta muted">
-            {summary.wins.toLocaleString("ja-JP")}勝{" "}
-            {summary.losses.toLocaleString("ja-JP")}敗・
-            {summary.battles.toLocaleString("ja-JP")}戦
-          </div>
-          <WinRateBar summary={summary} />
-        </>
-      )}
-    </div>
-  );
-}
-
 /** 「使用兵種の割合」で最初に表示する兵種数。超えた分はトグルで開閉する。 */
 const UNIT_USAGE_TOP = 6;
 
@@ -422,12 +393,8 @@ function UnitUsageCard({
   outcomes: WarlordOutcomes;
   onSelectUnit: (name: string) => void;
 }) {
-  const attack = useMemo(
-    () => outcomes.filter((o) => o.side === "left"),
-    [outcomes],
-  );
-  const defense = useMemo(
-    () => outcomes.filter((o) => o.side === "right"),
+  const { attack, defense } = useMemo(
+    () => splitBySide(outcomes),
     [outcomes],
   );
   return (
@@ -529,16 +496,12 @@ function UnitUsageList({
         </ol>
       )}
       {hiddenCount > 0 && (
-        <div className="show-more-row">
-          <button
-            type="button"
-            className="btn show-more-btn"
-            onClick={() => setShowAll((v) => !v)}
-            aria-expanded={showAll}
-          >
-            {showAll ? "閉じる" : `残り${hiddenCount}種を表示`}
-          </button>
-        </div>
+        <ShowMoreButton
+          hiddenCount={hiddenCount}
+          unit="種"
+          expanded={showAll}
+          onToggle={() => setShowAll((v) => !v)}
+        />
       )}
     </section>
   );
@@ -590,12 +553,8 @@ export function HomeTab({
   );
   const overall = useMemo(() => summarize(outcomes), [outcomes]);
   // 出兵（left）・守備（right）それぞれの戦績。
-  const attack = useMemo(
-    () => summarize(outcomes.filter((o) => o.side === "left")),
-    [outcomes],
-  );
-  const defense = useMemo(
-    () => summarize(outcomes.filter((o) => o.side === "right")),
+  const { attack, defense } = useMemo(
+    () => summarizeBySide(outcomes),
     [outcomes],
   );
 
@@ -753,8 +712,20 @@ export function HomeTab({
                 <WinRateBar summary={overall} />
               </div>
               <div className="home-splits">
-                <SideWinRateTile title="⚔️ 出兵勝率" summary={attack} />
-                <SideWinRateTile title="🏯 守備勝率" summary={defense} />
+                <SideWinRate
+                  title="⚔️ 出兵勝率"
+                  summary={attack}
+                  headingLevel="h3"
+                  emptyText="この期の戦闘はありません。"
+                  className="home-split"
+                />
+                <SideWinRate
+                  title="🏯 守備勝率"
+                  summary={defense}
+                  headingLevel="h3"
+                  emptyText="この期の戦闘はありません。"
+                  className="home-split"
+                />
               </div>
             </div>
           )}

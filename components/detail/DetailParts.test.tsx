@@ -3,10 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 import type { BattleSide } from "@/lib/parser";
 import type { BattleOutcome, StatSummary } from "@/lib/stats";
 import type { YearRangeFilter } from "@/components/detail/YearRangeFilter";
+import { EmptyState } from "@/components/EmptyState";
 import {
   DetailLayout,
   DetailBattleLogSection,
-  DetailEmptyState,
   DetailPage,
   DetailSummary,
   DetailHeader,
@@ -220,12 +220,12 @@ describe("DetailSummary", () => {
   });
 });
 
-describe("DetailEmptyState", () => {
+describe("EmptyState", () => {
   it("現行クラスとtitle・hint・任意childrenの順序を維持する", () => {
     const html = renderToStaticMarkup(
-      <DetailEmptyState title="データがありません" hint="条件を確認してください">
+      <EmptyState title="データがありません" hint="条件を確認してください">
         <button type="button">一覧へ戻る</button>
-      </DetailEmptyState>
+      </EmptyState>
     );
 
     expect(html).toContain('class="empty"');
@@ -245,7 +245,7 @@ describe("DetailEmptyState", () => {
 
   it("titleとhintがない既存の簡易空状態も表現できる", () => {
     const html = renderToStaticMarkup(
-      <DetailEmptyState>該当する履歴がありません。</DetailEmptyState>
+      <EmptyState>該当する履歴がありません。</EmptyState>
     );
 
     expect(html).toBe(
@@ -372,5 +372,29 @@ describe("DetailBattleLogSection", () => {
     for (const card of cards) {
       expect(card.indexOf("武将甲")).toBeLessThan(card.indexOf("武将乙"));
     }
+  });
+});
+
+describe("DetailSummary の出兵・守備", () => {
+  it("sides を渡すと出兵・守備それぞれの勝率と勝敗を出す", () => {
+    const markup = renderToStaticMarkup(
+      <DetailSummary
+        summary={SUMMARY}
+        sides={{
+          attack: { battles: 6, wins: 4, losses: 1, others: 1, decided: 5, winRate: 0.8 },
+          defense: { battles: 0, wins: 0, losses: 0, others: 0, decided: 0, winRate: 0 },
+        }}
+      />
+    );
+    expect(markup).toContain(">出兵</h4>");
+    expect(markup).toContain("80.0%");
+    expect(markup).toMatch(/4(<!-- -->)?勝/);
+    expect(markup).toContain(">守備</h4>");
+    expect(markup).toContain("戦闘なし");
+  });
+
+  it("sides が無ければ出兵・守備の枠は出さない", () => {
+    const markup = renderToStaticMarkup(<DetailSummary summary={SUMMARY} />);
+    expect(markup).not.toContain("detail-sides");
   });
 });

@@ -68,6 +68,7 @@ export async function importWarlordStats(
     maxTroops?: number;
     faction?: string;
     raw?: string;
+    iconUrl?: string;
   }>
 ): Promise<ImportStatsResponse> {
   const res = await fetch("/api/warlord-stats", {

@@ -47,6 +47,7 @@ model Warlord {
   selfPr       String?  // 自己PR
   maxTroops    Int?     // 最大徴兵兵数
   statsRaw     String?  // 取り込み元の生テキスト（資金・兵糧など未使用項目の保全用）
+  iconUrl      String?  // アイコン画像URL（ランキング取り込み）
 
   @@id([name, term])
 }
@@ -59,6 +60,9 @@ model BattleRecord {
   time    String? // 戦闘時刻
   term    Int     @default(145) // 期番号（145期など）
   savedAt BigInt  @default(0)
+
+  // 期ごとの取得（/api/state?term=）と期一覧（/api/terms）を全件走査させない。
+  @@index([term])
 }
 
 // 国（勢力）の表示色設定（全ユーザー共有）

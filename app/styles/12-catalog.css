@@ -9,15 +9,18 @@
 .catalog-toolbar > .search-box {
   flex: 1 1 260px;
 }
-.catalog-select {
-  display: inline-flex;
+/* 操作行の絞り込みは縦並びの .filter を横並びにし、検索ボックスの隣に収める。 */
+.catalog-toolbar .filter {
+  flex-direction: row;
   align-items: center;
   gap: var(--space-2);
-  color: var(--muted);
-  font-size: var(--font-size-sm);
   white-space: nowrap;
 }
-.catalog-select .select {
+.catalog-toolbar .filter > span {
+  font-size: var(--font-size-sm);
+  letter-spacing: 0;
+}
+.catalog-toolbar .select {
   min-width: 112px;
 }
 .catalog-panel .select,
@@ -44,7 +47,7 @@
   gap: 6px;
   flex-wrap: wrap;
 }
-.catalog-sort-btn {
+.catalog-sort .tmx-period {
   font-size: 12px;
 }
 .catalog-none {

@@ -18,10 +18,11 @@ import {
   type FactionColorMap,
 } from "@/lib/factionColors";
 import { copyText } from "@/lib/copyText";
+import { EmptyState } from "@/components/EmptyState";
+import { ShowMoreButton } from "@/components/ShowMoreButton";
 import { Section } from "@/components/detail/Section";
 import {
   DetailBattleLogSection,
-  DetailEmptyState,
   DetailLayout,
   DetailSummary,
 } from "@/components/detail/DetailParts";
@@ -122,7 +123,7 @@ export function FactionDetail({
   );
 
   const emptyState = outcomes.length === 0 && members.length === 0 ? (
-    <DetailEmptyState
+    <EmptyState
       title="この国のデータがありません"
       hint={
         <>
@@ -351,16 +352,12 @@ function FactionMembers({
         })}
       </ul>
       {members.length > INITIAL_MEMBERS && (
-        <div className="show-more-row">
-          <button
-            type="button"
-            className="btn show-more-btn"
-            onClick={() => setExpanded((v) => !v)}
-            aria-expanded={expanded}
-          >
-            {expanded ? "一部だけ表示" : `もっと見る（残り${hiddenCount}人）`}
-          </button>
-        </div>
+        <ShowMoreButton
+          hiddenCount={hiddenCount}
+          unit="人"
+          expanded={expanded}
+          onToggle={() => setExpanded((v) => !v)}
+        />
       )}
     </Section>
   );

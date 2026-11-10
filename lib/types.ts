@@ -39,6 +39,8 @@ export interface Warlord {
   maxTroops?: number;
   /** 取り込み元の生テキスト（未使用項目の保全用） */
   statsRaw?: string;
+  /** アイコン画像URL（ランキング取り込み） */
+  iconUrl?: string;
 }
 
 export type WarlordMap = Record<string, Warlord>;

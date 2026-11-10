@@ -1,5 +1,7 @@
 "use client";
 
+import { SideWinRate } from "@/components/SideWinRate";
+import { WinRateBar } from "@/components/WinRateBar";
 import {
   useEffect,
   useId,
@@ -23,6 +25,8 @@ interface HeaderProps {
   titleColor?: string;
   tags?: ReactNode;
   actions?: ReactNode;
+  /** 見出しの左に置く画像（武将アイコンなど）。 */
+  icon?: ReactNode;
   onBack: () => void;
 }
 
@@ -59,6 +63,7 @@ export function DetailHeader({
   titleColor,
   tags,
   actions,
+  icon,
   onBack,
 }: HeaderProps) {
   // 詳細ページへ遷移したら見出しへフォーカスを移す（キーボード／スクリーンリーダー対応）。
@@ -69,22 +74,25 @@ export function DetailHeader({
   }, [kind, title]);
 
   return (
-    <div className="detail-head">
+    <div className={"detail-head" + (icon ? " has-icon" : "")}>
       <button type="button" className="btn detail-back" onClick={onBack}>
         <ChevronLeft />
         <span>戻る</span>
       </button>
-      <div className="detail-title">
-        <span className="detail-kind">{kind}</span>
-        <h2
-          ref={headingRef}
-          id={headingId}
-          tabIndex={-1}
-          style={titleColor ? { color: titleColor } : undefined}
-        >
-          {title}
-        </h2>
-        {tags && <div className="detail-tags">{tags}</div>}
+      <div className={"detail-title" + (icon ? " has-icon" : "")}>
+        {icon}
+        <div className="detail-title-text">
+          <span className="detail-kind">{kind}</span>
+          <h2
+            ref={headingRef}
+            id={headingId}
+            tabIndex={-1}
+            style={titleColor ? { color: titleColor } : undefined}
+          >
+            {title}
+          </h2>
+          {tags && <div className="detail-tags">{tags}</div>}
+        </div>
       </div>
       <div className="detail-head-actions">
         {actions}
@@ -150,29 +158,17 @@ export function DetailLayout({
   );
 }
 
-export function WinRateBar({ summary }: { summary: StatSummary }) {
-  const { wins, losses, decided } = summary;
-  const winPct = decided > 0 ? (wins / decided) * 100 : 0;
-  const lossPct = decided > 0 ? (losses / decided) * 100 : 0;
-  return (
-    <div
-      className="wr-bar"
-      role="img"
-      aria-label={`勝率 ${decided > 0 ? Math.round(winPct) : 0}%`}
-    >
-      <div className="wr-win" style={{ width: `${winPct}%` }} />
-      <div className="wr-loss" style={{ width: `${lossPct}%` }} />
-    </div>
-  );
-}
+export { WinRateBar } from "@/components/WinRateBar";
 
 /** 詳細画面で共通の主要戦績。既存のカードと勝敗バーを同じ順序で表示する。 */
 interface DetailSummaryProps {
   summary: StatSummary;
   antiSummary?: ReturnType<typeof unitAntiSummary>;
+  /** 出兵側・守備側に分けた戦績（武将詳細で使う）。 */
+  sides?: { attack: StatSummary; defense: StatSummary };
 }
 
-export function DetailSummary({ summary, antiSummary }: DetailSummaryProps) {
+export function DetailSummary({ summary, antiSummary, sides }: DetailSummaryProps) {
   const headingId = useId();
 
   return (
@@ -182,6 +178,12 @@ export function DetailSummary({ summary, antiSummary }: DetailSummaryProps) {
       </h3>
       <StatCards summary={summary} />
       <WinRateBar summary={summary} />
+      {sides && (
+        <div className="detail-sides">
+          <SideWinRate title="出兵" summary={sides.attack} />
+          <SideWinRate title="守備" summary={sides.defense} />
+        </div>
+      )}
       {antiSummary && (
         <>
           <table className="unit-summary-table">
@@ -217,27 +219,6 @@ export function DetailSummary({ summary, antiSummary }: DetailSummaryProps) {
         </>
       )}
     </section>
-  );
-}
-
-interface DetailEmptyStateProps {
-  title?: ReactNode;
-  hint?: ReactNode;
-  children?: ReactNode;
-}
-
-/** 詳細画面の空状態。文言と追加導線は呼び出し側に残す。 */
-export function DetailEmptyState({
-  title,
-  hint,
-  children,
-}: DetailEmptyStateProps) {
-  return (
-    <div className="empty">
-      {title != null && <p className="empty-title">{title}</p>}
-      {hint != null && <p className="empty-hint">{hint}</p>}
-      {children}
-    </div>
   );
 }
 

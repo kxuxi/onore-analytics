@@ -5,6 +5,7 @@ import { BATTLE_LOG_PAGE_SIZE as PAGE_SIZE } from "@/lib/stats";
 import type { BattleOutcome, OutcomeResult } from "@/lib/stats";
 import type { FactionColorMap } from "@/lib/factionColors";
 import { useAntiIndex } from "@/lib/useAntiIndex";
+import { EmptyState } from "@/components/EmptyState";
 import { BattleHistoryCard } from "@/components/tabs/BattleHistoryCard";
 import {
   useYearRangeFilter,
@@ -73,7 +74,7 @@ export function BattleLogList({
   };
 
   if (outcomes.length === 0) {
-    return <div className="empty">該当する戦闘履歴がありません。</div>;
+    return <EmptyState>該当する戦闘履歴がありません。</EmptyState>;
   }
 
   return (
@@ -81,10 +82,10 @@ export function BattleLogList({
       {showOwnFilterBar && yf.years.length >= 2 && <YearRangeFilterBar {...yf} />}
 
       {filtered.length === 0 ? (
-        <div className="empty">
+        <EmptyState>
           選択した期間（{Math.min(yf.fromYear, yf.toYear)}年〜
           {Math.max(yf.fromYear, yf.toYear)}年）の戦闘履歴がありません。
-        </div>
+        </EmptyState>
       ) : (
         <>
           <ul className="battle-list">

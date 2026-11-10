@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { parseWarlordStats, hasWarlordStats } from "./warlordStats";
+import {
+  extractRankingIcons,
+  hasWarlordStats,
+  isStorableIconUrl,
+  parseWarlordStats,
+} from "./warlordStats";
 
 /** タブ区切りの 1 行を組み立てる。 */
 function row(fields: (string | number)[]): string {
@@ -218,5 +223,41 @@ describe("hasWarlordStats", () => {
         selfPr: "hello",
       })
     ).toBe(true);
+  });
+});
+
+describe("extractRankingIcons", () => {
+  const html =
+    '<html><body><!--StartFragment--><table><tbody>' +
+    '<tr><th>順位</th><th></th><th>名前</th><th><a href="?s=1">武力</a></th></tr>' +
+    '<tr><td>1</td><td><img src="https://example.com/img/a.png" width="80"></td>' +
+    '<td><a href="/p?id=1">土川方児</a></td><td>59</td></tr>' +
+    '<tr><td>2</td><td><a href="/p?id=2"><img src=\'https://example.com/img/b.png?x=1&amp;y=2\'></a></td>' +
+    '<td><a href="/p?id=2">鞠さん</a></td></tr>' +
+    '<tr><td>3</td><td><img src="data:image/png;base64,AAAA"></td><td><a>データ画像</a></td></tr>' +
+    '<tr><td>4</td><td><img src="//cdn.example.com/c.png"></td><td><a>&lt;あき&amp;やすみ&gt;</a></td></tr>' +
+    '<tr><td>5</td><td></td><td><a>画像なし</a></td></tr>' +
+    "</tbody></table><!--EndFragment--></body></html>";
+
+  it("各行の最初の画像を、最初の文字入りリンクの武将名に結びつける", () => {
+    const icons = extractRankingIcons(html);
+    expect(icons.get("土川方児")).toBe("https://example.com/img/a.png");
+    // 画像がリンクで囲まれていても、文字のある次のリンクを名前とみなし、&amp; は復号する。
+    expect(icons.get("鞠さん")).toBe("https://example.com/img/b.png?x=1&y=2");
+    expect(icons.get("<あき&やすみ>")).toBe("https://cdn.example.com/c.png");
+  });
+
+  it("data: 画像や画像の無い行、見出し行は含めない", () => {
+    const icons = extractRankingIcons(html);
+    expect(icons.has("データ画像")).toBe(false);
+    expect(icons.has("画像なし")).toBe(false);
+    expect(icons.has("武力")).toBe(false);
+    expect(icons.size).toBe(3);
+  });
+
+  it("保存できるURLは http(s) の絶対URLだけ", () => {
+    expect(isStorableIconUrl("https://a.example/x.png")).toBe(true);
+    expect(isStorableIconUrl("javascript:alert(1)")).toBe(false);
+    expect(isStorableIconUrl("/relative.png")).toBe(false);
   });
 });

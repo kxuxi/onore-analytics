@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { BattleRecord, WarlordMap } from "@/lib/types";
+import { EmptyState } from "@/components/EmptyState";
 import { parseBattleCard } from "@/lib/parser";
 import {
   DEFAULT_WIN_LEFT,
@@ -152,9 +153,9 @@ export function FactionTab({
       </p>
 
       {factions.length === 0 ? (
-        <div className="empty">
+        <EmptyState>
           登録された国がありません。戦闘履歴を登録すると国が一覧に表示されます。
-        </div>
+        </EmptyState>
       ) : (
         <div className="faction-color-list">
           {factions.map((f) => {

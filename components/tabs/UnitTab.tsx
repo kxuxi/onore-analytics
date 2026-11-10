@@ -11,6 +11,8 @@ import {
   parseUnitTypesTsv,
   BASE_STAT_OPTIONS,
 } from "@/lib/unitTypeForm";
+import { EmptyState } from "@/components/EmptyState";
+import { FilterSelect } from "@/components/FilterSelect";
 import { SearchBox } from "@/components/SearchBox";
 import { PageHeader } from "@/components/layout/PageHeader";
 import {
@@ -19,7 +21,7 @@ import {
   type ImportMessageValue,
 } from "@/components/ImportFeedback";
 import { UnitCatalogResults } from "./UnitCatalogResults";
-import { CatalogListHead, CatalogSelect, CatalogToolbar } from "./CatalogParts";
+import { CatalogListHead, CatalogToolbar } from "./CatalogParts";
 import {
   UNIT_CATALOG_SORT_OPTIONS,
   filterAndSortUnitCatalog,
@@ -264,24 +266,19 @@ export function UnitTab({
           placeholder="兵種名・得意・ボーナスで検索"
           ariaLabel="兵種名・得意・ボーナスで検索"
         />
-        <CatalogSelect
-          id="unit-catalog-category"
+        <FilterSelect
           label="種類"
           value={category}
-          options={[
-            { value: "", label: "すべて" },
-            ...categories.map((c) => ({ value: c, label: c })),
-          ]}
+          options={categories}
           onChange={setCategory}
+          emptyLabel="すべて"
         />
       </CatalogToolbar>
 
       {loading ? (
         <p className="muted catalog-none">兵種を読み込み中…</p>
       ) : baseUnits.length === 0 ? (
-        <div className="empty">
-          <p className="empty-title">兵種のデータがありません</p>
-        </div>
+        <EmptyState title="兵種のデータがありません" />
       ) : (
         <>
           <CatalogListHead

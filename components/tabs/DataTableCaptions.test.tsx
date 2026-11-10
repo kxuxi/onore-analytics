@@ -78,7 +78,7 @@ describe("データ表のcaption", () => {
     );
 
     expect(markup).toContain(
-      'aria-pressed="true" class="tmx-period meta-sort-btn active">戦闘数</button>'
+      'aria-pressed="true" class="tmx-period active">戦闘数</button>'
     );
     expect(markup).toMatch(/\d+勝\d+敗/);
     expect(markup).not.toContain("採用");

@@ -12,12 +12,18 @@ const errorResponse = makeErrorResponse("api/terms");
  */
 export async function GET() {
   try {
-    const rows = await prisma.battleRecord.findMany({
-      distinct: ["term"],
-      select: { term: true },
-      orderBy: { term: "desc" },
-    });
-    return NextResponse.json(rows.map((r) => r.term));
+    // term の索引を「最大値 → それより小さい最大値 → …」と辿り、期の数だけの
+    // 索引参照で一覧を作る（DISTINCT だと全戦闘履歴を走査してしまう）。
+    const rows = await prisma.$queryRaw<{ term: number }[]>`
+      WITH RECURSIVE t AS (
+        SELECT MAX("term") AS term FROM "BattleRecord"
+        UNION ALL
+        SELECT (SELECT MAX("term") FROM "BattleRecord" WHERE "term" < t.term)
+        FROM t WHERE t.term IS NOT NULL
+      )
+      SELECT term FROM t WHERE term IS NOT NULL ORDER BY term DESC
+    `;
+    return NextResponse.json(rows.map((r) => Number(r.term)));
   } catch (err) {
     return errorResponse("GET", err);
   }

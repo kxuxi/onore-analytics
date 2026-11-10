@@ -18,6 +18,7 @@ export interface WarlordCoreRow {
   selfPr: string | null;
   maxTroops: number | null;
   statsRaw: string | null;
+  iconUrl?: string | null;
 }
 
 export function warlordCoreRowToDto(row: WarlordCoreRow): Warlord {
@@ -39,5 +40,6 @@ export function warlordCoreRowToDto(row: WarlordCoreRow): Warlord {
     selfPr: row.selfPr ?? undefined,
     maxTroops: row.maxTroops ?? undefined,
     statsRaw: row.statsRaw ?? undefined,
+    iconUrl: row.iconUrl ?? undefined,
   };
 }

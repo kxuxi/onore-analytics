@@ -17,6 +17,7 @@ import { getWarlordNote, setWarlordNote } from "@/lib/warlordNotes";
 import { factionNameStyle, type FactionColorMap } from "@/lib/factionColors";
 import type { Warlord } from "@/lib/types";
 import { hasWarlordStats } from "@/lib/warlordStats";
+import { ShowMoreButton } from "@/components/ShowMoreButton";
 import { Section } from "@/components/detail/Section";
 import { ChevronUp } from "@/components/icons";
 
@@ -252,16 +253,12 @@ export function UnitWinRateList({
         ))}
       </ul>
       {units.length > INITIAL_UNITS && (
-        <div className="show-more-row">
-          <button
-            type="button"
-            className="btn show-more-btn"
-            onClick={() => setExpanded((v) => !v)}
-            aria-expanded={expanded}
-          >
-            {expanded ? "一部だけ表示" : `もっと見る（残り${hiddenCount}件）`}
-          </button>
-        </div>
+        <ShowMoreButton
+          hiddenCount={hiddenCount}
+          unit="件"
+          expanded={expanded}
+          onToggle={() => setExpanded((v) => !v)}
+        />
       )}
     </Section>
   );

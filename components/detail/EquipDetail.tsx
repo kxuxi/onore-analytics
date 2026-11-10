@@ -11,10 +11,10 @@ import {
   unitUsage,
   type EquipSlot,
 } from "@/lib/stats";
+import { EmptyState } from "@/components/EmptyState";
 import { Section } from "@/components/detail/Section";
 import {
   DetailBattleLogSection,
-  DetailEmptyState,
   DetailLayout,
   DetailSummary,
 } from "@/components/detail/DetailParts";
@@ -62,7 +62,7 @@ export function EquipDetail({
     <DetailSummary summary={summary} />
   ) : undefined;
   const emptyState = outcomes.length === 0 ? (
-    <DetailEmptyState
+    <EmptyState
       title={`この${kind}の戦闘履歴がまだありません`}
       hint={
         <>
