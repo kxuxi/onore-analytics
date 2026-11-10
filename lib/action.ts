@@ -13,8 +13,10 @@ export interface ActionInfo {
   status: ActionStatus;
   /** 判定に使用した観測時刻からの経過分（時刻が無い場合は null） */
   minutes: number | null;
-  /** 状況判定と経過時間に使用した観測時刻。 */
+  /** 状況判定と経過時間に使用した観測時刻（最新の出兵、または後から受けた守備敗北）。 */
   actionAt: string | null;
+  /** 最新の出兵時刻。守備（勝敗とも）の時刻は含めない。固定行動の予測の起点。 */
+  attackAt: string | null;
   /** 直近の行動が「末尾固定」（分の1の位が動かず連続行動）か */
   noRest: boolean;
   /** 末尾から連続して「末尾固定」（分の1の位が一致）で行動した戦数（2未満は 0） */
@@ -32,7 +34,7 @@ export type NoRestLabel = "固定分" | "休養なし" | "末尾固定";
 export const NO_REST_EVOLVE_STREAK = 5;
 /** 出兵（または守備敗北）からこの分数が経つと、再び出兵できる。 */
 export const ACTION_DONE_MINUTES = 40;
-/** 出兵からこの分数を超えて観測が無ければ「動向不明」とする。 */
+/** 出兵（または守備敗北）からこの分数を超えて観測が無ければ「動向不明」とする。 */
 export const ACTION_READY_MINUTES = 80;
 
 /**
@@ -40,7 +42,7 @@ export const ACTION_READY_MINUTES = 80;
  *  - done     … 出兵直後で、まだ次の出兵ができない（クールタイム）
  *  - ready    … クールタイムが明け、次の出兵が観測されていない（今いちばん来うる）
  *  - unknown  … 観測が途切れていて動向が読めない（来うるが確度は低い）
- *  - depleted … 守備敗北で兵が減っている
+ *  - depleted … 守備敗北で兵が減っていて、まだ次の出兵ができない
  */
 export const ACTION_LABEL: Record<ActionStatus, string> = {
   done: "クールタイム",
@@ -122,13 +124,17 @@ function latestObservedAt(
 }
 
 /**
- * 行動時刻からの経過時間でステータスを判定する。
- *  - 40分未満            … 行動済み (done)
- *  - 40分〜1時間20分     … 未行動   (ready)
- *  - 1時間20分以上       … 行動可   (unknown)
- *  - 守備敗北から40分未満 … 兵力減   (depleted)
- *  - 守備敗北から40分以上 … 行動可   (unknown)
- *  - 行動時刻なし        … データなし (none)
+ * 最新の観測（出兵、またはその後に受けた守備敗北）からの経過時間でステータスを判定する。
+ *  - 出兵から40分未満     … クールタイム (done)
+ *  - 守備敗北から40分未満 … 兵力減       (depleted)
+ *  - 40分〜1時間20分      … 出兵可能     (ready)
+ *  - 1時間20分以上        … 動向不明     (unknown)
+ *  - 出兵時刻なし         … データなし   (none)
+ *
+ * 守備敗北は「次に出兵できる時刻」を後ろへずらすだけで、40分経てば出兵と同じく
+ * 出兵可能として扱う（観測が新しいのに動向不明へ落とさない）。
+ * 出兵時刻は w.actions（出兵のみ）とログ由来の latestAttackAt から求める。
+ * w.lastActionAt は守備の時刻も含むため、出兵の判定には使わない。
  */
 export function getActionInfo(
   w: Warlord,
@@ -138,21 +144,21 @@ export function getActionInfo(
     "depletedByDefenseLoss" | "defenseLossAt" | "latestAttackAt"
   >
 ): ActionInfo {
-  const latestActionAt = latestObservedAt(
-    w.lastActionAt,
+  const attackAt = latestObservedAt(
+    w.actions?.[w.actions.length - 1],
     availability?.latestAttackAt,
     now
   );
+  const depleted = availability?.depletedByDefenseLoss === true;
   // 守備敗北時刻が不明な兵力減を、古い出兵時刻から誤って回復させない。
-  const actionAt = availability?.depletedByDefenseLoss
-    ? availability.defenseLossAt
-    : latestActionAt;
+  const actionAt = depleted ? availability?.defenseLossAt : attackAt;
   const d = parseActionDate(actionAt, now);
   if (!d)
     return {
-      status: availability?.depletedByDefenseLoss ? "depleted" : "none",
+      status: depleted ? "depleted" : "none",
       minutes: null,
       actionAt: actionAt ?? null,
+      attackAt: attackAt ?? null,
       noRest: false,
       noRestStreak: 0,
       strictStreak: 0,
@@ -160,9 +166,7 @@ export function getActionInfo(
     };
   const minutes = Math.max(0, Math.floor((now.getTime() - d.getTime()) / 60000));
   let status: ActionStatus;
-  if (availability?.depletedByDefenseLoss) {
-    status = minutes < ACTION_DONE_MINUTES ? "depleted" : "unknown";
-  } else if (minutes < ACTION_DONE_MINUTES) status = "done";
+  if (minutes < ACTION_DONE_MINUTES) status = depleted ? "depleted" : "done";
   else if (minutes < ACTION_READY_MINUTES) status = "ready";
   else status = "unknown";
   const noRestStreak = computeNoRestStreak(w, now);
@@ -172,6 +176,7 @@ export function getActionInfo(
     status,
     minutes,
     actionAt: actionAt ?? null,
+    attackAt: attackAt ?? null,
     noRest: noRestStreak >= 2,
     noRestStreak,
     strictStreak,

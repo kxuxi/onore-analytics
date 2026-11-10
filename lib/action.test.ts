@@ -149,17 +149,53 @@ describe("getActionInfo の兵力減判定", () => {
     expect(info.minutes).toBe(39);
   });
 
-  it("守備敗北から40分経過したら行動可にする", () => {
+  it("守備敗北から40分経過したら出兵可能にする（動向不明にしない）", () => {
     const now = new Date(2026, 5, 15, 10, 40, 0);
     const info = getActionInfo(warlord([at(9, 0)]), now, {
       depletedByDefenseLoss: true,
       defenseLossAt: at(10, 0),
     });
 
-    expect(info.status).toBe("unknown");
-    expect(ACTION_LABEL[info.status]).toBe("動向不明");
+    expect(info.status).toBe("ready");
+    expect(ACTION_LABEL[info.status]).toBe("出兵可能");
     expect(info.actionAt).toBe(at(10, 0));
+    expect(info.attackAt).toBe(at(9, 0));
     expect(info.minutes).toBe(40);
+  });
+
+  it("回帰: 1時間弱前に出兵し、直後に守備敗北した武将は出兵可能のまま", () => {
+    // 10:00 出兵 → 10:05 守備敗北 → 10:55 時点（出兵から55分・敗北から50分）
+    const now = new Date(2026, 5, 15, 10, 55, 0);
+    const info = getActionInfo(warlord([at(10, 0)]), now, {
+      depletedByDefenseLoss: true,
+      defenseLossAt: at(10, 5),
+      latestAttackAt: at(10, 0),
+    });
+
+    expect(info.status).toBe("ready");
+    expect(info.attackAt).toBe(at(10, 0));
+  });
+
+  it("守備敗北から1時間20分経って観測が無ければ動向不明にする", () => {
+    const now = new Date(2026, 5, 15, 11, 20, 0);
+    const info = getActionInfo(warlord([at(9, 0)]), now, {
+      depletedByDefenseLoss: true,
+      defenseLossAt: at(10, 0),
+    });
+
+    expect(info.status).toBe("unknown");
+  });
+
+  it("守備の時刻（lastActionAt）は出兵時刻として扱わない", () => {
+    const now = new Date(2026, 5, 15, 10, 50, 0);
+    const info = getActionInfo(
+      { ...warlord([at(10, 0)]), lastActionAt: at(10, 45) },
+      now
+    );
+
+    expect(info.attackAt).toBe(at(10, 0));
+    expect(info.actionAt).toBe(at(10, 0));
+    expect(info.status).toBe("ready");
   });
 
   it("守備敗北時刻を取得できない場合は安全側の兵力減を維持する", () => {

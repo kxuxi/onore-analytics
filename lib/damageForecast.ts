@@ -25,8 +25,10 @@ const MAX_PREDICTION_STEPS = 12;
 
 /** 次の出兵の見込み。 */
 export interface Forecast {
-  /** 判定に使った観測時刻。 */
+  /** 判定に使った観測時刻（最新の出兵、または後から受けた守備敗北）。 */
   baseAt: Date | null;
+  /** 最新の出兵時刻。固定行動の予測の起点。 */
+  attackAt: Date | null;
   /** 出兵可能になる時刻（観測時刻 + 40分）。 */
   readyAt: Date | null;
   /** 固定行動から予測した次の出兵時刻（固定行動でなければ null）。 */
@@ -49,6 +51,7 @@ export function computeForecast(info: ActionInfo, now: Date): Forecast {
   if (!baseAt) {
     return {
       baseAt: null,
+      attackAt: null,
       readyAt: null,
       predictedAt: null,
       predictedSpread: null,
@@ -61,12 +64,14 @@ export function computeForecast(info: ActionInfo, now: Date): Forecast {
   let predictedAt: Date | null = null;
   let predictedSpread: number | null = null;
   let fixedDigit: number | null = null;
-  // 兵力減（守備敗北）の時刻は出兵パターンではないので予測に使わない。
-  if (info.noRestLabel && info.status !== "depleted") {
-    fixedDigit = baseAt.getMinutes() % 10;
+  // 固定行動は出兵の並びから読むので、起点は必ず最新の出兵時刻にする
+  // （守備敗北の時刻は出兵パターンではない）。兵力減の間は予測しない。
+  const attackAt = parseActionDate(info.attackAt ?? undefined, now);
+  if (info.noRestLabel && attackAt && info.status !== "depleted") {
+    fixedDigit = attackAt.getMinutes() % 10;
     predictedSpread =
       info.noRestLabel === "休養なし" ? 0 : FIXED_SPREAD_MINUTES;
-    let candidate = baseAt.getTime() + FIXED_INTERVAL_MINUTES * MINUTE;
+    let candidate = attackAt.getTime() + FIXED_INTERVAL_MINUTES * MINUTE;
     let steps = 1;
     while (
       candidate < now.getTime() - PREDICTION_GRACE_MINUTES * MINUTE &&
@@ -91,6 +96,7 @@ export function computeForecast(info: ActionInfo, now: Date): Forecast {
 
   return {
     baseAt,
+    attackAt,
     readyAt,
     predictedAt,
     predictedSpread,
