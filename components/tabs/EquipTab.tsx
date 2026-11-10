@@ -3,10 +3,12 @@
 import { useMemo, useState } from "react";
 import type { BattleRecord } from "@/lib/types";
 import { weaponStats, itemStats } from "@/lib/stats";
+import { EmptyState } from "@/components/EmptyState";
+import { FilterSelect } from "@/components/FilterSelect";
 import { SearchBox } from "@/components/SearchBox";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EquipCatalogResults } from "./EquipCatalogResults";
-import { CatalogListHead, CatalogSelect, CatalogToolbar } from "./CatalogParts";
+import { CatalogListHead, CatalogToolbar } from "./CatalogParts";
 import {
   EQUIP_CATALOG_MIN_USE_OPTIONS,
   EQUIP_CATALOG_SORT_OPTIONS,
@@ -39,7 +41,7 @@ const VARIANT_COPY: Record<
 };
 
 const MIN_USE_OPTIONS = EQUIP_CATALOG_MIN_USE_OPTIONS.map((n) => ({
-  value: n,
+  value: String(n),
   label: n === 1 ? "すべて" : `${n}回以上`,
 }));
 
@@ -66,22 +68,19 @@ export function EquipTab({ log, onSelectWarlord, onSelectEquip, variant }: Props
           placeholder={`${copy.noun}名で検索`}
           ariaLabel={`${copy.noun}名で検索`}
         />
-        <CatalogSelect
-          id={`${variant}-catalog-min`}
+        <FilterSelect
           label="使用回数"
-          value={minUses}
+          value={String(minUses)}
           options={MIN_USE_OPTIONS}
-          onChange={setMinUses}
+          onChange={(value) => setMinUses(Number(value))}
         />
       </CatalogToolbar>
 
       {stats.length === 0 ? (
-        <div className="empty">
-          <p className="empty-title">{copy.noun}のデータがありません</p>
-          <p className="empty-hint">
-            戦闘履歴を取り込むと、武将が持っていた{copy.noun}が並びます。
-          </p>
-        </div>
+        <EmptyState
+          title={`${copy.noun}のデータがありません`}
+          hint={`戦闘履歴を取り込むと、武将が持っていた${copy.noun}が並びます。`}
+        />
       ) : (
         <>
           <CatalogListHead

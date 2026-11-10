@@ -1,12 +1,12 @@
 "use client";
 
+import { PeriodSelector, useRankingPeriod } from "@/components/PeriodSelector";
 import { useCallback, useMemo, useState } from "react";
 import type { BattleRecord } from "@/lib/types";
 import {
   assetMetricRanking,
   factionsInYearRange,
   formatWinRate,
-  rankingPeriods,
   type AssetMetricStat,
 } from "@/lib/stats";
 import {
@@ -16,6 +16,8 @@ import {
   DEFAULT_RANKING_PERIOD_KEY,
   RANK_METRIC_DESCRIPTIONS,
 } from "@/lib/rankingDefaults";
+import { EmptyState } from "@/components/EmptyState";
+import { FilterSelect } from "@/components/FilterSelect";
 import { SearchBox } from "@/components/SearchBox";
 import {
   FilterPanel,
@@ -262,13 +264,13 @@ export function RankingTab({
   const [faction, setFaction] = useState("");
   const [unitType, setUnitType] = useState("");
   const [showFilter, setShowFilter] = useState(DEFAULT_RANKING_FILTERS_OPEN);
-  const [periodKey, setPeriodKey] = useState<string>(DEFAULT_PERIOD_KEY);
+  const {
+    periods,
+    periodKey,
+    setPeriodKey,
+    period: range,
+  } = useRankingPeriod(log, DEFAULT_PERIOD_KEY);
 
-  const periods = useMemo(() => rankingPeriods(log), [log]);
-  const range = useMemo(
-    () => periods.find((period) => period.key === periodKey),
-    [periodKey, periods]
-  );
   const availableFactions = useMemo(
     () => factionsInYearRange(log, range),
     [log, range]
@@ -401,21 +403,11 @@ export function RankingTab({
     <section className="panel ranking-panel">
       <PageHeader title={copy.title} description={copy.description} />
 
-      <div className="tmx-periods" role="group" aria-label="集計期間">
-        {periods.map((period) => (
-          <button
-            key={period.key}
-            type="button"
-            aria-pressed={periodKey === period.key}
-            className={
-              "tmx-period" + (periodKey === period.key ? " active" : "")
-            }
-            onClick={() => setPeriodKey(period.key)}
-          >
-            {period.label}
-          </button>
-        ))}
-      </div>
+      <PeriodSelector
+        periods={periods}
+        value={periodKey}
+        onChange={setPeriodKey}
+      />
 
       <FilterPanel
         id={`${variant}-ranking-filters`}
@@ -440,68 +432,34 @@ export function RankingTab({
       >
         <>
           {activeMetric && (
-            <label className="filter">
-              <span>指標</span>
-              <select
-                className="select"
-                value={activeMetric}
-                onChange={(event) =>
-                  setActiveMetric(event.target.value as MetricKey)
-                }
-              >
-                {METRIC_OPTIONS.map((option) => (
-                  <option key={option.key} value={option.key}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <FilterSelect
+              label="指標"
+              value={activeMetric}
+              options={METRIC_OPTIONS.map((o) => ({ value: o.key, label: o.label }))}
+              onChange={(value) => setActiveMetric(value as MetricKey)}
+            />
           )}
-          <label className="filter">
-            <span>国</span>
-            <select
-              className="select"
-              value={faction}
-              onChange={(event) => setFaction(event.target.value)}
-            >
-              <option value="">すべて</option>
-              {factionOptions.map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="filter">
-            <span>最低使用回数</span>
-            <select
-              className="select"
-              value={minUses}
-              onChange={(event) => setMinUses(Number(event.target.value))}
-            >
-              {MIN_USE_OPTIONS.map((count) => (
-                <option key={count} value={count}>
-                  {count}回以上
-                </option>
-              ))}
-            </select>
-          </label>
+          <FilterSelect
+            label="国"
+            value={faction}
+            options={factionOptions}
+            onChange={setFaction}
+            emptyLabel="すべて"
+          />
+          <FilterSelect
+            label="最低使用回数"
+            value={String(minUses)}
+            options={MIN_USE_OPTIONS.map((n) => ({ value: String(n), label: `${n}回以上` }))}
+            onChange={(value) => setMinUses(Number(value))}
+          />
           {variant === "unit" && (
-            <label className="filter">
-              <span>兵種タイプ</span>
-              <select
-                className="select"
-                value={unitType}
-                onChange={(event) => setUnitType(event.target.value)}
-              >
-                <option value="">すべて</option>
-                {unitTypeOptions.map((value) => (
-                  <option key={value} value={value}>
-                    {value}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <FilterSelect
+              label="兵種タイプ"
+              value={unitType}
+              options={unitTypeOptions}
+              onChange={setUnitType}
+              emptyLabel="すべて"
+            />
           )}
         </>
       </FilterPanel>
@@ -571,14 +529,10 @@ export function RankingTab({
           </p>
 
           {detailRows.length === 0 ? (
-            <div className="empty">
-              <p className="empty-title">
-                条件を満たす{copy.noun}がありません
-              </p>
-              <p className="empty-hint">
-                集計期間や絞り込み条件を見直してください。
-              </p>
-            </div>
+            <EmptyState
+              title={`条件を満たす${copy.noun}がありません`}
+              hint="集計期間や絞り込み条件を見直してください。"
+            />
           ) : (
             <ol className="swi-list">
               {detailRows.map((row, index) => (

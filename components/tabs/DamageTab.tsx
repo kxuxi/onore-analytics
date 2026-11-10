@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BattleRecord, Warlord, WarlordMap } from "@/lib/types";
+import { EmptyState } from "@/components/EmptyState";
 import { FilterPanel, type ActiveFilter } from "@/components/FilterPanel";
 import { SearchBox } from "@/components/SearchBox";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -678,12 +679,10 @@ export function DamageTab({ db, allDb, log, onSelectWarlord }: Props) {
       {notifyError && <p className="dmg-notify-error">{notifyError}</p>}
 
       {!now ? null : rows.length === 0 ? (
-        <div className="empty">
-          <p className="empty-title">表示できる行動データがありません</p>
-          <p className="empty-hint">
-            「戦闘履歴」タブで戦績を登録すると、各武将の出兵時刻からここに表示します。
-          </p>
-        </div>
+        <EmptyState
+          title="表示できる行動データがありません"
+          hint="「戦闘履歴」タブで戦績を登録すると、各武将の出兵時刻からここに表示します。"
+        />
       ) : (
         <>
           {readable.length > 0 && (

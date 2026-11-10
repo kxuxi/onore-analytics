@@ -1,8 +1,11 @@
 "use client";
 
+import { PeriodSelector, useRankingPeriod } from "@/components/PeriodSelector";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { BattleRecord, UnitType, WarlordMap } from "@/lib/types";
 import { fetchUnitTypes } from "@/lib/api";
+import { EmptyState } from "@/components/EmptyState";
+import { FilterSelect } from "@/components/FilterSelect";
 import { SearchBox } from "@/components/SearchBox";
 import {
   FilterPanel,
@@ -15,7 +18,6 @@ import {
   factionsInYearRange,
   formatWinRate,
   pontaPointRanking,
-  rankingPeriods,
   warlordRanking,
 } from "@/lib/stats";
 import {
@@ -405,7 +407,12 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
   const [pendingWarlordType, setPendingWarlordType] = useState("");
   const [excludePoliticians, setExcludePoliticians] = useState(false);
   const [showFilter, setShowFilter] = useState(DEFAULT_RANKING_FILTERS_OPEN);
-  const [periodKey, setPeriodKey] = useState<string>(DEFAULT_PERIOD_KEY);
+  const {
+    periods,
+    periodKey,
+    setPeriodKey,
+    period: range,
+  } = useRankingPeriod(log, DEFAULT_PERIOD_KEY);
   const [unitTypes, setUnitTypes] = useState<UnitType[] | null>(null);
   const [unitTypesLoading, setUnitTypesLoading] = useState(true);
   const [unitTypesError, setUnitTypesError] = useState(false);
@@ -425,11 +432,6 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
   useEffect(() => {
     void loadUnitTypes();
   }, [loadUnitTypes]);
-  const periods = useMemo(() => rankingPeriods(log), [log]);
-  const range = useMemo(
-    () => periods.find((period) => period.key === periodKey),
-    [periodKey, periods]
-  );
   const availableFactions = useMemo(
     () => factionsInYearRange(log, range),
     [log, range]
@@ -696,21 +698,11 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
         description="※初期設定では、各指標の集計対象回数が10回未満の武将を除外します。"
       />
 
-      <div className="tmx-periods" role="group" aria-label="集計期間">
-        {periods.map((period) => (
-          <button
-            key={period.key}
-            type="button"
-            aria-pressed={periodKey === period.key}
-            className={
-              "tmx-period" + (periodKey === period.key ? " active" : "")
-            }
-            onClick={() => setPeriodKey(period.key)}
-          >
-            {period.label}
-          </button>
-        ))}
-      </div>
+      <PeriodSelector
+        periods={periods}
+        value={periodKey}
+        onChange={setPeriodKey}
+      />
 
       <FilterPanel
         id="warlord-ranking-filters"
@@ -736,54 +728,26 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
         }
       >
         <>
-          <label className="filter">
-            <span>国</span>
-            <select
-              className="select"
-              value={faction}
-              onChange={(event) => setFaction(event.target.value)}
-            >
-              <option value="">すべて</option>
-              {factionOptions.map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="filter">
-            <span>
-              {activeMetric
-                ? metricContactLabel(activeMetric)
-                : "最低戦闘数"}
-            </span>
-            <select
-              className="select"
-              value={minContacts}
-              onChange={(e) => setMinContacts(Number(e.target.value))}
-            >
-              {MIN_CONTACT_OPTIONS.map((v) => (
-                <option key={v} value={v}>
-                  {v}回以上
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="filter">
-            <span>兵種タイプ</span>
-            <select
-              className="select"
-              value={branch}
-              onChange={(e) => setBranch(e.target.value)}
-            >
-              <option value="">すべて</option>
-              {branchOptions.map((v) => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FilterSelect
+            label="国"
+            value={faction}
+            options={factionOptions}
+            onChange={setFaction}
+            emptyLabel="すべて"
+          />
+          <FilterSelect
+            label={activeMetric ? metricContactLabel(activeMetric) : "最低戦闘数"}
+            value={String(minContacts)}
+            options={MIN_CONTACT_OPTIONS.map((n) => ({ value: String(n), label: `${n}回以上` }))}
+            onChange={(value) => setMinContacts(Number(value))}
+          />
+          <FilterSelect
+            label="兵種タイプ"
+            value={branch}
+            options={branchOptions}
+            onChange={setBranch}
+            emptyLabel="すべて"
+          />
           <label className="filter">
             <span>武将タイプ</span>
             <select
@@ -913,10 +877,10 @@ export function MetricsTab({ log, db, onSelectWarlord }: Props) {
               </button>
             </div>
           ) : detailRows.length === 0 ? (
-            <div className="empty">
-              <p className="empty-title">条件を満たす武将がいません</p>
-              <p className="empty-hint">絞り込み条件を見直してください。</p>
-            </div>
+            <EmptyState
+              title="条件を満たす武将がいません"
+              hint="絞り込み条件を見直してください。"
+            />
           ) : (
             <ol className="swi-list">
               {detailRows.map((r, i) => (

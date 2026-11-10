@@ -24,6 +24,8 @@ export interface WarlordStatImport {
   raw: string;
   /** 国名（新規作成時の faction 補完に使う）。 */
   faction?: string;
+  /** アイコン画像URL（貼り付け時の HTML から補う）。 */
+  iconUrl?: string;
 }
 
 export interface WarlordStatParseResult {
@@ -197,4 +199,46 @@ export function hasWarlordStats(w: Warlord | undefined): boolean {
     w.strategy !== undefined ||
     (w.selfPr !== undefined && w.selfPr !== "")
   );
+}
+
+/** HTML の文字参照をよく使うものだけ復号する。 */
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+    .replace(/&nbsp;/g, " ")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+}
+
+/** 取り込めるアイコンURLか（http/https の絶対URLのみ。data: などは保存しない）。 */
+export function isStorableIconUrl(url: string): boolean {
+  return /^https?:\/\/[^\s"'<>]+$/i.test(url) && url.length <= 2048;
+}
+
+/**
+ * ランキング表をコピーしたときのクリップボード HTML から、武将名 → アイコン画像URL を取り出す。
+ * 各行（<tr>）の最初の <img src> をアイコン、最初のリンク（<a>）の文字列を武将名とみなす。
+ * テキスト貼り付けでは画像が失われるため、貼り付け時の text/html から補う。
+ */
+export function extractRankingIcons(html: string): Map<string, string> {
+  const icons = new Map<string, string>();
+  for (const row of html.split(/<tr[\s>]/i).slice(1)) {
+    const src = row.match(/<img\b[^>]*?\bsrc\s*=\s*["']([^"']+)["']/i)?.[1];
+    if (!src) continue;
+    let url = decodeEntities(src.trim());
+    if (url.startsWith("//")) url = `https:${url}`;
+    if (!isStorableIconUrl(url)) continue;
+    for (const m of Array.from(row.matchAll(/<a\b[^>]*>([\s\S]*?)<\/a>/gi))) {
+      const name = decodeEntities(m[1].replace(/<[^>]*>/g, "")).trim();
+      if (name) {
+        icons.set(name, url);
+        break;
+      }
+    }
+  }
+  return icons;
 }

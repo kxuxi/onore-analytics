@@ -1,5 +1,6 @@
 "use client";
 
+import { WarlordIcon } from "@/components/WarlordIcon";
 import { useCallback, useMemo, useState } from "react";
 import type { WarlordMap } from "@/lib/types";
 import type { BattleRecord } from "@/lib/types";
@@ -9,6 +10,7 @@ import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
 import {
   collectWarlordBattles,
   summarize,
+  summarizeBySide,
   selfUnitStats,
   formatWinRate,
   latestSelfProfile,
@@ -21,10 +23,10 @@ import {
 import { PieChart, chartColor } from "@/components/PieChart";
 import { DownloadIcon, StarIcon } from "@/components/icons";
 import { useYearRangeFilter, YearRangeFilterBar } from "@/components/detail/YearRangeFilter";
+import { EmptyState } from "@/components/EmptyState";
 import { Section } from "@/components/detail/Section";
 import {
   DetailBattleLogSection,
-  DetailEmptyState,
   DetailLayout,
   DetailSummary,
 } from "@/components/detail/DetailParts";
@@ -81,6 +83,8 @@ export function WarlordDetail({
     [log, name]
   );
   const summary = useMemo(() => summarize(outcomes), [outcomes]);
+  // 出兵（左側）と守備（右側）で分けた勝率（壁戦は戦績に含まれない）。
+  const sides = useMemo(() => summarizeBySide(outcomes), [outcomes]);
   // 使用兵種の割合は戦闘ログと同じ年フィルターを共有する。
   const yearFilter = useYearRangeFilter(outcomes);
   const usage = useMemo(() => selfUnitStats(yearFilter.filtered), [yearFilter.filtered]);
@@ -188,7 +192,7 @@ export function WarlordDetail({
 
   const emptyState = outcomes.length === 0 ? (
     !dbInfo ? (
-      <DetailEmptyState
+      <EmptyState
         title="武将が見つかりません"
         hint={
           <>
@@ -199,9 +203,9 @@ export function WarlordDetail({
       />
     ) : (
       <>
-        <DetailEmptyState>
+        <EmptyState>
           この武将が登場する戦闘履歴がまだありません。
-        </DetailEmptyState>
+        </EmptyState>
         {canComment && <WarlordComment name={name} />}
       </>
     )
@@ -276,6 +280,9 @@ export function WarlordDetail({
     <DetailLayout
       kind="武将"
       title={name}
+      icon={
+        <WarlordIcon url={dbInfo?.iconUrl} size={64} className="detail-icon" />
+      }
       tags={tags}
       actions={
         isAdmin ? (
@@ -334,7 +341,7 @@ export function WarlordDetail({
       onBack={onBack}
       profile={<AbilityStats warlord={dbInfo} />}
       summary={
-        outcomes.length > 0 ? <DetailSummary summary={summary} /> : undefined
+        outcomes.length > 0 ? <DetailSummary summary={summary} sides={sides} /> : undefined
       }
       emptyState={emptyState}
       sections={sections}

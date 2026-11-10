@@ -1,5 +1,6 @@
 "use client";
 
+import { PeriodSelector, useRankingPeriod } from "@/components/PeriodSelector";
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import type { BattleRecord } from "@/lib/types";
@@ -8,8 +9,6 @@ import {
   traitMatchupMatrix,
   collectTraitMatchupBattles,
   formatWinRate,
-  META_PERIODS,
-  rankingPeriods,
 } from "@/lib/stats";
 import { BattleLogList } from "@/components/detail/BattleLogList";
 import { CloseIcon } from "@/components/icons";
@@ -21,11 +20,6 @@ interface Props {
   onSelectUnit: (name: string) => void;
   onSelectEquip?: (name: string, slot: "weapon" | "item") => void;
 }
-
-/** 集計期間のプリセット（全期間・過去10年間・ゲーム内年バケット）。 */
-type PeriodKey =
-  | (typeof META_PERIODS)[number]["key"]
-  | "last10";
 
 /** 統計的に意味を持たせる最小サンプル数（これ未満のマスは「–」表示）。 */
 const MIN_SAMPLE = 5;
@@ -52,16 +46,17 @@ export function TraitMatrixTab({
   onSelectUnit,
   onSelectEquip,
 }: Props) {
-  const [period, setPeriod] = useState<PeriodKey>("all");
+  const {
+    periods,
+    periodKey: period,
+    setPeriodKey: setPeriod,
+    period: selectedPeriod,
+  } = useRankingPeriod(log, "all");
   const [selected, setSelected] = useState<{ row: string; col: string } | null>(
     null
   );
 
-  const periods = useMemo(() => rankingPeriods(log), [log]);
-  const range = useMemo(
-    () => periods.find((p) => p.key === period) ?? null,
-    [period, periods]
-  );
+  const range = selectedPeriod ?? null;
 
   const { traits, matrix } = useMemo(
     () => traitMatchupMatrix(log, range ?? undefined),
@@ -84,7 +79,7 @@ export function TraitMatrixTab({
     );
   }, [log, selected, range]);
 
-  const selectPeriod = (key: PeriodKey) => {
+  const selectPeriod = (key: string) => {
     setPeriod(key);
     setSelected(null);
   };
@@ -96,19 +91,11 @@ export function TraitMatrixTab({
         description="出兵側が、守備側にどれだけ勝てるかを示します。"
       />
 
-      <div className="tmx-periods" role="group" aria-label="集計期間">
-        {periods.map((p) => (
-          <button
-            key={p.key}
-            type="button"
-            aria-pressed={period === p.key}
-            className={"tmx-period" + (period === p.key ? " active" : "")}
-            onClick={() => selectPeriod(p.key)}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
+      <PeriodSelector
+        periods={periods}
+        value={period}
+        onChange={selectPeriod}
+      />
 
       {totalBattles === 0 ? (
         <p className="muted">この期間の対戦データがありません。</p>

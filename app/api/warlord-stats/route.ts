@@ -14,6 +14,7 @@ import {
 } from "@/lib/warlordDto";
 import type { Warlord, WarlordMap } from "@/lib/types";
 import { warlordKey } from "@/lib/storage";
+import { isStorableIconUrl } from "@/lib/warlordStats";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,7 @@ interface StatInput {
   maxTroops?: number;
   faction?: string;
   raw?: string;
+  iconUrl?: string;
 }
 
 /** 取り込み能力値の入力を境界で検証する。 */
@@ -68,6 +70,12 @@ function parseBody(body: unknown): { stats: StatInput[] } | { error: string } {
       !optionalNumber(s.maxTroops)
     ) {
       return { error: "能力値は数値である必要があります" };
+    }
+    if (
+      s.iconUrl !== undefined &&
+      (typeof s.iconUrl !== "string" || !isStorableIconUrl(s.iconUrl))
+    ) {
+      return { error: "iconUrl は http(s) のURLである必要があります" };
     }
   }
   return { stats: stats as StatInput[] };
@@ -116,6 +124,8 @@ export async function POST(req: Request) {
             selfPr: s.selfPr ?? null,
             maxTroops: s.maxTroops ?? null,
             statsRaw: s.raw ?? null,
+            // アイコンは取れた行だけ更新し、取れなかった行は既存値を残す。
+            ...(s.iconUrl ? { iconUrl: s.iconUrl } : {}),
           };
           const term = latestTermByName.get(s.name);
           if (term !== undefined) updated++;

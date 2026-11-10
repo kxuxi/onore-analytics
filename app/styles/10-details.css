@@ -563,3 +563,89 @@
 .anti-arrow--up { color: #e5484d; }
 /* アンチを取られている（不利）＝青い ↓ */
 .anti-arrow--down { color: #3b82f6; }
+
+/* 武将アイコン（ランキング取り込み・原寸 64px の GIF） */
+.warlord-icon {
+  flex: 0 0 auto;
+  display: block;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  background: var(--panel-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+img.warlord-icon {
+  /* 画像の上に枠線を重ねられないため、外側に1pxの線を引く。 */
+  box-shadow: 0 0 0 1px var(--border);
+}
+.warlord-icon-dummy {
+  color: var(--muted);
+  fill: currentColor;
+}
+
+/* アイコンがある詳細見出し: 1行目は操作（戻る・共有）、2行目にアイコン付きの名前。 */
+.detail-head.has-icon {
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "back actions"
+    "title title";
+  row-gap: 16px;
+}
+.detail-title.has-icon {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.detail-title-text {
+  min-width: 0;
+}
+.detail-icon {
+  border-radius: 12px;
+}
+
+/* 一覧の名前セル（アイコン + 名前） */
+.db-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+
+/* 出兵・守備の勝率タイル（SideWinRate）。ホームは .home-split で大きくする。 */
+.detail-sides {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.side-wr {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-variant-numeric: tabular-nums;
+}
+.panel .side-wr-title {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+.side-wr-rate {
+  margin-top: 4px;
+  font-size: 20px;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.2;
+}
+.side-wr-meta {
+  margin-top: 2px;
+  font-size: var(--font-size-xs);
+}
+.side-wr .wr-bar {
+  margin-top: 10px;
+}
+.side-wr-empty {
+  margin: 6px 0 0;
+  font-size: var(--font-size-xs);
+}

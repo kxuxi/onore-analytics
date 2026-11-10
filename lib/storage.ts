@@ -61,6 +61,7 @@ export function mergeWarlords(
       strategy: w.strategy ?? prev?.strategy,
       selfPr: w.selfPr ?? prev?.selfPr,
       statsRaw: w.statsRaw ?? prev?.statsRaw,
+      iconUrl: w.iconUrl ?? prev?.iconUrl,
     };
   }
   return { map, added, updated };

@@ -11,6 +11,8 @@ import {
   SortIcon,
   TrashIcon,
 } from "@/components/icons";
+import { EmptyState } from "@/components/EmptyState";
+import { FilterSelect } from "@/components/FilterSelect";
 import { FilterPanel, type ActiveFilter } from "@/components/FilterPanel";
 import { SearchBox } from "@/components/SearchBox";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -522,55 +524,27 @@ export function HistoryTab({
             ) : undefined
           }
         >
-          <label className="filter">
-            <span>国</span>
-            <select
-              className="select"
-              value={factionFilter}
-              onChange={(e) => setFactionFilter(e.target.value)}
-            >
-              <option value="">すべて</option>
-              {factionOptions.map((f) => (
-                <option key={f} value={f}>
-                  {f}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="filter">
-            <span>ゲーム内年月（開始）</span>
-            <select
-              className="select"
-              value={fromYm ?? ""}
-              onChange={(e) =>
-                setFromYm(e.target.value ? Number(e.target.value) : null)
-              }
-            >
-              <option value="">指定なし</option>
-              {yearMonthOptions.map(({ order, label }) => (
-                <option key={order} value={order}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="filter">
-            <span>ゲーム内年月（終了）</span>
-            <select
-              className="select"
-              value={toYm ?? ""}
-              onChange={(e) =>
-                setToYm(e.target.value ? Number(e.target.value) : null)
-              }
-            >
-              <option value="">指定なし</option>
-              {yearMonthOptions.map(({ order, label }) => (
-                <option key={order} value={order}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FilterSelect
+            label="国"
+            value={factionFilter}
+            options={factionOptions}
+            onChange={setFactionFilter}
+            emptyLabel="すべて"
+          />
+          <FilterSelect
+            label="ゲーム内年月（開始）"
+            value={fromYm == null ? "" : String(fromYm)}
+            options={yearMonthOptions.map(({ order, label }) => ({ value: String(order), label }))}
+            onChange={(value) => setFromYm(value ? Number(value) : null)}
+            emptyLabel="指定なし"
+          />
+          <FilterSelect
+            label="ゲーム内年月（終了）"
+            value={toYm == null ? "" : String(toYm)}
+            options={yearMonthOptions.map(({ order, label }) => ({ value: String(order), label }))}
+            onChange={(value) => setToYm(value ? Number(value) : null)}
+            emptyLabel="指定なし"
+          />
           <label className="filter">
             <span>実日付（開始）</span>
             <input
@@ -595,21 +569,19 @@ export function HistoryTab({
 
         {visibleLog.length === 0 ? (
           log.length === 0 ? (
-            <div className="empty">
-              <p className="empty-title">まだ戦闘履歴がありません</p>
-              <p className="empty-hint">
-                {canRegister
+            <EmptyState
+              title="まだ戦闘履歴がありません"
+              hint={
+                canRegister
                   ? "上の入力欄にゲームの戦闘履歴を貼り付けて「登録する」を押すと、ここに一覧表示されます。リンク付きでコピーすれば詳細ページのURLも保持されます。"
-                  : "管理者が戦闘履歴を登録すると、ここに一覧表示されます。"}
-              </p>
-            </div>
+                  : "管理者が戦闘履歴を登録すると、ここに一覧表示されます。"
+              }
+            />
           ) : (
-            <div className="empty">
-              <p className="empty-title">条件に一致する履歴がありません</p>
-              <p className="empty-hint">
-                武将・国・兵種・装備の検索語や、期間・国の条件を変更してください。
-              </p>
-            </div>
+            <EmptyState
+              title="条件に一致する履歴がありません"
+              hint="武将・国・兵種・装備の検索語や、期間・国の条件を変更してください。"
+            />
           )
         ) : (
           <>

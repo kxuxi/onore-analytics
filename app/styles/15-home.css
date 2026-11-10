@@ -440,36 +440,30 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
+/* ホームの出兵/守備タイルは SideWinRate の大きい版。 */
 .home-split {
-  display: flex;
-  flex-direction: column;
   gap: 4px;
-  padding: 12px 14px;
   background: color-mix(in srgb, var(--panel-2) 70%, transparent);
-  border: 1px solid var(--border);
   border-radius: 10px;
-  min-width: 0;
 }
-.panel .home-split-title {
-  margin: 0;
+.panel .home-split .side-wr-title {
   font-size: 13px;
   font-weight: var(--font-weight-semibold);
-  color: var(--muted);
 }
-.home-split-rate {
+.home-split .side-wr-rate {
+  margin-top: 0;
   font-size: 28px;
   line-height: 1.1;
   font-weight: var(--font-weight-bold);
-  font-variant-numeric: tabular-nums;
 }
-.home-split-meta {
+.home-split .side-wr-meta {
+  margin: 0 0 6px;
   font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  margin-bottom: 6px;
 }
 .home-split .wr-bar {
   margin-top: auto;
 }
+.home-split .side-wr-empty,
 .home-split-empty {
   margin: 4px 0 0;
   font-size: 13px;

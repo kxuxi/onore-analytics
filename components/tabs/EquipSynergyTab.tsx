@@ -1,13 +1,15 @@
 "use client";
 
+import { PeriodSelector, useRankingPeriod } from "@/components/PeriodSelector";
 import { useMemo, useState } from "react";
+import { EmptyState } from "@/components/EmptyState";
+import { FilterSelect } from "@/components/FilterSelect";
 import { PageHeader } from "@/components/layout/PageHeader";
 import type { BattleRecord } from "@/lib/types";
 import {
   equipSynergy,
   formatWinRate,
   metaOverview,
-  rankingPeriods,
   RANKING_LAST10_KEY,
 } from "@/lib/stats";
 import { FilterIcon, CloseIcon } from "@/components/icons";
@@ -34,22 +36,22 @@ const MIN_USE_OPTIONS = [5, 10, 30, 50, 100];
  * 装備シナジー。武将の持つ武器と武将の持つ品物の組み合わせごとに勝率を集計し、
  * どの組み合わせが強いかを数値化する。両装備が揃っている側のみが母数。
  */
+/** 装備シナジーで選べる集計期間（並びは rankingPeriods のまま）。 */
+const SYNERGY_PERIOD_KEYS = ["all", RANKING_LAST10_KEY];
+
 export function EquipSynergyTab({ log, onSelectWarlord, onSelectEquip }: Props) {
   const [keyword, setKeyword] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("winRate");
   const [minUses, setMinUses] = useState(10);
   const [showFilter, setShowFilter] = useState(true);
-  const [periodKey, setPeriodKey] = useState(RANKING_LAST10_KEY);
   const [warlordType, setWarlordType] = useState("");
 
-  const periods = useMemo(() => rankingPeriods(log), [log]);
-  const period = useMemo(
-    () => periods.find((option) => option.key === periodKey),
-    [periodKey, periods]
-  );
-  const periodOptions = periods.filter(
-    (option) => option.key === RANKING_LAST10_KEY || option.key === "all"
-  );
+  const {
+    periods: periodOptions,
+    periodKey,
+    setPeriodKey,
+    period,
+  } = useRankingPeriod(log, RANKING_LAST10_KEY, SYNERGY_PERIOD_KEYS);
   const warlordTypeOptions = useMemo(
     () => metaOverview(log).traits.map((trait) => trait.trait),
     [log]
@@ -91,21 +93,11 @@ export function EquipSynergyTab({ log, onSelectWarlord, onSelectEquip }: Props) 
         description="武器と品物の組み合わせごとに勝率を集計します。"
       />
 
-      <div className="tmx-periods" role="group" aria-label="集計期間">
-        {periodOptions.map((option) => (
-          <button
-            key={option.key}
-            type="button"
-            aria-pressed={periodKey === option.key}
-            className={
-              "tmx-period" + (periodKey === option.key ? " active" : "")
-            }
-            onClick={() => setPeriodKey(option.key)}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
+      <PeriodSelector
+        periods={periodOptions}
+        value={periodKey}
+        onChange={setPeriodKey}
+      />
 
       <p className="sr-only" role="status" aria-live="polite">
         絞り込み結果 {view.length.toLocaleString("ja-JP")}件
@@ -143,60 +135,33 @@ export function EquipSynergyTab({ log, onSelectWarlord, onSelectEquip }: Props) 
 
       {showFilter && (
         <div className="filter-grid">
-          <label className="filter">
-            <span>並べ替え</span>
-            <select
-              className="select"
-              value={sortKey}
-              onChange={(e) => setSortKey(e.target.value as SortKey)}
-            >
-              {SORT_OPTIONS.map((o) => (
-                <option key={o.key} value={o.key}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="filter">
-            <span>最低使用回数</span>
-            <select
-              className="select"
-              value={minUses}
-              onChange={(e) => setMinUses(Number(e.target.value))}
-            >
-              {MIN_USE_OPTIONS.map((v) => (
-                <option key={v} value={v}>
-                  {v}回以上
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="filter">
-            <span>武将タイプ</span>
-            <select
-              className="select"
-              value={warlordType}
-              onChange={(event) => setWarlordType(event.target.value)}
-            >
-              <option value="">すべて</option>
-              {warlordTypeOptions.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FilterSelect
+            label="並べ替え"
+            value={sortKey}
+            options={SORT_OPTIONS.map((o) => ({ value: o.key, label: o.label }))}
+            onChange={(value) => setSortKey(value as SortKey)}
+          />
+          <FilterSelect
+            label="最低使用回数"
+            value={String(minUses)}
+            options={MIN_USE_OPTIONS.map((n) => ({ value: String(n), label: `${n}回以上` }))}
+            onChange={(value) => setMinUses(Number(value))}
+          />
+          <FilterSelect
+            label="武将タイプ"
+            value={warlordType}
+            options={warlordTypeOptions}
+            onChange={setWarlordType}
+            emptyLabel="すべて"
+          />
         </div>
       )}
 
       {view.length === 0 ? (
-        <div className="empty">
-          <p className="empty-title">該当する組み合わせがありません</p>
-          <p className="empty-hint">
-            「戦闘履歴」タブで戦績を登録すると、武器と品物の組み合わせから勝率を算出します。
-            すでに登録済みの場合は、検索語や最低使用回数の条件を見直してください。
-          </p>
-        </div>
+        <EmptyState
+          title="該当する組み合わせがありません"
+          hint="「戦闘履歴」タブで戦績を登録すると、武器と品物の組み合わせから勝率を算出します。 すでに登録済みの場合は、検索語や最低使用回数の条件を見直してください。"
+        />
       ) : (
         <div className="table-wrap">
           <table className="table-card">

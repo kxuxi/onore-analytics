@@ -1,12 +1,14 @@
 "use client";
 
+import { ShowMoreButton } from "@/components/ShowMoreButton";
+import { SegmentedControl } from "@/components/SegmentedControl";
+import { PeriodSelector, useRankingPeriod } from "@/components/PeriodSelector";
 import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import type { BattleRecord } from "@/lib/types";
 import {
   metaOverview,
   metaUnitUsage,
-  rankingPeriods,
   type MetaUnitStat,
   type MetaUnitUsage,
 } from "@/lib/stats";
@@ -30,6 +32,10 @@ const SORT_LABEL: Record<SortKey, string> = {
   winRate: "勝率",
   lift: "普段との差",
 };
+const SORT_OPTIONS = (Object.keys(SORT_LABEL) as SortKey[]).map((key) => ({
+  key,
+  label: SORT_LABEL[key],
+}));
 const MIN_DECIDED_OPTIONS = [1, 5, 10, 20, 50];
 
 interface Prefs {
@@ -106,7 +112,12 @@ export function sortMetaRows(rows: MetaRow[], sort: SortKey): MetaRow[] {
  * 使い手の普段の勝率と並べ、勝率が兵種によるものか使い手によるものかを見られるようにする。
  */
 export function MetaTab({ log, onSelectUnit, onSelectWarlord }: Props) {
-  const [period, setPeriod] = useState<string>("all");
+  const {
+    periods,
+    periodKey: period,
+    setPeriodKey: setPeriod,
+    period: selectedPeriod,
+  } = useRankingPeriod(log, "all");
   const [type, setType] = useState<string>("");
   const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
@@ -127,11 +138,7 @@ export function MetaTab({ log, onSelectUnit, onSelectWarlord }: Props) {
   }, [prefs, prefsLoaded]);
 
   // 集計期間（先頭＝過去10年間、以降はメタ分析の絶対年バケット＋全期間）。
-  const periods = useMemo(() => rankingPeriods(log), [log]);
-  const range = useMemo(
-    () => periods.find((p) => p.key === period) ?? null,
-    [periods, period],
-  );
+  const range = selectedPeriod ?? null;
 
   // 武将タイプの選択肢は期間に依存せず安定させたいので、全期間から抽出する。
   const typeOptions = useMemo(
@@ -175,19 +182,11 @@ export function MetaTab({ log, onSelectUnit, onSelectWarlord }: Props) {
         description="兵種ごとの勝敗と使い手を表示します。"
       />
 
-      <div className="tmx-periods" role="group" aria-label="集計期間">
-        {periods.map((p) => (
-          <button
-            key={p.key}
-            type="button"
-            aria-pressed={period === p.key}
-            className={"tmx-period" + (period === p.key ? " active" : "")}
-            onClick={() => setPeriod(p.key)}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
+      <PeriodSelector
+        periods={periods}
+        value={period}
+        onChange={setPeriod}
+      />
 
       <div className="meta-filter">
         <span className="meta-filter-pair">
@@ -241,22 +240,13 @@ export function MetaTab({ log, onSelectUnit, onSelectWarlord }: Props) {
                 全{totalBattles.toLocaleString("ja-JP")}戦
               </span>
             </h3>
-            <div className="meta-sort" role="group" aria-label="並び順">
-              {(Object.keys(SORT_LABEL) as SortKey[]).map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  aria-pressed={prefs.sort === k}
-                  className={
-                    "tmx-period meta-sort-btn" +
-                    (prefs.sort === k ? " active" : "")
-                  }
-                  onClick={() => setPrefs((p) => ({ ...p, sort: k }))}
-                >
-                  {SORT_LABEL[k]}
-                </button>
-              ))}
-            </div>
+            <SegmentedControl
+              className="meta-sort"
+              ariaLabel="並び順"
+              options={SORT_OPTIONS}
+              value={prefs.sort}
+              onChange={(sort) => setPrefs((p) => ({ ...p, sort }))}
+            />
           </div>
 
           <div className="meta-legend" aria-hidden="true">
@@ -284,15 +274,12 @@ export function MetaTab({ log, onSelectUnit, onSelectWarlord }: Props) {
             </ol>
           )}
           {rows.length > INITIAL_ROWS && (
-            <button
-              type="button"
-              className="btn meta-more"
-              onClick={() => setShowAll((v) => !v)}
-            >
-              {showAll
-                ? "上位だけ表示"
-                : `残り${rows.length - INITIAL_ROWS}兵種を表示`}
-            </button>
+            <ShowMoreButton
+              hiddenCount={rows.length - INITIAL_ROWS}
+              unit="兵種"
+              expanded={showAll}
+              onToggle={() => setShowAll((v) => !v)}
+            />
           )}
         </div>
       )}
@@ -451,15 +438,12 @@ function MetaUnitRow({
             </tbody>
           </table>
           {users.length > INITIAL_USERS && (
-            <button
-              type="button"
-              className="btn meta-more"
-              onClick={() => setAllUsers((v) => !v)}
-            >
-              {allUsers
-                ? "上位だけ表示"
-                : `残り${users.length - INITIAL_USERS}人を表示`}
-            </button>
+            <ShowMoreButton
+              hiddenCount={users.length - INITIAL_USERS}
+              unit="人"
+              expanded={allUsers}
+              onToggle={() => setAllUsers((v) => !v)}
+            />
           )}
         </div>
       )}

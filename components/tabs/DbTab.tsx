@@ -1,12 +1,15 @@
 "use client";
 
+import { WarlordIcon } from "@/components/WarlordIcon";
 import { useId, useMemo, useState } from "react";
 import type { BattleRecord, WarlordMap } from "@/lib/types";
 import { copyText } from "@/lib/copyText";
 import { latestUnitByWarlord } from "@/lib/stats";
-import { parseWarlordStats } from "@/lib/warlordStats";
+import { parseWarlordStats, extractRankingIcons } from "@/lib/warlordStats";
 import { displayWarlordType } from "@/lib/warlordType";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
+import { EmptyState } from "@/components/EmptyState";
+import { FilterSelect } from "@/components/FilterSelect";
 import { FilterPanel, type ActiveFilter } from "@/components/FilterPanel";
 import { SearchBox } from "@/components/SearchBox";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -64,6 +67,10 @@ export function DbTab({ db, log, colors, onSelectWarlord, onSelectFaction, onImp
   const [showFilter, setShowFilter] = useState(true);
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState("");
+  // 貼り付け時のクリップボード HTML から拾った 武将名 → アイコンURL。
+  const [importIcons, setImportIcons] = useState<Map<string, string>>(
+    () => new Map()
+  );
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState<ImportMessageValue | null>(null);
   const importId = useId();
@@ -235,6 +242,12 @@ export function DbTab({ db, log, colors, onSelectWarlord, onSelectFaction, onImp
     () => parseWarlordStats(importText),
     [importText]
   );
+  // 今回の貼り付けで取り込める行のうち、アイコンが見つかった件数。
+  const importIconCount = useMemo(
+    () =>
+      importPreview.stats.filter((s) => importIcons.has(s.name)).length,
+    [importPreview, importIcons]
+  );
 
   // ランキング表を貼り付けて能力値を取り込む。
   const handleImport = async () => {
@@ -251,11 +264,16 @@ export function DbTab({ db, log, colors, onSelectWarlord, onSelectFaction, onImp
     setImporting(true);
     setImportMsg(null);
     try {
-      const { updated, created } = await onImportStats(stats, skipped);
+      const withIcons = stats.map((s) => {
+        const iconUrl = importIcons.get(s.name);
+        return iconUrl ? { ...s, iconUrl } : s;
+      });
+      const { updated, created } = await onImportStats(withIcons, skipped);
       const parts = [`${updated}件更新`, `${created}件新規`];
       if (skipped > 0) parts.push(`${skipped}行スキップ`);
       setImportMsg({ kind: "ok", text: `取り込み完了：${parts.join(" / ")}` });
       setImportText("");
+      setImportIcons(new Map());
     } catch (e) {
       setImportMsg({
         kind: "error",
@@ -322,7 +340,7 @@ export function DbTab({ db, log, colors, onSelectWarlord, onSelectFaction, onImp
           >
             <legend className="import-legend">武将能力値の取り込み</legend>
             <p id={importIds.hint} className="import-hint">
-              武将ランキング表をコピーして、そのまま貼り付けてください。武力・知力・統率力・政治力・計略・自己PR を各武将ページへ反映します。
+              武将ランキング表をコピーして、そのまま貼り付けてください。武力・知力・統率力・政治力・計略・自己PR・アイコン を各武将ページへ反映します。
             </p>
             <label className="import-label" htmlFor={importIds.input}>
               武将ランキング表の貼り付け
@@ -342,6 +360,16 @@ export function DbTab({ db, log, colors, onSelectWarlord, onSelectFaction, onImp
               placeholder={
                 "順位\t名前\t武力\t知力\t統率力\t政治力\t計略\t資金\t兵糧\t年齢\t勝率\t仕官月数\t自己PR\t階級\t国名\n（ランキング表をタブ区切りのまま貼り付け）"
               }
+              onPaste={(e) => {
+                // 表をコピーすると画像は text/plain から落ちるため、HTML からアイコンを拾う。
+                const html = e.clipboardData.getData("text/html");
+                if (html) {
+                  const found = extractRankingIcons(html);
+                  setImportIcons(
+                    (cur) => new Map([...Array.from(cur), ...Array.from(found)])
+                  );
+                }
+              }}
               onChange={(e) => {
                 setImportText(e.target.value);
                 setImportMsg(null);
@@ -354,6 +382,11 @@ export function DbTab({ db, log, colors, onSelectWarlord, onSelectFaction, onImp
                 parsed={importPreview.parsed}
                 skipped={importPreview.skipped}
               />
+            )}
+            {importText.trim() && importIconCount > 0 && (
+              <p className="import-hint">
+                アイコン {importIconCount.toLocaleString("ja-JP")}件も取り込みます
+              </p>
             )}
             <div className="import-actions">
               <button
@@ -406,89 +439,55 @@ export function DbTab({ db, log, colors, onSelectWarlord, onSelectFaction, onImp
             : `全${all.length.toLocaleString("ja-JP")}件`
         }
       >
-        <label className="filter">
-          <span>国</span>
-          <select
-            className="select"
-            value={faction}
-            onChange={(e) => setFaction(e.target.value)}
-          >
-            <option value="">すべて</option>
-            {options.faction.map((v) => (
-              <option key={v} value={v}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="filter">
-          <span>タイプ</span>
-          <select
-            className="select"
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-          >
-            <option value="">すべて</option>
-            {options.type.map((v) => (
-              <option key={v} value={v}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="filter">
-          <span>兵種タイプ</span>
-          <select
-            className="select"
-            value={branch}
-            onChange={(e) => setBranch(e.target.value)}
-          >
-            <option value="">すべて</option>
-            {options.branch.map((v) => (
-              <option key={v} value={v}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="filter">
-          <span>兵種名</span>
-          <select
-            className="select"
-            value={unit}
-            onChange={(e) => setUnit(e.target.value)}
-          >
-            <option value="">すべて</option>
-            {options.unit.map((v) => (
-              <option key={v} value={v}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FilterSelect
+          label="国"
+          value={faction}
+          options={options.faction}
+          onChange={setFaction}
+          emptyLabel="すべて"
+        />
+        <FilterSelect
+          label="タイプ"
+          value={type}
+          options={options.type}
+          onChange={setType}
+          emptyLabel="すべて"
+        />
+        <FilterSelect
+          label="兵種タイプ"
+          value={branch}
+          options={options.branch}
+          onChange={setBranch}
+          emptyLabel="すべて"
+        />
+        <FilterSelect
+          label="兵種名"
+          value={unit}
+          options={options.unit}
+          onChange={setUnit}
+          emptyLabel="すべて"
+        />
       </FilterPanel>
 
       <div className="db-sort-mobile">
-        <label className="filter">
-          <span>並び替え</span>
-          <select
-            className="select"
-            value={sortKey}
-            onChange={(e) => {
-              const key = e.target.value as SortKey;
-              setSortKey(key);
-              setSortDir(key === "updatedAt" ? "desc" : "asc");
-            }}
-          >
-            <option value="updatedAt">更新日時</option>
-            <option value="faction">国</option>
-            <option value="name">武将名</option>
-            <option value="type">タイプ</option>
-            <option value="branch">兵種タイプ</option>
-            <option value="unit">兵種名</option>
-            <option value="lastActionAt">行動時間</option>
-          </select>
-        </label>
+        <FilterSelect
+          label="並び替え"
+          value={sortKey}
+          options={[
+            { value: "updatedAt", label: "更新日時" },
+            { value: "faction", label: "国" },
+            { value: "name", label: "武将名" },
+            { value: "type", label: "タイプ" },
+            { value: "branch", label: "兵種タイプ" },
+            { value: "unit", label: "兵種名" },
+            { value: "lastActionAt", label: "行動時間" },
+          ]}
+          onChange={(value) => {
+            const key = value as SortKey;
+            setSortKey(key);
+            setSortDir(key === "updatedAt" ? "desc" : "asc");
+          }}
+        />
         <button
           type="button"
           className="btn db-sort-dir"
@@ -514,11 +513,11 @@ export function DbTab({ db, log, colors, onSelectWarlord, onSelectFaction, onImp
 
       <div className="table-wrap">
         {filtered.length === 0 ? (
-          <div className="empty">
+          <EmptyState>
             {all.length === 0
               ? "まだ登録された武将はありません。"
               : "条件に一致する武将がいません。"}
-          </div>
+          </EmptyState>
         ) : (
           <table className="table-card">
             <caption className="sr-only">
@@ -556,10 +555,11 @@ export function DbTab({ db, log, colors, onSelectWarlord, onSelectFaction, onImp
                   <td className="cell-title">
                     <button
                       type="button"
-                      className="link-like"
+                      className="link-like db-name"
                       onClick={() => onSelectWarlord(w.name)}
                       title={`${w.name} の戦績を見る`}
                     >
+                      <WarlordIcon url={w.iconUrl} size={32} />
                       {w.name}
                     </button>
                   </td>

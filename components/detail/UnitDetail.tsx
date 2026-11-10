@@ -14,11 +14,11 @@ import {
 } from "@/lib/stats";
 import { fetchUnitTypes } from "@/lib/api";
 import { parseReqStats, splitGoodAgainst } from "@/lib/unitTypeForm";
+import { EmptyState } from "@/components/EmptyState";
 import { Section } from "@/components/detail/Section";
 import {
   DetailBattleLogSection,
   DetailLayout,
-  DetailEmptyState,
   DetailSummary,
 } from "@/components/detail/DetailParts";
 import {
@@ -162,7 +162,7 @@ export function UnitDetail({
     <DetailSummary summary={summary} antiSummary={antiSummary} />
   ) : undefined;
   const emptyState = outcomes.length === 0 ? (
-    <DetailEmptyState
+    <EmptyState
       title="この兵種の戦闘データがありません"
       hint={
         <>

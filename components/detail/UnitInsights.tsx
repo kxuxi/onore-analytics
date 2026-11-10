@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import { formatWinRate } from "@/lib/stats";
+import { ShowMoreButton } from "@/components/ShowMoreButton";
 import { Section } from "@/components/detail/Section";
 import { ChevronUp } from "@/components/icons";
 import type {
@@ -146,16 +147,12 @@ export function UserWinRateList({
         ))}
       </ul>
       {users.length > INITIAL_USERS && (
-        <div className="show-more-row">
-          <button
-            type="button"
-            className="btn show-more-btn"
-            onClick={() => setExpanded((v) => !v)}
-            aria-expanded={expanded}
-          >
-            {expanded ? "一部だけ表示" : `もっと見る（残り${hiddenCount}人）`}
-          </button>
-        </div>
+        <ShowMoreButton
+          hiddenCount={hiddenCount}
+          unit="人"
+          expanded={expanded}
+          onToggle={() => setExpanded((v) => !v)}
+        />
       )}
     </Section>
   );

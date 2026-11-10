@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { BattleRecord, WarlordMap } from "@/lib/types";
 import { factionSummaries, formatWinRate } from "@/lib/stats";
 import { factionNameStyle, type FactionColorMap } from "@/lib/factionColors";
+import { EmptyState } from "@/components/EmptyState";
 import { SearchBox } from "@/components/SearchBox";
 import { PageHeader } from "@/components/layout/PageHeader";
 
@@ -104,13 +105,10 @@ export function NationTab({ db, log, colors, onSelectFaction }: Props) {
       </p>
 
       {view.length === 0 ? (
-        <div className="empty">
-          <p className="empty-title">該当する国がありません</p>
-          <p className="empty-hint">
-            「戦闘履歴」タブで戦績を登録するか、DBに武将の所属国を登録すると、ここに国の一覧が表示されます。
-            すでに登録済みの場合は検索語を見直してください。
-          </p>
-        </div>
+        <EmptyState
+          title="該当する国がありません"
+          hint="「戦闘履歴」タブで戦績を登録するか、DBに武将の所属国を登録すると、ここに国の一覧が表示されます。 すでに登録済みの場合は検索語を見直してください。"
+        />
       ) : (
         <ol className="nation-list">
           {view.map((f, i) => {

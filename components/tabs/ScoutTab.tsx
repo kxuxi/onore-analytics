@@ -9,6 +9,7 @@ import { shortUnit } from "@/lib/unitShortNames";
 import { copyText } from "@/lib/copyText";
 import { factionBadgeStyle, type FactionColorMap } from "@/lib/factionColors";
 import { displayWarlordType } from "@/lib/warlordType";
+import { EmptyState } from "@/components/EmptyState";
 import { PageHeader } from "@/components/layout/PageHeader";
 
 // 偵察の兵種表示から省く兵種。農民は初期兵種で情報量が乏しいため、
@@ -371,12 +372,10 @@ export function ScoutTab({ db, log, colors, onSelectWarlord }: Props) {
             )}
           </div>
           {visibleRows.length === 0 ? (
-            <div className="empty">
-              <p className="empty-title">未登録の武将はありません</p>
-              <p className="empty-hint">
-                「未登録のみ表示」を解除すると、登録済みの武将も含めて一覧表示します。
-              </p>
-            </div>
+            <EmptyState
+              title="未登録の武将はありません"
+              hint="「未登録のみ表示」を解除すると、登録済みの武将も含めて一覧表示します。"
+            />
           ) : (
             <div className="table-wrap">
               <table className="table-card">

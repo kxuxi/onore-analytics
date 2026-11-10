@@ -3,6 +3,7 @@ import {
   collectWarlordBattles,
   collectUnitBattles,
   summarize,
+  summarizeBySide,
   opponentStats,
   matchupRanking,
   branchStats,
@@ -2993,5 +2994,20 @@ describe("ランキングの国フィルタ", () => {
     expect(
       warlordRanking(sideScopedLog, undefined, undefined, " ")
     ).toEqual(warlordRanking(sideScopedLog));
+  });
+});
+
+describe("summarizeBySide", () => {
+  it("出兵（左）と守備（右）に分けて集計し、合計は全体と一致する", () => {
+    const log = [
+      rec("【1戦目】 1600年4月 04/10 10:00 京都 東軍 甲 甲家 武特 騎馬隊 騎兵 槍 鎧 V.S. 西軍 乙 乙家 統特 足軽隊 歩兵 刀 盾 甲の勝利 5", 1),
+      rec("【1戦目】 1600年4月 04/10 11:00 京都 西軍 乙 乙家 統特 足軽隊 歩兵 刀 盾 V.S. 東軍 甲 甲家 武特 騎馬隊 騎兵 槍 鎧 乙の勝利 5", 2),
+      rec("【1戦目】 1600年4月 04/10 12:00 京都 西軍 乙 乙家 統特 足軽隊 歩兵 刀 盾 V.S. 東軍 甲 甲家 武特 騎馬隊 騎兵 槍 鎧 甲の勝利 5", 3),
+    ];
+    const outcomes = collectWarlordBattles(log, "甲");
+    const { attack, defense } = summarizeBySide(outcomes);
+    expect(attack).toMatchObject({ battles: 1, wins: 1, losses: 0 });
+    expect(defense).toMatchObject({ battles: 2, wins: 1, losses: 1 });
+    expect(attack.battles + defense.battles).toBe(summarize(outcomes).battles);
   });
 });

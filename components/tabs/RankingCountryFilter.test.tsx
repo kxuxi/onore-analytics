@@ -196,6 +196,10 @@ interface InspectedElementProps {
   onChange?: (event: { target: { value: string } }) => void;
   onClick?: () => void;
   row?: { name?: string };
+  periods?: { key: string; label: string }[];
+  /** FilterSelect のラベルと選択肢。 */
+  label?: unknown;
+  options?: unknown;
 }
 
 function visitElements(
@@ -238,22 +242,31 @@ function findSelect(
   return result;
 }
 
-function findButton(
-  root: ReactElement,
-  label: string
-): ReactElement<InspectedElementProps> {
-  let result: ReactElement<InspectedElementProps> | undefined;
+/** 絞り込みのセレクト（FilterSelect、または素の label/select）で label の値を選ぶ。 */
+function changeSelect(root: ReactElement, label: string, value: string): void {
+  let hit: ReactElement<InspectedElementProps> | undefined;
   visitElements(root, (element) => {
-    if (
-      !result &&
-      element.type === "button" &&
-      element.props.children === label
-    ) {
-      result = element;
-    }
+    if (!hit && element.props.label === label && element.props.options) hit = element;
   });
-  if (!result) throw new Error(`${label} button was not found`);
-  return result;
+  if (hit) {
+    (hit.props.onChange as unknown as (value: string) => void)(value);
+    return;
+  }
+  findSelect(root, label).props.onChange?.({ target: { value } });
+}
+
+/** 集計期間（PeriodSelector）の中から label の期間を選ぶ。 */
+function selectPeriod(root: ReactElement, label: string): void {
+  let done = false;
+  visitElements(root, (element) => {
+    const { periods, onChange } = element.props;
+    if (done || !periods || !onChange) return;
+    const hit = periods.find((p) => p.label === label);
+    if (!hit) return;
+    (onChange as unknown as (key: string) => void)(hit.key);
+    done = true;
+  });
+  if (!done) throw new Error(`${label} period was not found`);
 }
 
 function rankingRowNames(root: ReactElement): Set<string> {
@@ -362,19 +375,15 @@ describe("ランキングUIの期間・国・最低回数", () => {
       let tree = render();
       expect(rankingRowNames(tree)).toContain("境界剣");
 
-      findButton(tree, "過去10年間").props.onClick?.();
+      selectPeriod(tree, "過去10年間");
       tree = render();
       expect(rankingRowNames(tree)).toContain("境界剣");
 
-      findSelect(tree, "国").props.onChange?.({
-        target: { value: "赤国" },
-      });
+      changeSelect(tree, "国", "赤国");
       tree = render();
       expect(rankingRowNames(tree)).not.toContain("境界剣");
 
-      findSelect(tree, "最低使用回数").props.onChange?.({
-        target: { value: "1" },
-      });
+      changeSelect(tree, "最低使用回数", "1");
       tree = render();
       expect(rankingRowNames(tree)).toContain("境界剣");
     } finally {
