@@ -469,6 +469,126 @@
   font-size: 13px;
 }
 
+/* --- 交戦国との条件判定：国・条件の選択と、該当／非該当の 2 列 --- */
+.home-war-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.home-war-picker-label {
+  font-size: 12px;
+}
+.home-war-reset {
+  margin-left: 8px;
+  font-size: 12px;
+}
+.home-war-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.home-war-chip {
+  appearance: none;
+  padding: 4px 10px;
+  min-height: 32px;
+  border: 1px solid var(--color-control-border, var(--border));
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.home-war-chip.is-on {
+  color: var(--text);
+  font-weight: var(--font-weight-semibold);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.home-war-chip:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+.home-war-chip-count {
+  margin-left: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.home-war-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.home-war-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.home-war-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 5.5em;
+  align-items: baseline;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.home-war-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.home-war-faction {
+  margin-left: 6px;
+  font-size: 11px;
+}
+.home-war-val {
+  font-weight: var(--font-weight-semibold);
+}
+.home-war-diff {
+  font-size: 12px;
+  text-align: right;
+}
+.home-war-unjudged > summary {
+  font-size: 12px;
+  cursor: pointer;
+}
+.home-war-equipment-settings,
+.home-war-own-equipment {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.home-war-equipment {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.home-war-row > .home-war-equipment {
+  grid-column: 1 / -1;
+}
+.home-war-equip-toggle {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 28px;
+  cursor: pointer;
+}
+.home-war-equip-toggle input {
+  flex: 0 0 auto;
+  accent-color: var(--accent);
+}
+.home-war-equip-time {
+  padding-left: 22px;
+  font-size: 11px;
+}
+.home-war-unjudged > .home-war-col {
+  margin-top: 8px;
+}
+
 /* --- 使用兵種の割合：単色の横棒リスト（名前→棒→数値を 1 行で読む） --- */
 .home-card-head {
   display: flex;

@@ -778,6 +778,7 @@ export default function HomePage() {
           <HomeTab
             log={filteredBattleLog}
             db={latestDbByName}
+            termDb={filteredDb}
             colors={factionColors}
             isAdmin={isAdmin}
             onSelectWarlord={selectWarlordNormalized}

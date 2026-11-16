@@ -321,4 +321,65 @@ describe("HomeTab", () => {
     expect(html).not.toContain("その他");
     expect((html.match(/class="home-usage-row"/g) ?? []).length).toBe(6);
   });
+  it("管理者には交戦国の武将を条件ごとに該当・非該当へ分けて表示する", () => {
+    vi.stubGlobal("document", {
+      cookie: "onore_my_warlord=%E4%BF%A1%E9%95%B7",
+    });
+    const stats = { type: "武特", branch: "騎兵", updatedAt: 0, term: 1 };
+    const unequippedBattle = (opponent: string, savedAt: number) => {
+      const record = battleRecord(1583, savedAt, opponent, "信長の勝利");
+      return {
+        ...record,
+        line: record.line
+          .replace("槍 鎧", "なし なし")
+          .replace("馬 旗", "なし なし")
+          .replace("某家", `${opponent}家`),
+      };
+    };
+    const props = {
+      log: [unequippedBattle("勝頼", 1), unequippedBattle("信玄", 2)],
+      db: {
+        信長: { ...stats, name: "信長", faction: "織田", intelligence: 84 },
+        勝頼: { ...stats, name: "勝頼", faction: "武田", intelligence: 70 },
+        信玄: { ...stats, name: "信玄", faction: "武田", intelligence: 95 },
+        昌幸: { ...stats, name: "昌幸", faction: "武田" },
+        謙信: { ...stats, name: "謙信", faction: "上杉", intelligence: 60 },
+      },
+      colors: {},
+      ...callbacks,
+    };
+
+    const html = renderToStaticMarkup(<HomeTab {...props} isAdmin />);
+    expect(html).toContain("交戦国との条件判定");
+    expect(html).toContain("自分の知力 84");
+    // 知力、敵以上: 勝頼(70)は該当、信玄(95)は非該当、昌幸は能力値未取得。
+    expect(html).toContain("知力、敵以上 ×0.9");
+    expect(html).toContain("⭕ 該当 1人");
+    expect(html).toContain("❌ 非該当 1人");
+    expect(html).toContain("自分+14");
+    expect(html).toContain("自分−11");
+    expect(html).toContain("能力値・装備が未確認で判定できない 1人");
+    // 戦っていない国の武将は出さない。
+    expect(html).not.toContain("謙信");
+
+    expect(renderToStaticMarkup(<HomeTab {...props} />)).not.toContain(
+      "交戦国との条件判定"
+    );
+
+    // 表示中の期の武将だけで判定する（別の期の所属国・能力値を混ぜない）。
+    const scoped = renderToStaticMarkup(
+      <HomeTab
+        {...props}
+        isAdmin
+        termDb={{
+          信長: { ...stats, name: "信長", faction: "織田", intelligence: 60 },
+          勝頼: { ...stats, name: "勝頼", faction: "武田", intelligence: 70 },
+        }}
+      />
+    );
+    expect(scoped).toContain("自分の知力 60");
+    expect(scoped).toContain("⭕ 該当 0人");
+    expect(scoped).toContain("❌ 非該当 1人");
+    expect(scoped).not.toContain("信玄");
+  });
 });
