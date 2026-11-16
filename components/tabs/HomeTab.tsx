@@ -21,6 +21,7 @@ import {
 } from "@/lib/stats";
 import { WinRateBar } from "@/components/detail/DetailParts";
 import { HomeActivation, HomeWarlordSearch } from "./HomeActivation";
+import { HomeWarConditions } from "./HomeWarConditions";
 import { filterHomeWarlordSuggestions } from "./homeSearch";
 import {
   computeStratagemUnlockStatus,
@@ -35,8 +36,13 @@ import {
 interface Props {
   log: BattleRecord[];
   db: WarlordMap;
+  /**
+   * 表示中の期の武将（名前キー）。「交戦国との条件判定」は期ごとの所属国・能力値で
+   * 判定するため、最新プロフィールの db ではなくこちらを使う。未指定なら db。
+   */
+  termDb?: WarlordMap;
   colors: FactionColorMap;
-  /** 管理者のみ「自分のステータス」編集フォームを表示する。 */
+  /** 管理者のみ「交戦国との条件判定」と「自分のステータス」編集フォームを表示する。 */
   isAdmin?: boolean;
   onSelectWarlord: (name: string) => void;
   onSelectUnit: (name: string) => void;
@@ -514,6 +520,7 @@ function UnitUsageList({
 export function HomeTab({
   log,
   db,
+  termDb = db,
   colors,
   isAdmin = false,
   onSelectWarlord,
@@ -566,6 +573,9 @@ export function HomeTab({
   const hasStratagemStats =
     dbInfo?.intelligence != null && dbInfo?.strategy != null;
   const hasPolitics = dbInfo?.politics != null;
+  // 条件判定は表示中の期のプロフィールで行う（別の期の所属国・能力値を混ぜない）。
+  const termInfo = name ? lookup(termDb, name) : undefined;
+  const termFaction = termInfo?.faction ?? profile?.faction;
 
   const choose = (n: string) => {
     pendingFocusRef.current = "dashboard";
@@ -751,6 +761,23 @@ export function HomeTab({
               />
             )}
           </div>
+        )}
+
+        {isAdmin && termFaction && (
+          <HomeWarConditions
+            key={`${termInfo?.term ?? "all"}:${name}:${termFaction}`}
+            me={{
+              type: "",
+              branch: "",
+              updatedAt: 0,
+              ...termInfo,
+              name,
+              faction: termFaction,
+            }}
+            db={termDb}
+            log={log}
+            onSelectWarlord={onSelectWarlord}
+          />
         )}
 
         {isAdmin && onUpdateStats && (
